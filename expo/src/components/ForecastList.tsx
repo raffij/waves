@@ -63,7 +63,6 @@ function ExtraExtremesRow({
 export function ForecastList({ yesterday, days, waveSeries, windSeries, now }: Props) {
   return (
     <View style={styles.container}>
-      <Text style={styles.heading}>5-Day Forecast</Text>
       {yesterday && (
         <View key={yesterday.dateKey} style={[styles.dayRow, styles.yesterdayRow]}>
           <Text style={styles.dayLabel}>{yesterday.label}</Text>
@@ -119,8 +118,7 @@ export function ForecastList({ yesterday, days, waveSeries, windSeries, now }: P
 }
 
 const styles = StyleSheet.create({
-  container: { marginTop: 20, paddingTop: 20, borderTopWidth: 1, borderTopColor: colors.cardBorder },
-  heading: { color: colors.textPrimary, fontSize: 16, fontWeight: '700', marginBottom: 12 },
+  container: { marginTop: 8, paddingTop: 14, borderTopWidth: 1, borderTopColor: colors.cardBorder },
   dayRow: { marginBottom: 14 },
   dayLabel: {
     color: colors.textSecondary,
