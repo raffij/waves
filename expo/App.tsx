@@ -20,6 +20,8 @@ import { SecureKeyStore } from './src/services/SecureKeyStore';
 import { TideAPIClient } from './src/services/TideAPIClient';
 import { TideForecast } from './src/services/TideForecast';
 import { TideSeries } from './src/services/TideSeries';
+import { WaveAPIClient } from './src/services/WaveAPIClient';
+import { WaveSeries } from './src/services/WaveSeries';
 import { colors } from './src/theme';
 
 const STATION_ID = 'hastings_pier-hgp-gbr-cco';
@@ -28,6 +30,7 @@ const keyStore = new SecureKeyStore('wave-hastings-tidecheck-api-key');
 export default function App() {
   const [apiKey, setApiKey] = useState<string | null | undefined>(undefined); // undefined = still loading
   const [data, setData] = useState<TideResponse | null>(null);
+  const [waveData, setWaveData] = useState<any>(null);
   const [fetchedAt, setFetchedAt] = useState<Date | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,14 +44,21 @@ export default function App() {
       if (!apiKey) return;
       setLoading(true);
       setError(null);
-      const client = new TideAPIClient(STATION_ID, apiKey);
-      const result = force ? await client.forceRefresh() : await client.loadTideData();
-      if (result) {
-        setData(result.data);
-        setFetchedAt(result.fetchedAt);
+      const tideClient = new TideAPIClient(STATION_ID, apiKey);
+      const tideResult = force ? await tideClient.forceRefresh() : await tideClient.loadTideData();
+      if (tideResult) {
+        setData(tideResult.data);
+        setFetchedAt(tideResult.fetchedAt);
       } else {
         setError('Could not load tide data. Check your connection or API key.');
       }
+
+      const waveClient = new WaveAPIClient();
+      const waveResult = force ? await waveClient.forceRefresh() : await waveClient.loadWaveData();
+      if (waveResult) {
+        setWaveData(waveResult.data);
+      }
+
       setLoading(false);
     },
     [apiKey],
@@ -89,8 +99,10 @@ export default function App() {
 
   const now = new Date();
   const series = data ? new TideSeries(data.timeSeries) : null;
+  const waveSeries = waveData ? new WaveSeries(waveData) : null;
   const forecast = data ? new TideForecast(data.extremes) : null;
   const current = series?.currentLevel(now) ?? null;
+  const waveHeight = waveSeries?.heightAt(now) ?? null;
   const yesterday = forecast?.yesterday(now) ?? null;
   const days = forecast?.days(now, 5) ?? [];
 
@@ -104,11 +116,11 @@ export default function App() {
             <RefreshControl tintColor={colors.primary} refreshing={loading} onRefresh={() => load(true)} />
           }
         >
-          <CurrentLevelCard current={current} fetchedAt={fetchedAt} />
+          <CurrentLevelCard current={current} waveHeight={waveHeight} fetchedAt={fetchedAt} />
 
           {series && (
             <View style={styles.chartCard}>
-              <TideChart series={series} now={now} />
+              <TideChart series={series} waveSeries={waveSeries} now={now} />
             </View>
           )}
 

@@ -3,10 +3,12 @@ import { type LayoutChangeEvent, PanResponder, StyleSheet, Text, View } from 're
 import Svg, { Circle, Defs, Line, LinearGradient, Path, Stop } from 'react-native-svg';
 import { TideClock } from '../services/TideClock';
 import type { TideSeries } from '../services/TideSeries';
+import type { WaveSeries } from '../services/WaveSeries';
 import { colors } from '../theme';
 
 interface Props {
   series: TideSeries;
+  waveSeries?: WaveSeries | null;
   now: Date;
   startHour?: number;
   endHour?: number;
