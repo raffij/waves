@@ -8,7 +8,9 @@
     "userInterfaceStyle": "dark",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.hastings-tide"
+      "bundleIdentifier": "com.anonymous.hastings-tide",
+      "backgroundColor": "#03122b",
+      "statusBarStyle": "light"
     },
     "android": {
       "adaptiveIcon": {
@@ -19,8 +21,14 @@
       },
       "predictiveBackGestureEnabled": false
     },
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#03122b"
+    },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "backgroundColor": "#03122b"
     },
     "experiments": {
       "baseUrl": "/waves"
