@@ -1,8 +1,7 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { StyleSheet, Text, View } from 'react-native';
+import type { CurrentLevel, Trend } from '../services/TideSeries';
 import { colors } from '../theme';
-import { CurrentLevel, Trend } from '../services/TideSeries';
 
 interface Props {
   current: CurrentLevel | null;
@@ -30,7 +29,8 @@ export function CurrentLevelCard({ current, fetchedAt }: Props) {
         <Text style={styles.label}>Hastings Pier</Text>
         {fetchedAt && (
           <Text style={styles.updated}>
-            Updated {fetchedAt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/London' })}
+            Updated{' '}
+            {fetchedAt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/London' })}
           </Text>
         )}
       </View>

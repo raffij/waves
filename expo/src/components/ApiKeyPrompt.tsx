@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, Linking } from 'react-native';
+import { useState } from 'react';
+import { Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { colors } from '../theme';
 
 interface Props {
@@ -13,7 +13,8 @@ export function ApiKeyPrompt({ onSubmit }: Props) {
     <View style={styles.container}>
       <Text style={styles.title}>Connect TideCheck</Text>
       <Text style={styles.body}>
-        Enter your TideCheck API key to show live tide data for Hastings Pier. Get a free key at tidecheck.com/developers.
+        Enter your TideCheck API key to show live tide data for Hastings Pier. Get a free key at
+        tidecheck.com/developers.
       </Text>
       <TextInput
         style={styles.input}

@@ -1,5 +1,5 @@
-import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 
 // iOS Keychain-backed storage, mirroring the macOS widget's use of the system
 // Keychain. expo-secure-store has no web implementation, so on web this falls

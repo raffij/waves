@@ -1,15 +1,25 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { SafeAreaView, ScrollView, StyleSheet, RefreshControl, StatusBar, ActivityIndicator, Text, View, Pressable } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useCallback, useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Pressable,
+  RefreshControl,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { ApiKeyPrompt } from './src/components/ApiKeyPrompt';
+import { CurrentLevelCard } from './src/components/CurrentLevelCard';
+import { ForecastList } from './src/components/ForecastList';
+import { TideChart } from './src/components/TideChart';
+import type { TideResponse } from './src/models/TideModels';
 import { SecureKeyStore } from './src/services/SecureKeyStore';
 import { TideAPIClient } from './src/services/TideAPIClient';
-import { TideSeries } from './src/services/TideSeries';
 import { TideForecast } from './src/services/TideForecast';
-import { TideResponse } from './src/models/TideModels';
-import { CurrentLevelCard } from './src/components/CurrentLevelCard';
-import { TideChart } from './src/components/TideChart';
-import { ForecastList } from './src/components/ForecastList';
-import { ApiKeyPrompt } from './src/components/ApiKeyPrompt';
+import { TideSeries } from './src/services/TideSeries';
 import { colors } from './src/theme';
 
 const STATION_ID = 'hastings_pier-hgp-gbr-cco';
@@ -41,7 +51,7 @@ export default function App() {
       }
       setLoading(false);
     },
-    [apiKey]
+    [apiKey],
   );
 
   useEffect(() => {
@@ -89,7 +99,9 @@ export default function App() {
       <SafeAreaView style={styles.flex}>
         <ScrollView
           contentContainerStyle={styles.content}
-          refreshControl={<RefreshControl tintColor={colors.primary} refreshing={loading} onRefresh={() => load(true)} />}
+          refreshControl={
+            <RefreshControl tintColor={colors.primary} refreshing={loading} onRefresh={() => load(true)} />
+          }
         >
           <CurrentLevelCard current={current} fetchedAt={fetchedAt} />
 

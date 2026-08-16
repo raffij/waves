@@ -1,8 +1,8 @@
-import React, { useRef, useState } from 'react';
-import { View, Text, StyleSheet, PanResponder, LayoutChangeEvent } from 'react-native';
-import Svg, { Path, Circle, Line, Defs, LinearGradient, Stop } from 'react-native-svg';
-import { TideSeries } from '../services/TideSeries';
+import { useRef, useState } from 'react';
+import { type LayoutChangeEvent, PanResponder, StyleSheet, Text, View } from 'react-native';
+import Svg, { Circle, Defs, Line, LinearGradient, Path, Stop } from 'react-native-svg';
 import { TideClock } from '../services/TideClock';
+import type { TideSeries } from '../services/TideSeries';
 import { colors } from '../theme';
 
 interface Props {
@@ -67,7 +67,7 @@ export function TideChart({ series, now, startHour = 6, endHour = 22 }: Props) {
       // handoff happened instead of tracking the finger to the end.
       onPanResponderTerminationRequest: () => false,
       onShouldBlockNativeResponder: () => true,
-    })
+    }),
   ).current;
 
   if (samples.length < 2) {
@@ -95,9 +95,10 @@ export function TideChart({ series, now, startHour = 6, endHour = 22 }: Props) {
   const areaPath = `${linePath} L ${points[points.length - 1].x.toFixed(1)} ${floorY} L ${points[0].x.toFixed(1)} ${floorY} Z`;
 
   const isScrubbing = scrubX !== null;
-  const activeTime = isScrubbing
-    ? new Date(start.getTime() + ((scrubX! - PADDING_X) / plotWidth) * totalMs)
-    : new Date(Math.min(Math.max(now.getTime(), start.getTime()), end.getTime()));
+  const activeTime =
+    scrubX !== null
+      ? new Date(start.getTime() + ((scrubX - PADDING_X) / plotWidth) * totalMs)
+      : new Date(Math.min(Math.max(now.getTime(), start.getTime()), end.getTime()));
   const activeHeight = series.heightAt(activeTime);
   const activePoint = activeHeight !== null ? toXY(activeTime, activeHeight) : null;
 
@@ -114,7 +115,14 @@ export function TideChart({ series, now, startHour = 6, endHour = 22 }: Props) {
             </LinearGradient>
           </Defs>
           <Path d={areaPath} fill="url(#fill)" stroke="none" />
-          <Path d={linePath} fill="none" stroke={colors.primary} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+          <Path
+            d={linePath}
+            fill="none"
+            stroke={colors.primary}
+            strokeWidth={2.5}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
           {activePoint && (
             <>
               <Line
@@ -146,7 +154,8 @@ export function TideChart({ series, now, startHour = 6, endHour = 22 }: Props) {
             ]}
           >
             <Text style={styles.tooltipText} numberOfLines={1}>
-              {TideClock.format(activeTime, { hour: '2-digit', minute: '2-digit', hour12: false })} · {activeHeight.toFixed(1)}m
+              {TideClock.format(activeTime, { hour: '2-digit', minute: '2-digit', hour12: false })} ·{' '}
+              {activeHeight.toFixed(1)}m
             </Text>
           </View>
         )}

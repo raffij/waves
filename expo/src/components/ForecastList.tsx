@@ -1,7 +1,6 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import { ForecastDay } from '../services/TideForecast';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { TideClock } from '../services/TideClock';
+import type { ForecastDay } from '../services/TideForecast';
 import { colors } from '../theme';
 
 interface Props {
@@ -15,17 +14,15 @@ export function ForecastList({ days }: Props) {
       {days.map((day) => (
         <View key={day.dateKey} style={styles.dayRow}>
           <Text style={styles.dayLabel}>{day.label}</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.chipsRow}
-          >
-            {day.extremes.map((extreme, i) => {
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
+            {day.extremes.map((extreme) => {
               const tint = extreme.type === 'high' ? colors.high : colors.low;
               const parsed = TideClock.parseISODate(extreme.localTime);
-              const time = parsed ? TideClock.format(parsed, { hour: '2-digit', minute: '2-digit', hour12: false }) : '';
+              const time = parsed
+                ? TideClock.format(parsed, { hour: '2-digit', minute: '2-digit', hour12: false })
+                : '';
               return (
-                <View key={i} style={styles.chip}>
+                <View key={extreme.localTime} style={styles.chip}>
                   <Text style={[styles.chipLabel, { color: tint }]}>{extreme.type === 'high' ? 'H' : 'L'}</Text>
                   <Text style={styles.chipHeight}>{extreme.height.toFixed(1)}m</Text>
                   <Text style={styles.chipTime}>{time}</Text>

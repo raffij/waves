@@ -1,4 +1,4 @@
-import { SeriesPoint } from '../models/TideModels';
+import type { SeriesPoint } from '../models/TideModels';
 import { TideClock } from './TideClock';
 
 export type Trend = 'rising' | 'falling' | 'steady' | 'unknown';

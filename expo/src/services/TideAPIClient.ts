@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { TideResponse } from '../models/TideModels';
+import type { TideResponse } from '../models/TideModels';
 
 const CACHE_DATA_KEY = 'wave-hastings-tide-cache';
 const CACHE_TIMESTAMP_KEY = 'wave-hastings-tide-cache-timestamp';
@@ -16,7 +16,7 @@ export class TideAPIClient {
   constructor(
     private readonly stationId: string,
     private readonly apiKey: string,
-    private readonly cacheMaxAgeMs: number = 6 * 60 * 60 * 1000
+    private readonly cacheMaxAgeMs: number = 6 * 60 * 60 * 1000,
   ) {}
 
   async loadTideData(): Promise<TideDataResult | null> {

@@ -1,4 +1,4 @@
-import { Extreme } from '../models/TideModels';
+import type { Extreme } from '../models/TideModels';
 import { TideClock } from './TideClock';
 
 export interface ForecastDay {
@@ -20,7 +20,8 @@ export class TideForecast {
     for (const extreme of this.extremes) {
       if (extreme.localDate < todayKey) continue;
       if (!seen.includes(extreme.localDate)) seen.push(extreme.localDate);
-      (byDate[extreme.localDate] ??= []).push(extreme);
+      byDate[extreme.localDate] ??= [];
+      byDate[extreme.localDate].push(extreme);
     }
 
     return seen.slice(0, limit).map((dateKey) => ({
