@@ -1,13 +1,14 @@
 {
   "expo": {
-    "name": "Hastings Tide",
+    "name": "Hastings Pier",
     "slug": "hastings-tide",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.anonymous.hastings-tide"
     },
     "android": {
       "adaptiveIcon": {
@@ -20,6 +21,9 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "experiments": {
+      "baseUrl": "/waves"
     },
     "plugins": [
       "expo-secure-store"

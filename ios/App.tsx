@@ -91,13 +91,10 @@ export default function App() {
           contentContainerStyle={styles.content}
           refreshControl={<RefreshControl tintColor={colors.primary} refreshing={loading} onRefresh={() => load(true)} />}
         >
-          <Text style={styles.title}>Hastings Tide</Text>
-
           <CurrentLevelCard current={current} fetchedAt={fetchedAt} />
 
           {series && (
             <View style={styles.chartCard}>
-              <Text style={styles.chartHeading}>Today, 6am – 10pm</Text>
               <TideChart series={series} now={now} />
             </View>
           )}
@@ -119,7 +116,6 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   flexCenter: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   content: { padding: 20, paddingBottom: 48 },
-  title: { color: colors.textPrimary, fontSize: 28, fontWeight: '800', marginBottom: 20 },
   chartCard: {
     backgroundColor: colors.card,
     borderColor: colors.cardBorder,
@@ -127,9 +123,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 16,
     marginTop: 16,
-    alignItems: 'center',
   },
-  chartHeading: { color: colors.textSecondary, fontSize: 13, fontWeight: '600', marginBottom: 8, alignSelf: 'flex-start' },
   error: { color: colors.falling, marginTop: 16, textAlign: 'center' },
   reset: { color: colors.textSecondary, textAlign: 'center', marginTop: 24, fontSize: 12 },
 });

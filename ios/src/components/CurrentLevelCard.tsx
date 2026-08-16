@@ -34,7 +34,7 @@ export function CurrentLevelCard({ current, fetchedAt }: Props) {
             <Text style={styles.unit}>m</Text>
           </Text>
           <View style={styles.trendRow}>
-            <Ionicons name={trendIcon[current.trend]} size={20} color={trendColor[current.trend]} />
+            <Ionicons name={trendIcon[current.trend]} size={16} color={trendColor[current.trend]} />
             <Text style={[styles.trendText, { color: trendColor[current.trend] }]}>{current.trend}</Text>
           </View>
         </View>
@@ -55,12 +55,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
     borderColor: colors.cardBorder,
     borderWidth: 1,
-    borderRadius: 20,
-    padding: 20,
+    borderRadius: 18,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
   },
   label: {
     color: colors.textSecondary,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 1,
@@ -69,11 +70,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'space-between',
-    marginTop: 8,
+    marginTop: 2,
   },
-  height: { color: colors.textPrimary, fontSize: 56, fontWeight: '700' },
-  unit: { fontSize: 24, fontWeight: '500', color: colors.textSecondary },
-  trendRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
-  trendText: { fontSize: 15, fontWeight: '600', textTransform: 'capitalize' },
-  updated: { color: colors.textSecondary, fontSize: 12, marginTop: 12 },
+  height: { color: colors.textPrimary, fontSize: 38, fontWeight: '700' },
+  unit: { fontSize: 16, fontWeight: '500', color: colors.textSecondary },
+  trendRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 4 },
+  trendText: { fontSize: 13, fontWeight: '600', textTransform: 'capitalize' },
+  updated: { color: colors.textSecondary, fontSize: 11, marginTop: 4 },
 });

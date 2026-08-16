@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { ForecastDay } from '../services/TideForecast';
 import { TideClock } from '../services/TideClock';
 import { colors } from '../theme';
@@ -15,7 +15,11 @@ export function ForecastList({ days }: Props) {
       {days.map((day) => (
         <View key={day.dateKey} style={styles.dayRow}>
           <Text style={styles.dayLabel}>{day.label}</Text>
-          <View style={styles.chipsRow}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.chipsRow}
+          >
             {day.extremes.map((extreme, i) => {
               const tint = extreme.type === 'high' ? colors.high : colors.low;
               const parsed = TideClock.parseISODate(extreme.localTime);
@@ -28,7 +32,7 @@ export function ForecastList({ days }: Props) {
                 </View>
               );
             })}
-          </View>
+          </ScrollView>
         </View>
       ))}
     </View>
@@ -47,7 +51,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chipsRow: { flexDirection: 'row', gap: 8, paddingRight: 4 },
   chip: {
     borderWidth: 1,
     borderRadius: 12,
