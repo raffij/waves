@@ -18,29 +18,43 @@ function dateKeyToNoon(dateKey: string): Date {
   return new Date(year, month - 1, day, 12, 0, 0);
 }
 
-function ExtraExtremesRow({
-  dateKey,
+function ExtremeChips({
   extremes,
   unitLabel,
 }: {
-  dateKey: string;
   extremes: { high: number | null; low: number | null };
   unitLabel: string;
 }) {
   if (extremes.high === null || extremes.low === null) return null;
   return (
+    <>
+      <View style={styles.chip}>
+        <Text style={[styles.chipLabel, { color: colors.high }]}>H</Text>
+        <Text style={styles.chipHeight}>{extremes.high.toFixed(1)}</Text>
+        <Text style={[styles.chipTime, { fontSize: 10 }]}>{unitLabel}</Text>
+      </View>
+      <View style={styles.chip}>
+        <Text style={[styles.chipLabel, { color: colors.low }]}>L</Text>
+        <Text style={styles.chipHeight}>{extremes.low.toFixed(1)}</Text>
+        <Text style={[styles.chipTime, { fontSize: 10 }]}>{unitLabel}</Text>
+      </View>
+    </>
+  );
+}
+
+function ExtraExtremesRow({
+  waveExtremes,
+  windExtremes,
+}: {
+  waveExtremes: { high: number | null; low: number | null } | null;
+  windExtremes: { high: number | null; low: number | null } | null;
+}) {
+  if (!waveExtremes && !windExtremes) return null;
+  return (
     <View style={styles.extraRow}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
-        <View style={styles.chip}>
-          <Text style={[styles.chipLabel, { color: colors.high }]}>H</Text>
-          <Text style={styles.chipHeight}>{extremes.high.toFixed(1)}</Text>
-          <Text style={[styles.chipTime, { fontSize: 10 }]}>{unitLabel}</Text>
-        </View>
-        <View style={styles.chip}>
-          <Text style={[styles.chipLabel, { color: colors.low }]}>L</Text>
-          <Text style={styles.chipHeight}>{extremes.low.toFixed(1)}</Text>
-          <Text style={[styles.chipTime, { fontSize: 10 }]}>{unitLabel}</Text>
-        </View>
+        {waveExtremes && <ExtremeChips extremes={waveExtremes} unitLabel="wave" />}
+        {windExtremes && <ExtremeChips extremes={windExtremes} unitLabel="wind" />}
       </ScrollView>
     </View>
   );
@@ -69,20 +83,10 @@ export function ForecastList({ yesterday, days, waveSeries, windSeries, now }: P
               );
             })}
           </ScrollView>
-          {waveSeries && (
-            <ExtraExtremesRow
-              dateKey={yesterday.dateKey}
-              extremes={waveSeries.dailyExtremes(dateKeyToNoon(yesterday.dateKey))}
-              unitLabel="wave"
-            />
-          )}
-          {windSeries && (
-            <ExtraExtremesRow
-              dateKey={yesterday.dateKey}
-              extremes={windSeries.dailyExtremes(dateKeyToNoon(yesterday.dateKey))}
-              unitLabel="wind"
-            />
-          )}
+          <ExtraExtremesRow
+            waveExtremes={waveSeries ? waveSeries.dailyExtremes(dateKeyToNoon(yesterday.dateKey)) : null}
+            windExtremes={windSeries ? windSeries.dailyExtremes(dateKeyToNoon(yesterday.dateKey)) : null}
+          />
         </View>
       )}
       {days.map((day) => (
@@ -104,20 +108,10 @@ export function ForecastList({ yesterday, days, waveSeries, windSeries, now }: P
               );
             })}
           </ScrollView>
-          {waveSeries && (
-            <ExtraExtremesRow
-              dateKey={day.dateKey}
-              extremes={waveSeries.dailyExtremes(dateKeyToNoon(day.dateKey))}
-              unitLabel="wave"
-            />
-          )}
-          {windSeries && (
-            <ExtraExtremesRow
-              dateKey={day.dateKey}
-              extremes={windSeries.dailyExtremes(dateKeyToNoon(day.dateKey))}
-              unitLabel="wind"
-            />
-          )}
+          <ExtraExtremesRow
+            waveExtremes={waveSeries ? waveSeries.dailyExtremes(dateKeyToNoon(day.dateKey)) : null}
+            windExtremes={windSeries ? windSeries.dailyExtremes(dateKeyToNoon(day.dateKey)) : null}
+          />
         </View>
       ))}
     </View>
