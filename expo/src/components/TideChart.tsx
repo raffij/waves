@@ -16,6 +16,22 @@ interface Props {
   endHour?: number;
 }
 
+// Centered moving average, smoothing out point-to-point reversals before
+// curving. A spline alone still passes exactly through every sample, so a
+// sharp up-down-up in the raw values still reads as a pointy zigzag even
+// once curved — pre-averaging rounds off those reversals themselves.
+function movingAverage(values: number[], radius: number): number[] {
+  return values.map((_, i) => {
+    let sum = 0;
+    let count = 0;
+    for (let j = Math.max(0, i - radius); j <= Math.min(values.length - 1, i + radius); j++) {
+      sum += values[j];
+      count++;
+    }
+    return sum / count;
+  });
+}
+
 // Catmull-Rom-to-cubic-bezier spline through the given points. Used for wind,
 // where hourly readings genuinely jump around (unlike tide/wave's smooth
 // underlying curve), so straight segments between samples read as jagged
@@ -168,7 +184,11 @@ export function TideChart({ series, waveSeries, windSeries, now, startHour = 6, 
       ? wavePoints.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ')
       : '';
 
-  const windPoints = windSamples.length > 0 ? windSamples.map((s) => toWindXY(s.time, s.speed)) : [];
+  const smoothedWindSpeeds = movingAverage(
+    windSamples.map((s) => s.speed),
+    3,
+  );
+  const windPoints = windSamples.map((s, i) => toWindXY(s.time, smoothedWindSpeeds[i]));
   const windPath = smoothPath(windPoints);
 
   const currentX = PADDING_LEFT + ((now.getTime() - start.getTime()) / totalMs) * plotWidth;
