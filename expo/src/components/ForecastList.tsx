@@ -13,7 +13,7 @@ export function ForecastList({ yesterday, days }: Props) {
     <View style={styles.container}>
       <Text style={styles.heading}>5-Day Forecast</Text>
       {yesterday && (
-        <View key={yesterday.dateKey} style={styles.dayRow}>
+        <View key={yesterday.dateKey} style={[styles.dayRow, styles.yesterdayRow]}>
           <Text style={styles.dayLabel}>{yesterday.label}</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
             {yesterday.extremes.map((extreme) => {
@@ -79,4 +79,5 @@ const styles = StyleSheet.create({
   chipLabel: { fontWeight: '700', fontSize: 12 },
   chipHeight: { color: colors.textPrimary, fontSize: 13, fontWeight: '600' },
   chipTime: { color: colors.textSecondary, fontSize: 12 },
+  yesterdayRow: { opacity: 0.5 },
 });
