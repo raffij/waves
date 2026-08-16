@@ -10,6 +10,8 @@ interface Props {
   windSpeed: number | null;
   windTrend: Trend;
   fetchedAt: Date | null;
+  /** Set when viewing a non-live day (e.g. "Tomorrow"), shown in place of the "Updated" timestamp. */
+  dayLabel?: string | null;
 }
 
 const trendIcon: Record<Trend, keyof typeof Ionicons.glyphMap> = {
@@ -30,16 +32,24 @@ function TrendArrow({ trend }: { trend: Trend }) {
   return <Ionicons name={trendIcon[trend]} size={16} color={trendColor[trend]} style={styles.trendIcon} />;
 }
 
-export function CurrentLevelCard({ current, waveHeight, waveTrend, windSpeed, windTrend, fetchedAt }: Props) {
+export function CurrentLevelCard({ current, waveHeight, waveTrend, windSpeed, windTrend, fetchedAt, dayLabel }: Props) {
   return (
     <View style={styles.card}>
       <View style={styles.topRow}>
         <Text style={styles.label}>Hastings Pier</Text>
-        {fetchedAt && (
-          <Text style={styles.updated}>
-            Updated{' '}
-            {fetchedAt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/London' })}
-          </Text>
+        {dayLabel ? (
+          <Text style={styles.updated}>{dayLabel}</Text>
+        ) : (
+          fetchedAt && (
+            <Text style={styles.updated}>
+              Updated{' '}
+              {fetchedAt.toLocaleTimeString('en-GB', {
+                hour: '2-digit',
+                minute: '2-digit',
+                timeZone: 'Europe/London',
+              })}
+            </Text>
+          )
         )}
       </View>
       <View style={styles.contentRow}>

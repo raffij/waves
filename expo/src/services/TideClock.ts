@@ -52,4 +52,22 @@ export class TideClock {
     const utcGuess = Date.UTC(+p.year, +p.month - 1, +p.day, hour, 0, 0) - offset;
     return new Date(utcGuess);
   }
+
+  // A Date at noon local time on the given yyyy-MM-dd key — a stable
+  // instant to represent "this calendar day" without touching a DST edge.
+  static dateFromKey(dateKey: string): Date {
+    const [year, month, day] = dateKey.split('-').map(Number);
+    return new Date(year, month - 1, day, 12, 0, 0);
+  }
+
+  // `day`'s London calendar date, combined with `timeSource`'s London
+  // hour:minute — e.g. "what time is it right now, on this other day".
+  static withTimeOfDay(day: Date, timeSource: Date): Date {
+    const dayParts = partsOf(day);
+    const timeParts = partsOf(timeSource);
+    const offset = TideClock.offsetMillis(day);
+    const utcGuess =
+      Date.UTC(+dayParts.year, +dayParts.month - 1, +dayParts.day, +timeParts.hour, +timeParts.minute, 0) - offset;
+    return new Date(utcGuess);
+  }
 }

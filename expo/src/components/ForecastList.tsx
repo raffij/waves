@@ -1,4 +1,4 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { TideClock } from '../services/TideClock';
 import type { ForecastDay } from '../services/TideForecast';
 import type { WaveSeries } from '../services/WaveSeries';
@@ -10,12 +10,8 @@ interface Props {
   days: ForecastDay[];
   waveSeries?: WaveSeries | null;
   windSeries?: WindSeries | null;
-  now: Date;
-}
-
-function dateKeyToNoon(dateKey: string): Date {
-  const [year, month, day] = dateKey.split('-').map(Number);
-  return new Date(year, month - 1, day, 12, 0, 0);
+  selectedDateKey: string;
+  onSelectDay: (dateKey: string) => void;
 }
 
 function ExtremeChips({
@@ -60,58 +56,67 @@ function ExtraExtremesRow({
   );
 }
 
-export function ForecastList({ yesterday, days, waveSeries, windSeries, now }: Props) {
+function DayRow({
+  day,
+  isSelected,
+  onSelect,
+  waveSeries,
+  windSeries,
+}: {
+  day: ForecastDay;
+  isSelected: boolean;
+  onSelect: () => void;
+  waveSeries?: WaveSeries | null;
+  windSeries?: WindSeries | null;
+}) {
+  const dayDate = TideClock.dateFromKey(day.dateKey);
+  return (
+    <Pressable onPress={onSelect} style={[styles.dayRow, !isSelected && styles.fadedRow]}>
+      <Text style={styles.dayLabel}>{day.label}</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
+        {day.extremes.map((extreme) => {
+          const tint = extreme.type === 'high' ? colors.high : colors.low;
+          const parsed = TideClock.parseISODate(extreme.localTime);
+          const time = parsed ? TideClock.format(parsed, { hour: '2-digit', minute: '2-digit', hour12: false }) : '';
+          return (
+            <View key={extreme.localTime} style={styles.chip}>
+              <Text style={[styles.chipLabel, { color: tint }]}>{extreme.type === 'high' ? 'H' : 'L'}</Text>
+              <Text style={styles.chipHeight}>{extreme.height.toFixed(1)}</Text>
+              <Text style={styles.chipTime}>{time}</Text>
+            </View>
+          );
+        })}
+      </ScrollView>
+      <ExtraExtremesRow
+        waveExtremes={waveSeries ? waveSeries.dailyExtremes(dayDate) : null}
+        windExtremes={windSeries ? windSeries.dailyExtremes(dayDate) : null}
+      />
+    </Pressable>
+  );
+}
+
+export function ForecastList({ yesterday, days, waveSeries, windSeries, selectedDateKey, onSelectDay }: Props) {
   return (
     <View style={styles.container}>
       {yesterday && (
-        <View key={yesterday.dateKey} style={[styles.dayRow, styles.yesterdayRow]}>
-          <Text style={styles.dayLabel}>{yesterday.label}</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
-            {yesterday.extremes.map((extreme) => {
-              const tint = extreme.type === 'high' ? colors.high : colors.low;
-              const parsed = TideClock.parseISODate(extreme.localTime);
-              const time = parsed
-                ? TideClock.format(parsed, { hour: '2-digit', minute: '2-digit', hour12: false })
-                : '';
-              return (
-                <View key={extreme.localTime} style={styles.chip}>
-                  <Text style={[styles.chipLabel, { color: tint }]}>{extreme.type === 'high' ? 'H' : 'L'}</Text>
-                  <Text style={styles.chipHeight}>{extreme.height.toFixed(1)}</Text>
-                  <Text style={styles.chipTime}>{time}</Text>
-                </View>
-              );
-            })}
-          </ScrollView>
-          <ExtraExtremesRow
-            waveExtremes={waveSeries ? waveSeries.dailyExtremes(dateKeyToNoon(yesterday.dateKey)) : null}
-            windExtremes={windSeries ? windSeries.dailyExtremes(dateKeyToNoon(yesterday.dateKey)) : null}
-          />
-        </View>
+        <DayRow
+          key={yesterday.dateKey}
+          day={yesterday}
+          isSelected={yesterday.dateKey === selectedDateKey}
+          onSelect={() => onSelectDay(yesterday.dateKey)}
+          waveSeries={waveSeries}
+          windSeries={windSeries}
+        />
       )}
       {days.map((day) => (
-        <View key={day.dateKey} style={styles.dayRow}>
-          <Text style={styles.dayLabel}>{day.label}</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
-            {day.extremes.map((extreme) => {
-              const tint = extreme.type === 'high' ? colors.high : colors.low;
-              const parsed = TideClock.parseISODate(extreme.localTime);
-              const time = parsed
-                ? TideClock.format(parsed, { hour: '2-digit', minute: '2-digit', hour12: false })
-                : '';
-              return (
-                <View key={extreme.localTime} style={styles.chip}>
-                  <Text style={[styles.chipLabel, { color: tint }]}>{extreme.type === 'high' ? 'H' : 'L'}</Text>
-                  <Text style={styles.chipHeight}>{extreme.height.toFixed(1)}</Text>
-                  <Text style={styles.chipTime}>{time}</Text>
-                </View>
-              );
-            })}
-          </ScrollView>
-          <ExtraExtremesRow
-            waveExtremes={waveSeries ? waveSeries.dailyExtremes(dateKeyToNoon(day.dateKey)) : null}
-            windExtremes={windSeries ? windSeries.dailyExtremes(dateKeyToNoon(day.dateKey)) : null}
-          />
-        </View>
+        <DayRow
+          key={day.dateKey}
+          day={day}
+          isSelected={day.dateKey === selectedDateKey}
+          onSelect={() => onSelectDay(day.dateKey)}
+          waveSeries={waveSeries}
+          windSeries={windSeries}
+        />
       ))}
     </View>
   );
@@ -120,6 +125,7 @@ export function ForecastList({ yesterday, days, waveSeries, windSeries, now }: P
 const styles = StyleSheet.create({
   container: { marginTop: 8, paddingTop: 14, borderTopWidth: 1, borderTopColor: colors.cardBorder },
   dayRow: { marginBottom: 14 },
+  fadedRow: { opacity: 0.45 },
   dayLabel: {
     color: colors.textSecondary,
     fontSize: 13,
@@ -137,6 +143,5 @@ const styles = StyleSheet.create({
   chipLabel: { fontWeight: '700', fontSize: 12 },
   chipHeight: { color: colors.textPrimary, fontSize: 13, fontWeight: '600' },
   chipTime: { color: colors.textSecondary, fontSize: 12 },
-  yesterdayRow: { opacity: 0.5 },
   extraRow: { marginTop: 6, opacity: 0.7 },
 });
