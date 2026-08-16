@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { type LayoutChangeEvent, PanResponder, StyleSheet, Text, View } from 'react-native';
-import Svg, { Circle, Defs, Line, LinearGradient, Path, Stop, Text as SvgText } from 'react-native-svg';
+import Svg, { Circle, Defs, Line, LinearGradient, Path, Stop } from 'react-native-svg';
 import { TideClock } from '../services/TideClock';
 import type { TideSeries } from '../services/TideSeries';
 import type { WaveSeries } from '../services/WaveSeries';
@@ -44,7 +44,7 @@ function smoothPath(points: Array<{ x: number; y: number }>): string {
 const DEFAULT_WIDTH = 320;
 const HEIGHT = 150;
 const PADDING_X = 8;
-const PADDING_LEFT = 30; // room for the tide (m) axis labels
+const PADDING_LEFT = PADDING_X;
 const PADDING_TOP = 26; // extra room for the scrub tooltip
 const PADDING_BOTTOM = 4;
 const TOOLTIP_WIDTH = 170;
@@ -215,18 +215,6 @@ export function TideChart({ series, waveSeries, windSeries, now, startHour = 6, 
             strokeLinecap="round"
             strokeLinejoin="round"
           />
-          {tideGridLines.map((g) => (
-            <SvgText
-              key={g.value}
-              x={PADDING_LEFT - 4}
-              y={g.y + 3.5}
-              fontSize={10}
-              fill={colors.textSecondary}
-              textAnchor="end"
-            >
-              {g.value.toFixed(1)}m
-            </SvgText>
-          ))}
           {wavePath && (
             <Path
               d={wavePath}
