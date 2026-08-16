@@ -1,5 +1,4 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -15,33 +14,17 @@ import { ApiKeyPrompt } from './src/components/ApiKeyPrompt';
 import { CurrentLevelCard } from './src/components/CurrentLevelCard';
 import { ForecastList } from './src/components/ForecastList';
 import { TideChart } from './src/components/TideChart';
+import { useApiKey } from './src/hooks/useApiKey';
 import { useForecastData } from './src/hooks/useForecastData';
-import { SecureKeyStore } from './src/services/SecureKeyStore';
 import { TideForecast } from './src/services/TideForecast';
 import { TideSeries } from './src/services/TideSeries';
 import { WaveSeries } from './src/services/WaveSeries';
 import { WindSeries } from './src/services/WindSeries';
 import { colors } from './src/theme';
 
-const keyStore = new SecureKeyStore('wave-hastings-tidecheck-api-key');
-
 export default function App() {
-  const [apiKey, setApiKey] = useState<string | null | undefined>(undefined); // undefined = still loading
+  const { apiKey, saveKey, resetKey } = useApiKey();
   const { data, waveData, windData, fetchedAt, loading, error, load } = useForecastData(apiKey);
-
-  useEffect(() => {
-    keyStore.read().then(setApiKey);
-  }, []);
-
-  const handleSaveKey = async (key: string) => {
-    await keyStore.write(key);
-    setApiKey(key);
-  };
-
-  const handleResetKey = async () => {
-    await keyStore.clear();
-    setApiKey(null);
-  };
 
   if (apiKey === undefined) {
     return (
@@ -55,7 +38,7 @@ export default function App() {
     return (
       <LinearGradient colors={[colors.background, colors.backgroundGradientEnd]} style={styles.flex}>
         <StatusBar barStyle="light-content" />
-        <ApiKeyPrompt onSubmit={handleSaveKey} />
+        <ApiKeyPrompt onSubmit={saveKey} />
       </LinearGradient>
     );
   }
@@ -106,7 +89,7 @@ export default function App() {
             <Pressable onPress={() => load(true)} disabled={loading}>
               <Text style={styles.reset}>{loading ? 'Refreshing…' : 'Force refresh'}</Text>
             </Pressable>
-            <Pressable onPress={handleResetKey}>
+            <Pressable onPress={resetKey}>
               <Text style={styles.reset}>Reset API key</Text>
             </Pressable>
           </View>
