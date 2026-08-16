@@ -1,14 +1,17 @@
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { TideClock } from '../services/TideClock';
 import type { ForecastDay } from '../services/TideForecast';
+import type { WaveSeries } from '../services/WaveSeries';
 import { colors } from '../theme';
 
 interface Props {
   yesterday: ForecastDay | null;
   days: ForecastDay[];
+  waveSeries?: WaveSeries | null;
+  now: Date;
 }
 
-export function ForecastList({ yesterday, days }: Props) {
+export function ForecastList({ yesterday, days, waveSeries, now }: Props) {
   return (
     <View style={styles.container}>
       <Text style={styles.heading}>5-Day Forecast</Text>
@@ -52,6 +55,30 @@ export function ForecastList({ yesterday, days }: Props) {
               );
             })}
           </ScrollView>
+          {waveSeries && (
+            <View style={styles.waveRow}>
+              {(() => {
+                const [year, month, dayNum] = day.dateKey.split('-').map(Number);
+                const dayDate = new Date(year, month - 1, dayNum, 12, 0, 0);
+                const extremes = waveSeries.dailyExtremes(dayDate);
+                if (extremes.high === null || extremes.low === null) return null;
+                return (
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
+                    <View style={styles.chip}>
+                      <Text style={[styles.chipLabel, { color: colors.high }]}>H</Text>
+                      <Text style={styles.chipHeight}>{extremes.high.toFixed(1)}</Text>
+                      <Text style={[styles.chipTime, { fontSize: 10 }]}>wave</Text>
+                    </View>
+                    <View style={styles.chip}>
+                      <Text style={[styles.chipLabel, { color: colors.low }]}>L</Text>
+                      <Text style={styles.chipHeight}>{extremes.low.toFixed(1)}</Text>
+                      <Text style={[styles.chipTime, { fontSize: 10 }]}>wave</Text>
+                    </View>
+                  </ScrollView>
+                );
+              })()}
+            </View>
+          )}
         </View>
       ))}
     </View>
@@ -80,4 +107,5 @@ const styles = StyleSheet.create({
   chipHeight: { color: colors.textPrimary, fontSize: 13, fontWeight: '600' },
   chipTime: { color: colors.textSecondary, fontSize: 12 },
   yesterdayRow: { opacity: 0.5 },
+  waveRow: { marginTop: 6, opacity: 0.7 },
 });

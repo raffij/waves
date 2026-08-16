@@ -126,7 +126,7 @@ export default function App() {
 
           {error && <Text style={styles.error}>{error}</Text>}
 
-          <ForecastList yesterday={yesterday} days={days} />
+          <ForecastList yesterday={yesterday} days={days} waveSeries={waveSeries} now={now} />
 
           <Pressable onPress={handleResetKey}>
             <Text style={styles.reset}>Reset API key</Text>

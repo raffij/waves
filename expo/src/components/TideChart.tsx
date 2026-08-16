@@ -19,9 +19,9 @@ const HEIGHT = 150;
 const PADDING_X = 8;
 const PADDING_TOP = 26; // extra room for the scrub tooltip
 const PADDING_BOTTOM = 4;
-const TOOLTIP_WIDTH = 108;
+const TOOLTIP_WIDTH = 140;
 
-export function TideChart({ series, now, startHour = 6, endHour = 22 }: Props) {
+export function TideChart({ series, waveSeries, now, startHour = 6, endHour = 22 }: Props) {
   const [width, setWidth] = useState(DEFAULT_WIDTH);
   const onLayout = (evt: LayoutChangeEvent) => {
     const measured = evt.nativeEvent.layout.width;
@@ -30,9 +30,15 @@ export function TideChart({ series, now, startHour = 6, endHour = 22 }: Props) {
 
   const start = TideClock.londonDateAtHour(now, startHour);
   const end = TideClock.londonDateAtHour(now, endHour);
-  const samples = series
+  const tideSamples = series
     .samplesEvery(15, start, end)
     .filter((s): s is { time: Date; height: number } => s.height !== null);
+
+  const waveSamples = waveSeries
+    ? waveSeries
+        .samplesEvery(15, start, end)
+        .filter((s): s is { time: Date; height: number } => s.height !== null)
+    : [];
 
   const [scrubX, setScrubX] = useState<number | null>(null);
 
@@ -72,7 +78,7 @@ export function TideChart({ series, now, startHour = 6, endHour = 22 }: Props) {
     }),
   ).current;
 
-  if (samples.length < 2) {
+  if (tideSamples.length < 2) {
     return (
       <View style={styles.emptyState}>
         <Text style={styles.emptyText}>No chart data available</Text>
@@ -80,29 +86,52 @@ export function TideChart({ series, now, startHour = 6, endHour = 22 }: Props) {
     );
   }
 
-  const heights = samples.map((s) => s.height);
-  const minHeight = Math.min(...heights);
-  const maxHeight = Math.max(...heights);
-  const spread = maxHeight - minHeight || 1;
+  const tideHeights = tideSamples.map((s) => s.height);
+  const tideMinHeight = Math.min(...tideHeights);
+  const tideMaxHeight = Math.max(...tideHeights);
+  const tideSpread = tideMaxHeight - tideMinHeight || 1;
 
-  const toXY = (time: Date, height: number) => {
+  // Wave scaling: separate axis to show smaller wave heights clearly
+  const waveHeights = waveSamples.map((s) => s.height);
+  const waveMinHeight = waveHeights.length > 0 ? Math.min(...waveHeights) : 0;
+  const waveMaxHeight = waveHeights.length > 0 ? Math.max(...waveHeights) : 1;
+  const waveSpread = waveMaxHeight - waveMinHeight || 1;
+
+  const toTideXY = (time: Date, height: number) => {
     const x = PADDING_X + ((time.getTime() - start.getTime()) / totalMs) * plotWidth;
-    const y = PADDING_TOP + (1 - (height - minHeight) / spread) * plotHeight;
+    const y = PADDING_TOP + (1 - (height - tideMinHeight) / tideSpread) * plotHeight;
     return { x, y };
   };
 
-  const points = samples.map((s) => toXY(s.time, s.height));
-  const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
+  const toWaveXY = (time: Date, height: number) => {
+    const x = PADDING_X + ((time.getTime() - start.getTime()) / totalMs) * plotWidth;
+    const y = PADDING_TOP + (1 - (height - waveMinHeight) / waveSpread) * plotHeight;
+    return { x, y };
+  };
+
+  const tidePoints = tideSamples.map((s) => toTideXY(s.time, s.height));
+  const tidePath = tidePoints
+    .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
+    .join(' ');
   const floorY = PADDING_TOP + plotHeight;
-  const areaPath = `${linePath} L ${points[points.length - 1].x.toFixed(1)} ${floorY} L ${points[0].x.toFixed(1)} ${floorY} Z`;
+  const tideAreaPath = `${tidePath} L ${tidePoints[tidePoints.length - 1].x.toFixed(1)} ${floorY} L ${tidePoints[0].x.toFixed(1)} ${floorY} Z`;
+
+  const wavePoints = waveSamples.length > 0 ? waveSamples.map((s) => toWaveXY(s.time, s.height)) : [];
+  const wavePath =
+    wavePoints.length > 0
+      ? wavePoints
+          .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
+          .join(' ')
+      : '';
 
   const isScrubbing = scrubX !== null;
   const activeTime =
     scrubX !== null
       ? new Date(start.getTime() + ((scrubX - PADDING_X) / plotWidth) * totalMs)
       : new Date(Math.min(Math.max(now.getTime(), start.getTime()), end.getTime()));
-  const activeHeight = series.heightAt(activeTime);
-  const activePoint = activeHeight !== null ? toXY(activeTime, activeHeight) : null;
+  const activeTideHeight = series.heightAt(activeTime);
+  const activeWaveHeight = waveSeries?.heightAt(activeTime) ?? null;
+  const activeTidePoint = activeTideHeight !== null ? toTideXY(activeTime, activeTideHeight) : null;
 
   const hourTicks = [startHour, Math.round((startHour + endHour) / 2), endHour];
 
@@ -111,34 +140,45 @@ export function TideChart({ series, now, startHour = 6, endHour = 22 }: Props) {
       <View style={styles.chartArea}>
         <Svg width={width} height={HEIGHT}>
           <Defs>
-            <LinearGradient id="fill" x1="0" y1="0" x2="0" y2="1">
+            <LinearGradient id="tide-fill" x1="0" y1="0" x2="0" y2="1">
               <Stop offset="0" stopColor={colors.primary} stopOpacity={0.45} />
               <Stop offset="1" stopColor={colors.primary} stopOpacity={0.02} />
             </LinearGradient>
           </Defs>
-          <Path d={areaPath} fill="url(#fill)" stroke="none" />
+          <Path d={tideAreaPath} fill="url(#tide-fill)" stroke="none" />
           <Path
-            d={linePath}
+            d={tidePath}
             fill="none"
             stroke={colors.primary}
             strokeWidth={2.5}
             strokeLinecap="round"
             strokeLinejoin="round"
           />
-          {activePoint && (
+          {wavePath && (
+            <Path
+              d={wavePath}
+              fill="none"
+              stroke={colors.rising}
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              opacity={0.7}
+            />
+          )}
+          {activeTidePoint && (
             <>
               <Line
-                x1={activePoint.x}
+                x1={activeTidePoint.x}
                 y1={PADDING_TOP}
-                x2={activePoint.x}
+                x2={activeTidePoint.x}
                 y2={floorY}
                 stroke={colors.textSecondary}
                 strokeDasharray={isScrubbing ? undefined : '3,4'}
                 strokeWidth={1}
               />
               <Circle
-                cx={activePoint.x}
-                cy={activePoint.y}
+                cx={activeTidePoint.x}
+                cy={activeTidePoint.y}
                 r={isScrubbing ? 6 : 5}
                 fill={colors.textPrimary}
                 stroke={colors.primary}
@@ -147,17 +187,18 @@ export function TideChart({ series, now, startHour = 6, endHour = 22 }: Props) {
             </>
           )}
         </Svg>
-        {activeHeight !== null && activePoint && (
+        {activeTideHeight !== null && activeTidePoint && (
           <View
             pointerEvents="none"
             style={[
               styles.tooltip,
-              { left: Math.min(Math.max(activePoint.x - TOOLTIP_WIDTH / 2, 0), width - TOOLTIP_WIDTH) },
+              { left: Math.min(Math.max(activeTidePoint.x - TOOLTIP_WIDTH / 2, 0), width - TOOLTIP_WIDTH) },
             ]}
           >
             <Text style={styles.tooltipText} numberOfLines={1}>
               {TideClock.format(activeTime, { hour: '2-digit', minute: '2-digit', hour12: false })} ·{' '}
-              {activeHeight.toFixed(1)}m
+              {activeTideHeight.toFixed(1)}m
+              {activeWaveHeight !== null && ` / ${activeWaveHeight.toFixed(1)}w`}
             </Text>
           </View>
         )}
