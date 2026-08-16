@@ -26,7 +26,14 @@ const trendColor: Record<Trend, string> = {
 export function CurrentLevelCard({ current, fetchedAt }: Props) {
   return (
     <View style={styles.card}>
-      <Text style={styles.label}>Hastings Pier</Text>
+      <View style={styles.topRow}>
+        <Text style={styles.label}>Hastings Pier</Text>
+        {fetchedAt && (
+          <Text style={styles.updated}>
+            Updated {fetchedAt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/London' })}
+          </Text>
+        )}
+      </View>
       {current ? (
         <View style={styles.row}>
           <Text style={styles.height}>
@@ -41,23 +48,18 @@ export function CurrentLevelCard({ current, fetchedAt }: Props) {
       ) : (
         <Text style={styles.height}>—</Text>
       )}
-      {fetchedAt && (
-        <Text style={styles.updated}>
-          Updated {fetchedAt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/London' })}
-        </Text>
-      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.card,
-    borderColor: colors.cardBorder,
-    borderWidth: 1,
-    borderRadius: 18,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingTop: 4,
+  },
+  topRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   label: {
     color: colors.textSecondary,
@@ -72,9 +74,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginTop: 2,
   },
-  height: { color: colors.textPrimary, fontSize: 38, fontWeight: '700' },
-  unit: { fontSize: 16, fontWeight: '500', color: colors.textSecondary },
-  trendRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 4 },
+  height: { color: colors.textPrimary, fontSize: 48, fontWeight: '700' },
+  unit: { fontSize: 18, fontWeight: '500', color: colors.textSecondary },
+  trendRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 6 },
   trendText: { fontSize: 13, fontWeight: '600', textTransform: 'capitalize' },
-  updated: { color: colors.textSecondary, fontSize: 11, marginTop: 4 },
+  updated: { color: colors.textSecondary, fontSize: 11 },
 });

@@ -25,7 +25,7 @@ export function ForecastList({ days }: Props) {
               const parsed = TideClock.parseISODate(extreme.localTime);
               const time = parsed ? TideClock.format(parsed, { hour: '2-digit', minute: '2-digit', hour12: false }) : '';
               return (
-                <View key={i} style={[styles.chip, { backgroundColor: `${tint}22`, borderColor: tint }]}>
+                <View key={i} style={styles.chip}>
                   <Text style={[styles.chipLabel, { color: tint }]}>{extreme.type === 'high' ? 'H' : 'L'}</Text>
                   <Text style={styles.chipHeight}>{extreme.height.toFixed(1)}m</Text>
                   <Text style={styles.chipTime}>{time}</Text>
@@ -40,7 +40,7 @@ export function ForecastList({ days }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { marginTop: 24 },
+  container: { marginTop: 20, paddingTop: 20, borderTopWidth: 1, borderTopColor: colors.cardBorder },
   heading: { color: colors.textPrimary, fontSize: 16, fontWeight: '700', marginBottom: 12 },
   dayRow: { marginBottom: 14 },
   dayLabel: {
@@ -51,15 +51,11 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  chipsRow: { flexDirection: 'row', gap: 8, paddingRight: 4 },
+  chipsRow: { flexDirection: 'row', gap: 18, paddingRight: 4 },
   chip: {
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
+    alignItems: 'baseline',
+    gap: 5,
   },
   chipLabel: { fontWeight: '700', fontSize: 12 },
   chipHeight: { color: colors.textPrimary, fontSize: 13, fontWeight: '600' },
