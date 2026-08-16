@@ -105,12 +105,11 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    justifyContent: 'space-between',
     marginTop: 2,
   },
   height: { color: colors.textPrimary, fontSize: 48, fontWeight: '700' },
   unit: { fontSize: 18, fontWeight: '500', color: colors.textSecondary },
-  trendIcon: { marginBottom: 8 },
+  trendIcon: { marginBottom: 8, marginLeft: 2 },
   updated: { color: colors.textSecondary, fontSize: 11 },
   contentRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8, gap: 16 },
   tideSection: { flex: 1 },
