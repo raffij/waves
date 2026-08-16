@@ -11,6 +11,18 @@ export interface ForecastDay {
 export class TideForecast {
   constructor(private readonly extremes: Extreme[]) {}
 
+  yesterday(from: Date): ForecastDay | null {
+    const yesterdayDate = new Date(from.getTime() - 86_400_000);
+    const yesterdayKey = TideClock.dateKey(yesterdayDate);
+    const extremesForYesterday = this.extremes.filter((e) => e.localDate === yesterdayKey);
+    if (extremesForYesterday.length === 0) return null;
+    return {
+      label: 'Yesterday',
+      dateKey: yesterdayKey,
+      extremes: extremesForYesterday,
+    };
+  }
+
   days(from: Date, limit: number): ForecastDay[] {
     const todayKey = TideClock.dateKey(from);
     const tomorrowKey = TideClock.dateKey(new Date(from.getTime() + 86_400_000));

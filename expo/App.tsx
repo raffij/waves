@@ -91,6 +91,7 @@ export default function App() {
   const series = data ? new TideSeries(data.timeSeries) : null;
   const forecast = data ? new TideForecast(data.extremes) : null;
   const current = series?.currentLevel(now) ?? null;
+  const yesterday = forecast?.yesterday(now) ?? null;
   const days = forecast?.days(now, 5) ?? [];
 
   return (
@@ -113,7 +114,7 @@ export default function App() {
 
           {error && <Text style={styles.error}>{error}</Text>}
 
-          <ForecastList days={days} />
+          <ForecastList yesterday={yesterday} days={days} />
 
           <Pressable onPress={handleResetKey}>
             <Text style={styles.reset}>Reset API key</Text>

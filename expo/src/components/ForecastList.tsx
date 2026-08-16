@@ -4,13 +4,35 @@ import type { ForecastDay } from '../services/TideForecast';
 import { colors } from '../theme';
 
 interface Props {
+  yesterday: ForecastDay | null;
   days: ForecastDay[];
 }
 
-export function ForecastList({ days }: Props) {
+export function ForecastList({ yesterday, days }: Props) {
   return (
     <View style={styles.container}>
       <Text style={styles.heading}>5-Day Forecast</Text>
+      {yesterday && (
+        <View key={yesterday.dateKey} style={styles.dayRow}>
+          <Text style={styles.dayLabel}>{yesterday.label}</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
+            {yesterday.extremes.map((extreme) => {
+              const tint = extreme.type === 'high' ? colors.high : colors.low;
+              const parsed = TideClock.parseISODate(extreme.localTime);
+              const time = parsed
+                ? TideClock.format(parsed, { hour: '2-digit', minute: '2-digit', hour12: false })
+                : '';
+              return (
+                <View key={extreme.localTime} style={styles.chip}>
+                  <Text style={[styles.chipLabel, { color: tint }]}>{extreme.type === 'high' ? 'H' : 'L'}</Text>
+                  <Text style={styles.chipHeight}>{extreme.height.toFixed(1)}</Text>
+                  <Text style={styles.chipTime}>{time}</Text>
+                </View>
+              );
+            })}
+          </ScrollView>
+        </View>
+      )}
       {days.map((day) => (
         <View key={day.dateKey} style={styles.dayRow}>
           <Text style={styles.dayLabel}>{day.label}</Text>
