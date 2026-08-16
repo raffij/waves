@@ -108,7 +108,9 @@ export default function App() {
   const forecast = data ? new TideForecast(data.extremes) : null;
   const current = series?.currentLevel(now) ?? null;
   const waveHeight = waveSeries?.heightAt(now) ?? null;
+  const waveTrend = waveSeries?.trend(now) ?? 'unknown';
   const windSpeed = windSeries?.speedAt(now) ?? null;
+  const windTrend = windSeries?.trend(now) ?? 'unknown';
   const yesterday = forecast?.yesterday(now) ?? null;
   const days = forecast?.days(now, 5) ?? [];
 
@@ -122,7 +124,14 @@ export default function App() {
             <RefreshControl tintColor={colors.primary} refreshing={loading} onRefresh={() => load(true)} />
           }
         >
-          <CurrentLevelCard current={current} waveHeight={waveHeight} windSpeed={windSpeed} fetchedAt={fetchedAt} />
+          <CurrentLevelCard
+            current={current}
+            waveHeight={waveHeight}
+            waveTrend={waveTrend}
+            windSpeed={windSpeed}
+            windTrend={windTrend}
+            fetchedAt={fetchedAt}
+          />
 
           {series && (
             <View style={styles.chartCard}>

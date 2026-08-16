@@ -1,5 +1,10 @@
 import { TideClock } from './TideClock';
+import type { Trend } from './TideSeries';
 import type { WindData } from './WaveAPIClient';
+
+// Below this, an hour-over-hour change reads as noise rather than a
+// genuine rise or fall in wind speed.
+const STEADY_THRESHOLD_MS = 0.3;
 
 export class WindSeries {
   private readonly points: Array<{ time: Date; speed: number | null }>;
@@ -61,5 +66,15 @@ export class WindSeries {
       high: Math.max(...speeds),
       low: Math.min(...speeds),
     };
+  }
+
+  trend(date: Date): Trend {
+    const now = this.speedAt(date);
+    const past = this.speedAt(new Date(date.getTime() - 60 * 60 * 1000));
+    if (now === null || past === null) return 'unknown';
+
+    const diff = now - past;
+    if (Math.abs(diff) < STEADY_THRESHOLD_MS) return 'steady';
+    return diff > 0 ? 'rising' : 'falling';
   }
 }

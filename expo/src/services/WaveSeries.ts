@@ -1,5 +1,10 @@
 import { TideClock } from './TideClock';
+import type { Trend } from './TideSeries';
 import type { WaveData } from './WaveAPIClient';
+
+// Below this, an hour-over-hour change reads as noise rather than a
+// genuine rise or fall (wave height typically moves gradually, 0.2-1.5m).
+const STEADY_THRESHOLD_M = 0.05;
 
 export class WaveSeries {
   private readonly points: Array<{ time: Date; height: number | null }>;
@@ -61,5 +66,15 @@ export class WaveSeries {
       high: Math.max(...heights),
       low: Math.min(...heights),
     };
+  }
+
+  trend(date: Date): Trend {
+    const now = this.heightAt(date);
+    const past = this.heightAt(new Date(date.getTime() - 60 * 60 * 1000));
+    if (now === null || past === null) return 'unknown';
+
+    const diff = now - past;
+    if (Math.abs(diff) < STEADY_THRESHOLD_M) return 'steady';
+    return diff > 0 ? 'rising' : 'falling';
   }
 }

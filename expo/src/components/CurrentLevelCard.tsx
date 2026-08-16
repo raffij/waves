@@ -6,15 +6,17 @@ import { colors } from '../theme';
 interface Props {
   current: CurrentLevel | null;
   waveHeight: number | null;
+  waveTrend: Trend;
   windSpeed: number | null;
+  windTrend: Trend;
   fetchedAt: Date | null;
 }
 
 const trendIcon: Record<Trend, keyof typeof Ionicons.glyphMap> = {
-  rising: 'arrow-up-circle',
-  falling: 'arrow-down-circle',
-  steady: 'remove-circle',
-  unknown: 'help-circle',
+  rising: 'arrow-up',
+  falling: 'arrow-down',
+  steady: 'remove',
+  unknown: 'help',
 };
 
 const trendColor: Record<Trend, string> = {
@@ -24,7 +26,11 @@ const trendColor: Record<Trend, string> = {
   unknown: colors.textSecondary,
 };
 
-export function CurrentLevelCard({ current, waveHeight, windSpeed, fetchedAt }: Props) {
+function TrendArrow({ trend }: { trend: Trend }) {
+  return <Ionicons name={trendIcon[trend]} size={16} color={trendColor[trend]} style={styles.trendIcon} />;
+}
+
+export function CurrentLevelCard({ current, waveHeight, waveTrend, windSpeed, windTrend, fetchedAt }: Props) {
   return (
     <View style={styles.card}>
       <View style={styles.topRow}>
@@ -45,10 +51,7 @@ export function CurrentLevelCard({ current, waveHeight, windSpeed, fetchedAt }: 
                 {current.height.toFixed(1)}
                 <Text style={styles.unit}>m</Text>
               </Text>
-              <View style={styles.trendRow}>
-                <Ionicons name={trendIcon[current.trend]} size={16} color={trendColor[current.trend]} />
-                <Text style={[styles.trendText, { color: trendColor[current.trend] }]}>{current.trend}</Text>
-              </View>
+              <TrendArrow trend={current.trend} />
             </View>
           ) : (
             <Text style={styles.height}>—</Text>
@@ -57,19 +60,25 @@ export function CurrentLevelCard({ current, waveHeight, windSpeed, fetchedAt }: 
         {waveHeight !== null && (
           <View style={styles.waveSection}>
             <Text style={styles.sectionLabel}>Wave</Text>
-            <Text style={styles.height}>
-              {waveHeight.toFixed(1)}
-              <Text style={styles.unit}>m</Text>
-            </Text>
+            <View style={styles.row}>
+              <Text style={styles.height}>
+                {waveHeight.toFixed(1)}
+                <Text style={styles.unit}>m</Text>
+              </Text>
+              <TrendArrow trend={waveTrend} />
+            </View>
           </View>
         )}
         {windSpeed !== null && (
           <View style={styles.windSection}>
             <Text style={styles.sectionLabel}>Wind</Text>
-            <Text style={styles.height}>
-              {windSpeed.toFixed(1)}
-              <Text style={styles.unit}>m/s</Text>
-            </Text>
+            <View style={styles.row}>
+              <Text style={styles.height}>
+                {windSpeed.toFixed(1)}
+                <Text style={styles.unit}>m/s</Text>
+              </Text>
+              <TrendArrow trend={windTrend} />
+            </View>
           </View>
         )}
       </View>
@@ -101,8 +110,7 @@ const styles = StyleSheet.create({
   },
   height: { color: colors.textPrimary, fontSize: 48, fontWeight: '700' },
   unit: { fontSize: 18, fontWeight: '500', color: colors.textSecondary },
-  trendRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 6 },
-  trendText: { fontSize: 13, fontWeight: '600', textTransform: 'capitalize' },
+  trendIcon: { marginBottom: 8 },
   updated: { color: colors.textSecondary, fontSize: 11 },
   contentRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8, gap: 16 },
   tideSection: { flex: 1 },
