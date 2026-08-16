@@ -89,31 +89,43 @@ export class WaveAPIClient {
     forecastUrl.searchParams.append('wind_speed_unit', 'ms');
     forecastUrl.searchParams.append('timezone', 'Europe/London');
 
+    // Wave (marine) data is essential; wind is a nice-to-have overlay.
+    // Fetching both with Promise.all would mean an ad-blocker or firewall
+    // rejecting just the wind request (a real-world occurrence — some
+    // client-side blockers flag api.open-meteo.com's generic "api."
+    // subdomain even though marine-api.open-meteo.com is left alone)
+    // throws away the wave data too. Fetch independently instead, so wave
+    // still loads even when wind doesn't.
+    let marineJson: { hourly: { time: string[]; wave_height: (number | null)[] } } | null = null;
     try {
-      const [marineResponse, forecastResponse] = await Promise.all([
-        fetch(marineUrl.toString()),
-        fetch(forecastUrl.toString()),
-      ]);
-      if (!marineResponse.ok) return null;
-
-      const marineJson = (await marineResponse.json()) as {
-        hourly: { time: string[]; wave_height: (number | null)[] };
-      };
-      const forecastJson = forecastResponse.ok
-        ? ((await forecastResponse.json()) as { hourly: { time: string[]; wind_speed_10m: (number | null)[] } })
-        : null;
-
-      return {
-        data: {
-          time: marineJson.hourly.time,
-          wave_height: marineJson.hourly.wave_height,
-          wind_speed: forecastJson?.hourly.wind_speed_10m,
-        },
-        fetchedAt: new Date(),
-      };
+      const marineResponse = await fetch(marineUrl.toString());
+      if (marineResponse.ok) marineJson = await marineResponse.json();
     } catch {
-      return null;
+      // network/blocked — leave marineJson null
     }
+    if (!marineJson) return null;
+
+    let windSpeed: (number | null)[] | undefined;
+    try {
+      const forecastResponse = await fetch(forecastUrl.toString());
+      if (forecastResponse.ok) {
+        const forecastJson = (await forecastResponse.json()) as {
+          hourly: { time: string[]; wind_speed_10m: (number | null)[] };
+        };
+        windSpeed = forecastJson.hourly.wind_speed_10m;
+      }
+    } catch {
+      // network/blocked — wind stays undefined, wave data is unaffected
+    }
+
+    return {
+      data: {
+        time: marineJson.hourly.time,
+        wave_height: marineJson.hourly.wave_height,
+        wind_speed: windSpeed,
+      },
+      fetchedAt: new Date(),
+    };
   }
 
   private formatDate(date: Date): string {
