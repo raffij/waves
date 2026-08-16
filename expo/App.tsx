@@ -20,6 +20,7 @@ import { SecureKeyStore } from './src/services/SecureKeyStore';
 import { TideAPIClient } from './src/services/TideAPIClient';
 import { TideForecast } from './src/services/TideForecast';
 import { TideSeries } from './src/services/TideSeries';
+import type { WaveData, WindData } from './src/services/WaveAPIClient';
 import { WaveAPIClient } from './src/services/WaveAPIClient';
 import { WaveSeries } from './src/services/WaveSeries';
 import { WindSeries } from './src/services/WindSeries';
@@ -31,7 +32,8 @@ const keyStore = new SecureKeyStore('wave-hastings-tidecheck-api-key');
 export default function App() {
   const [apiKey, setApiKey] = useState<string | null | undefined>(undefined); // undefined = still loading
   const [data, setData] = useState<TideResponse | null>(null);
-  const [waveData, setWaveData] = useState<any>(null);
+  const [waveData, setWaveData] = useState<WaveData | null>(null);
+  const [windData, setWindData] = useState<WindData | null>(null);
   const [fetchedAt, setFetchedAt] = useState<Date | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,6 +60,7 @@ export default function App() {
       const waveResult = force ? await waveClient.forceRefresh() : await waveClient.loadWaveData();
       if (waveResult) {
         setWaveData(waveResult.data);
+        setWindData(waveResult.wind);
       }
 
       setLoading(false);
@@ -101,7 +104,7 @@ export default function App() {
   const now = new Date();
   const series = data ? new TideSeries(data.timeSeries) : null;
   const waveSeries = waveData ? new WaveSeries(waveData) : null;
-  const windSeries = waveData ? new WindSeries(waveData) : null;
+  const windSeries = windData ? new WindSeries(windData) : null;
   const forecast = data ? new TideForecast(data.extremes) : null;
   const current = series?.currentLevel(now) ?? null;
   const waveHeight = waveSeries?.heightAt(now) ?? null;

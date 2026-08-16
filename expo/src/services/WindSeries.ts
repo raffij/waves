@@ -1,15 +1,14 @@
 import { TideClock } from './TideClock';
-import type { WaveData } from './WaveAPIClient';
+import type { WindData } from './WaveAPIClient';
 
 export class WindSeries {
   private readonly points: Array<{ time: Date; speed: number | null }>;
 
-  constructor(data: WaveData) {
-    this.points =
-      data.wind_speed?.map((speed, i) => ({
-        time: new Date(data.time[i]),
-        speed: speed ?? null,
-      })) ?? [];
+  constructor(data: WindData) {
+    this.points = data.time.map((t, i) => ({
+      time: new Date(t),
+      speed: data.wind_speed[i] ?? null,
+    }));
   }
 
   speedAt(date: Date): number | null {

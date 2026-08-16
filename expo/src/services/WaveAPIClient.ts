@@ -2,21 +2,26 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const CACHE_DATA_KEY = 'wave-hastings-wave-cache';
 const CACHE_MAX_AGE_MS = 6 * 60 * 60 * 1000; // 6 hours
+const LATITUDE = '50.86';
+const LONGITUDE = '0.60';
 
 export interface WaveData {
   time: string[];
   wave_height: (number | null)[];
-  wind_speed?: (number | null)[];
+}
+
+export interface WindData {
+  time: string[];
+  wind_speed: (number | null)[];
 }
 
 export interface WaveDataResult {
   data: WaveData;
+  wind: WindData | null;
   fetchedAt: Date;
 }
 
 export class WaveAPIClient {
-  constructor(private readonly stationId: string = 'hastings_pier') {}
-
   async loadWaveData(): Promise<WaveDataResult | null> {
     const cached = await this.getCached();
     if (cached) return cached;
@@ -33,14 +38,14 @@ export class WaveAPIClient {
       const cached = await AsyncStorage.getItem(CACHE_DATA_KEY);
       if (!cached) return null;
 
-      const { data, cachedAt } = JSON.parse(cached);
+      const { data, wind, cachedAt } = JSON.parse(cached);
       const age = Date.now() - cachedAt;
       if (age > CACHE_MAX_AGE_MS) {
         await AsyncStorage.removeItem(CACHE_DATA_KEY);
         return null;
       }
 
-      return { data, fetchedAt: new Date(cachedAt) };
+      return { data, wind: wind ?? null, fetchedAt: new Date(cachedAt) };
     } catch {
       return null;
     }
@@ -55,6 +60,7 @@ export class WaveAPIClient {
         CACHE_DATA_KEY,
         JSON.stringify({
           data: result.data,
+          wind: result.wind,
           cachedAt: result.fetchedAt.getTime(),
         }),
       );
@@ -66,66 +72,77 @@ export class WaveAPIClient {
   }
 
   private async fetch(): Promise<WaveDataResult | null> {
-    const now = new Date();
-    const startDate = this.formatDate(new Date(now.getTime() - 86_400_000));
-    const endDate = this.formatDate(new Date(now.getTime() + 5 * 86_400_000));
-
-    const marineUrl = new URL('https://marine-api.open-meteo.com/v1/marine');
-    marineUrl.searchParams.append('latitude', '50.86');
-    marineUrl.searchParams.append('longitude', '0.60');
-    marineUrl.searchParams.append('start_date', startDate);
-    marineUrl.searchParams.append('end_date', endDate);
-    marineUrl.searchParams.append('hourly', 'wave_height');
-    marineUrl.searchParams.append('timezone', 'Europe/London');
-
-    // wind_speed_10m lives on the general Forecast API, not the Marine API
-    // (the Marine API silently accepts the param but returns all nulls).
-    const forecastUrl = new URL('https://api.open-meteo.com/v1/forecast');
-    forecastUrl.searchParams.append('latitude', '50.86');
-    forecastUrl.searchParams.append('longitude', '0.60');
-    forecastUrl.searchParams.append('start_date', startDate);
-    forecastUrl.searchParams.append('end_date', endDate);
-    forecastUrl.searchParams.append('hourly', 'wind_speed_10m');
-    forecastUrl.searchParams.append('wind_speed_unit', 'ms');
-    forecastUrl.searchParams.append('timezone', 'Europe/London');
-
-    // Wave (marine) data is essential; wind is a nice-to-have overlay.
-    // Fetching both with Promise.all would mean an ad-blocker or firewall
-    // rejecting just the wind request (a real-world occurrence — some
-    // client-side blockers flag api.open-meteo.com's generic "api."
-    // subdomain even though marine-api.open-meteo.com is left alone)
-    // throws away the wave data too. Fetch independently instead, so wave
-    // still loads even when wind doesn't.
-    let marineJson: { hourly: { time: string[]; wave_height: (number | null)[] } } | null = null;
-    try {
-      const marineResponse = await fetch(marineUrl.toString());
-      if (marineResponse.ok) marineJson = await marineResponse.json();
-    } catch {
-      // network/blocked — leave marineJson null
-    }
+    const marineJson = await this.fetchWave();
     if (!marineJson) return null;
 
-    let windSpeed: (number | null)[] | undefined;
-    try {
-      const forecastResponse = await fetch(forecastUrl.toString());
-      if (forecastResponse.ok) {
-        const forecastJson = (await forecastResponse.json()) as {
-          hourly: { time: string[]; wind_speed_10m: (number | null)[] };
-        };
-        windSpeed = forecastJson.hourly.wind_speed_10m;
-      }
-    } catch {
-      // network/blocked — wind stays undefined, wave data is unaffected
-    }
+    const wind = await this.fetchWind();
 
     return {
       data: {
         time: marineJson.hourly.time,
         wave_height: marineJson.hourly.wave_height,
-        wind_speed: windSpeed,
       },
+      wind,
       fetchedAt: new Date(),
     };
+  }
+
+  // Wave (marine) data is essential; wind is a nice-to-have overlay fetched
+  // from an entirely separate provider (met.no, not Open-Meteo) on its own
+  // timeline. They're fetched and cached independently so a wind request
+  // failing (blocked by a client-side filter, network hiccup, provider
+  // outage) never takes wave data down with it.
+  private async fetchWave(): Promise<{ hourly: { time: string[]; wave_height: (number | null)[] } } | null> {
+    const now = new Date();
+    const startDate = this.formatDate(new Date(now.getTime() - 86_400_000));
+    const endDate = this.formatDate(new Date(now.getTime() + 5 * 86_400_000));
+
+    const marineUrl = new URL('https://marine-api.open-meteo.com/v1/marine');
+    marineUrl.searchParams.append('latitude', LATITUDE);
+    marineUrl.searchParams.append('longitude', LONGITUDE);
+    marineUrl.searchParams.append('start_date', startDate);
+    marineUrl.searchParams.append('end_date', endDate);
+    marineUrl.searchParams.append('hourly', 'wave_height');
+    marineUrl.searchParams.append('timezone', 'Europe/London');
+
+    try {
+      const response = await fetch(marineUrl.toString());
+      if (!response.ok) return null;
+      return await response.json();
+    } catch {
+      return null;
+    }
+  }
+
+  // met.no's Locationforecast: free, no API key, hourly resolution for the
+  // first ~3 days then every 6 hours out to ~9 days. No historical data,
+  // but the app never needs wind further back than "now".
+  private async fetchWind(): Promise<WindData | null> {
+    const url = new URL('https://api.met.no/weatherapi/locationforecast/2.0/compact');
+    url.searchParams.append('lat', LATITUDE);
+    url.searchParams.append('lon', LONGITUDE);
+
+    try {
+      const response = await fetch(url.toString());
+      if (!response.ok) return null;
+
+      const json = (await response.json()) as {
+        properties: {
+          timeseries: Array<{ time: string; data: { instant: { details: { wind_speed?: number } } } }>;
+        };
+      };
+
+      const time: string[] = [];
+      const wind_speed: (number | null)[] = [];
+      for (const point of json.properties.timeseries) {
+        time.push(point.time);
+        wind_speed.push(point.data.instant.details.wind_speed ?? null);
+      }
+
+      return { time, wind_speed };
+    } catch {
+      return null;
+    }
   }
 
   private formatDate(date: Date): string {
