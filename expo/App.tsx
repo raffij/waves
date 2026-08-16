@@ -22,6 +22,7 @@ import { TideForecast } from './src/services/TideForecast';
 import { TideSeries } from './src/services/TideSeries';
 import { WaveAPIClient } from './src/services/WaveAPIClient';
 import { WaveSeries } from './src/services/WaveSeries';
+import { WindSeries } from './src/services/WindSeries';
 import { colors } from './src/theme';
 
 const STATION_ID = 'hastings_pier-hgp-gbr-cco';
@@ -100,9 +101,11 @@ export default function App() {
   const now = new Date();
   const series = data ? new TideSeries(data.timeSeries) : null;
   const waveSeries = waveData ? new WaveSeries(waveData) : null;
+  const windSeries = waveData ? new WindSeries(waveData) : null;
   const forecast = data ? new TideForecast(data.extremes) : null;
   const current = series?.currentLevel(now) ?? null;
   const waveHeight = waveSeries?.heightAt(now) ?? null;
+  const windSpeed = windSeries?.speedAt(now) ?? null;
   const yesterday = forecast?.yesterday(now) ?? null;
   const days = forecast?.days(now, 5) ?? [];
 
@@ -116,11 +119,11 @@ export default function App() {
             <RefreshControl tintColor={colors.primary} refreshing={loading} onRefresh={() => load(true)} />
           }
         >
-          <CurrentLevelCard current={current} waveHeight={waveHeight} fetchedAt={fetchedAt} />
+          <CurrentLevelCard current={current} waveHeight={waveHeight} windSpeed={windSpeed} fetchedAt={fetchedAt} />
 
           {series && (
             <View style={styles.chartCard}>
-              <TideChart series={series} waveSeries={waveSeries} now={now} />
+              <TideChart series={series} waveSeries={waveSeries} windSeries={windSeries} now={now} />
             </View>
           )}
 

@@ -6,6 +6,7 @@ import { colors } from '../theme';
 interface Props {
   current: CurrentLevel | null;
   waveHeight: number | null;
+  windSpeed: number | null;
   fetchedAt: Date | null;
 }
 
@@ -23,7 +24,7 @@ const trendColor: Record<Trend, string> = {
   unknown: colors.textSecondary,
 };
 
-export function CurrentLevelCard({ current, waveHeight, fetchedAt }: Props) {
+export function CurrentLevelCard({ current, waveHeight, windSpeed, fetchedAt }: Props) {
   return (
     <View style={styles.card}>
       <View style={styles.topRow}>
@@ -62,6 +63,15 @@ export function CurrentLevelCard({ current, waveHeight, fetchedAt }: Props) {
             </Text>
           </View>
         )}
+        {windSpeed !== null && (
+          <View style={styles.windSection}>
+            <Text style={styles.sectionLabel}>Wind</Text>
+            <Text style={styles.height}>
+              {windSpeed.toFixed(1)}
+              <Text style={styles.unit}>m/s</Text>
+            </Text>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -97,5 +107,13 @@ const styles = StyleSheet.create({
   contentRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8, gap: 16 },
   tideSection: { flex: 1 },
   waveSection: { flex: 1 },
-  sectionLabel: { color: colors.textSecondary, fontSize: 11, fontWeight: '600', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 },
+  windSection: { flex: 1 },
+  sectionLabel: {
+    color: colors.textSecondary,
+    fontSize: 11,
+    fontWeight: '600',
+    marginBottom: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
 });

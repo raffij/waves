@@ -11,4 +11,5 @@ export const colors = {
   low: '#4fd1ff',
   rising: '#7ee787',
   falling: '#ff8a80',
+  wind: '#ffb86c',
 } as const;

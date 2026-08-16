@@ -4,11 +4,13 @@ import Svg, { Circle, Defs, Line, LinearGradient, Path, Stop } from 'react-nativ
 import { TideClock } from '../services/TideClock';
 import type { TideSeries } from '../services/TideSeries';
 import type { WaveSeries } from '../services/WaveSeries';
+import type { WindSeries } from '../services/WindSeries';
 import { colors } from '../theme';
 
 interface Props {
   series: TideSeries;
   waveSeries?: WaveSeries | null;
+  windSeries?: WindSeries | null;
   now: Date;
   startHour?: number;
   endHour?: number;
@@ -19,9 +21,9 @@ const HEIGHT = 150;
 const PADDING_X = 8;
 const PADDING_TOP = 26; // extra room for the scrub tooltip
 const PADDING_BOTTOM = 4;
-const TOOLTIP_WIDTH = 140;
+const TOOLTIP_WIDTH = 170;
 
-export function TideChart({ series, waveSeries, now, startHour = 6, endHour = 22 }: Props) {
+export function TideChart({ series, waveSeries, windSeries, now, startHour = 6, endHour = 22 }: Props) {
   const [width, setWidth] = useState(DEFAULT_WIDTH);
   const onLayout = (evt: LayoutChangeEvent) => {
     const measured = evt.nativeEvent.layout.width;
@@ -35,9 +37,11 @@ export function TideChart({ series, waveSeries, now, startHour = 6, endHour = 22
     .filter((s): s is { time: Date; height: number } => s.height !== null);
 
   const waveSamples = waveSeries
-    ? waveSeries
-        .samplesEvery(15, start, end)
-        .filter((s): s is { time: Date; height: number } => s.height !== null)
+    ? waveSeries.samplesEvery(15, start, end).filter((s): s is { time: Date; height: number } => s.height !== null)
+    : [];
+
+  const windSamples = windSeries
+    ? windSeries.samplesEvery(15, start, end).filter((s): s is { time: Date; speed: number } => s.speed !== null)
     : [];
 
   const [scrubX, setScrubX] = useState<number | null>(null);
@@ -97,6 +101,12 @@ export function TideChart({ series, waveSeries, now, startHour = 6, endHour = 22
   const waveMaxHeight = waveHeights.length > 0 ? Math.max(...waveHeights) : 1;
   const waveSpread = waveMaxHeight - waveMinHeight || 1;
 
+  // Wind scaling: different unit (m/s) with typical range 0-20
+  const windSpeeds = windSamples.map((s) => s.speed);
+  const windMinSpeed = windSpeeds.length > 0 ? Math.min(...windSpeeds) : 0;
+  const windMaxSpeed = windSpeeds.length > 0 ? Math.max(...windSpeeds) : 1;
+  const windSpread = windMaxSpeed - windMinSpeed || 1;
+
   const toTideXY = (time: Date, height: number) => {
     const x = PADDING_X + ((time.getTime() - start.getTime()) / totalMs) * plotWidth;
     const y = PADDING_TOP + (1 - (height - tideMinHeight) / tideSpread) * plotHeight;
@@ -109,20 +119,30 @@ export function TideChart({ series, waveSeries, now, startHour = 6, endHour = 22
     return { x, y };
   };
 
+  const toWindXY = (time: Date, speed: number) => {
+    const x = PADDING_X + ((time.getTime() - start.getTime()) / totalMs) * plotWidth;
+    const y = PADDING_TOP + (1 - (speed - windMinSpeed) / windSpread) * plotHeight;
+    return { x, y };
+  };
+
   const tidePoints = tideSamples.map((s) => toTideXY(s.time, s.height));
-  const tidePath = tidePoints
-    .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
-    .join(' ');
+  const tidePath = tidePoints.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
   const floorY = PADDING_TOP + plotHeight;
   const tideAreaPath = `${tidePath} L ${tidePoints[tidePoints.length - 1].x.toFixed(1)} ${floorY} L ${tidePoints[0].x.toFixed(1)} ${floorY} Z`;
 
   const wavePoints = waveSamples.length > 0 ? waveSamples.map((s) => toWaveXY(s.time, s.height)) : [];
   const wavePath =
     wavePoints.length > 0
-      ? wavePoints
-          .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
-          .join(' ')
+      ? wavePoints.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ')
       : '';
+
+  const windPoints = windSamples.length > 0 ? windSamples.map((s) => toWindXY(s.time, s.speed)) : [];
+  const windPath =
+    windPoints.length > 0
+      ? windPoints.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ')
+      : '';
+
+  const currentX = PADDING_X + ((now.getTime() - start.getTime()) / totalMs) * plotWidth;
 
   const isScrubbing = scrubX !== null;
   const activeTime =
@@ -131,6 +151,7 @@ export function TideChart({ series, waveSeries, now, startHour = 6, endHour = 22
       : new Date(Math.min(Math.max(now.getTime(), start.getTime()), end.getTime()));
   const activeTideHeight = series.heightAt(activeTime);
   const activeWaveHeight = waveSeries?.heightAt(activeTime) ?? null;
+  const activeWindSpeed = windSeries?.speedAt(activeTime) ?? null;
   const activeTidePoint = activeTideHeight !== null ? toTideXY(activeTime, activeTideHeight) : null;
 
   const hourTicks = [startHour, Math.round((startHour + endHour) / 2), endHour];
@@ -165,6 +186,28 @@ export function TideChart({ series, waveSeries, now, startHour = 6, endHour = 22
               opacity={0.7}
             />
           )}
+          {windPath && (
+            <Path
+              d={windPath}
+              fill="none"
+              stroke={colors.wind}
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              opacity={0.6}
+            />
+          )}
+          {!isScrubbing && currentX >= PADDING_X && currentX <= width - PADDING_X && (
+            <Line
+              x1={currentX}
+              y1={PADDING_TOP}
+              x2={currentX}
+              y2={floorY}
+              stroke={colors.textSecondary}
+              strokeWidth={1.5}
+              opacity={0.5}
+            />
+          )}
           {activeTidePoint && (
             <>
               <Line
@@ -195,10 +238,10 @@ export function TideChart({ series, waveSeries, now, startHour = 6, endHour = 22
               { left: Math.min(Math.max(activeTidePoint.x - TOOLTIP_WIDTH / 2, 0), width - TOOLTIP_WIDTH) },
             ]}
           >
-            <Text style={styles.tooltipText} numberOfLines={1}>
+            <Text style={styles.tooltipText} numberOfLines={2}>
               {TideClock.format(activeTime, { hour: '2-digit', minute: '2-digit', hour12: false })} ·{' '}
-              {activeTideHeight.toFixed(1)}m
-              {activeWaveHeight !== null && ` / ${activeWaveHeight.toFixed(1)}w`}
+              {activeTideHeight.toFixed(1)}m{activeWaveHeight !== null && ` / ${activeWaveHeight.toFixed(1)}w`}
+              {activeWindSpeed !== null && ` / ${activeWindSpeed.toFixed(1)}s`}
             </Text>
           </View>
         )}
