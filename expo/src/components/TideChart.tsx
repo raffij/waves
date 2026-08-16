@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { type LayoutChangeEvent, PanResponder, StyleSheet, Text, View } from 'react-native';
-import Svg, { Circle, Defs, Line, LinearGradient, Path, Stop } from 'react-native-svg';
+import Svg, { Circle, Defs, Line, LinearGradient, Path, Stop, Text as SvgText } from 'react-native-svg';
 import { TideClock } from '../services/TideClock';
 import type { TideSeries } from '../services/TideSeries';
 import type { WaveSeries } from '../services/WaveSeries';
@@ -19,6 +19,7 @@ interface Props {
 const DEFAULT_WIDTH = 320;
 const HEIGHT = 150;
 const PADDING_X = 8;
+const PADDING_LEFT = 30; // room for the tide (m) axis labels
 const PADDING_TOP = 26; // extra room for the scrub tooltip
 const PADDING_BOTTOM = 4;
 const TOOLTIP_WIDTH = 170;
@@ -46,7 +47,7 @@ export function TideChart({ series, waveSeries, windSeries, now, startHour = 6, 
 
   const [scrubX, setScrubX] = useState<number | null>(null);
 
-  const plotWidth = width - PADDING_X * 2;
+  const plotWidth = width - PADDING_LEFT - PADDING_X;
   const plotHeight = HEIGHT - PADDING_TOP - PADDING_BOTTOM;
   const totalMs = end.getTime() - start.getTime();
 
@@ -68,11 +69,11 @@ export function TideChart({ series, waveSeries, windSeries, now, startHour = 6, 
       onMoveShouldSetPanResponder: () => true,
       onPanResponderGrant: (evt) => {
         const w = widthRef.current;
-        setScrubX(Math.min(Math.max(evt.nativeEvent.locationX, PADDING_X), w - PADDING_X));
+        setScrubX(Math.min(Math.max(evt.nativeEvent.locationX, PADDING_LEFT), w - PADDING_X));
       },
       onPanResponderMove: (evt) => {
         const w = widthRef.current;
-        setScrubX(Math.min(Math.max(evt.nativeEvent.locationX, PADDING_X), w - PADDING_X));
+        setScrubX(Math.min(Math.max(evt.nativeEvent.locationX, PADDING_LEFT), w - PADDING_X));
       },
       // Without this, the parent ScrollView can (and does) steal the
       // gesture partway through a drag, freezing the reading wherever the
@@ -108,22 +109,28 @@ export function TideChart({ series, waveSeries, windSeries, now, startHour = 6, 
   const windSpread = windMaxSpeed - windMinSpeed || 1;
 
   const toTideXY = (time: Date, height: number) => {
-    const x = PADDING_X + ((time.getTime() - start.getTime()) / totalMs) * plotWidth;
+    const x = PADDING_LEFT + ((time.getTime() - start.getTime()) / totalMs) * plotWidth;
     const y = PADDING_TOP + (1 - (height - tideMinHeight) / tideSpread) * plotHeight;
     return { x, y };
   };
 
   const toWaveXY = (time: Date, height: number) => {
-    const x = PADDING_X + ((time.getTime() - start.getTime()) / totalMs) * plotWidth;
+    const x = PADDING_LEFT + ((time.getTime() - start.getTime()) / totalMs) * plotWidth;
     const y = PADDING_TOP + (1 - (height - waveMinHeight) / waveSpread) * plotHeight;
     return { x, y };
   };
 
   const toWindXY = (time: Date, speed: number) => {
-    const x = PADDING_X + ((time.getTime() - start.getTime()) / totalMs) * plotWidth;
+    const x = PADDING_LEFT + ((time.getTime() - start.getTime()) / totalMs) * plotWidth;
     const y = PADDING_TOP + (1 - (speed - windMinSpeed) / windSpread) * plotHeight;
     return { x, y };
   };
+
+  const tideMidHeight = (tideMinHeight + tideMaxHeight) / 2;
+  const tideGridLines = [tideMaxHeight, tideMidHeight, tideMinHeight].map((value) => ({
+    value,
+    y: toTideXY(start, value).y,
+  }));
 
   const tidePoints = tideSamples.map((s) => toTideXY(s.time, s.height));
   const tidePath = tidePoints.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
@@ -142,12 +149,12 @@ export function TideChart({ series, waveSeries, windSeries, now, startHour = 6, 
       ? windPoints.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ')
       : '';
 
-  const currentX = PADDING_X + ((now.getTime() - start.getTime()) / totalMs) * plotWidth;
+  const currentX = PADDING_LEFT + ((now.getTime() - start.getTime()) / totalMs) * plotWidth;
 
   const isScrubbing = scrubX !== null;
   const activeTime =
     scrubX !== null
-      ? new Date(start.getTime() + ((scrubX - PADDING_X) / plotWidth) * totalMs)
+      ? new Date(start.getTime() + ((scrubX - PADDING_LEFT) / plotWidth) * totalMs)
       : new Date(Math.min(Math.max(now.getTime(), start.getTime()), end.getTime()));
   const activeTideHeight = series.heightAt(activeTime);
   const activeWaveHeight = waveSeries?.heightAt(activeTime) ?? null;
@@ -166,6 +173,17 @@ export function TideChart({ series, waveSeries, windSeries, now, startHour = 6, 
               <Stop offset="1" stopColor={colors.primary} stopOpacity={0.02} />
             </LinearGradient>
           </Defs>
+          {tideGridLines.map((g) => (
+            <Line
+              key={g.value}
+              x1={PADDING_LEFT}
+              y1={g.y}
+              x2={width - PADDING_X}
+              y2={g.y}
+              stroke={colors.cardBorder}
+              strokeWidth={1}
+            />
+          ))}
           <Path d={tideAreaPath} fill="url(#tide-fill)" stroke="none" />
           <Path
             d={tidePath}
@@ -175,6 +193,18 @@ export function TideChart({ series, waveSeries, windSeries, now, startHour = 6, 
             strokeLinecap="round"
             strokeLinejoin="round"
           />
+          {tideGridLines.map((g) => (
+            <SvgText
+              key={g.value}
+              x={PADDING_LEFT - 4}
+              y={g.y + 3.5}
+              fontSize={10}
+              fill={colors.textSecondary}
+              textAnchor="end"
+            >
+              {g.value.toFixed(1)}m
+            </SvgText>
+          ))}
           {wavePath && (
             <Path
               d={wavePath}
@@ -197,7 +227,7 @@ export function TideChart({ series, waveSeries, windSeries, now, startHour = 6, 
               opacity={0.6}
             />
           )}
-          {!isScrubbing && currentX >= PADDING_X && currentX <= width - PADDING_X && (
+          {!isScrubbing && currentX >= PADDING_LEFT && currentX <= width - PADDING_X && (
             <Line
               x1={currentX}
               y1={PADDING_TOP}
@@ -257,13 +287,43 @@ export function TideChart({ series, waveSeries, windSeries, now, startHour = 6, 
           </Text>
         ))}
       </View>
+      <View style={styles.legendRow}>
+        <View style={styles.legendItem}>
+          <View style={[styles.legendDot, { backgroundColor: colors.primary }]} />
+          <Text style={styles.legendText}>
+            Tide {tideMinHeight.toFixed(1)}–{tideMaxHeight.toFixed(1)}m
+          </Text>
+        </View>
+        {waveHeights.length > 0 && (
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: colors.rising }]} />
+            <Text style={styles.legendText}>
+              Wave {waveMinHeight.toFixed(1)}–{waveMaxHeight.toFixed(1)}m
+            </Text>
+          </View>
+        )}
+        {windSpeeds.length > 0 && (
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: colors.wind }]} />
+            <Text style={styles.legendText}>
+              Wind {windMinSpeed.toFixed(1)}–{windMaxSpeed.toFixed(1)} m/s
+            </Text>
+          </View>
+        )}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   chartArea: { position: 'relative' },
-  axisRow: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: PADDING_X, marginTop: 4 },
+  axisRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingLeft: PADDING_LEFT,
+    paddingRight: PADDING_X,
+    marginTop: 4,
+  },
   axisLabel: { color: colors.textSecondary, fontSize: 12 },
   emptyState: { padding: 24, alignItems: 'center' },
   emptyText: { color: colors.textSecondary },
@@ -278,4 +338,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
   },
   tooltipText: { color: colors.textPrimary, fontSize: 12, fontWeight: '600' },
+  legendRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 14,
+    marginTop: 8,
+    paddingLeft: PADDING_LEFT,
+    paddingRight: PADDING_X,
+  },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  legendDot: { width: 7, height: 7, borderRadius: 3.5 },
+  legendText: { color: colors.textSecondary, fontSize: 11 },
 });
