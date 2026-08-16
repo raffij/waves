@@ -141,7 +141,7 @@ export default function App() {
 
           {error && <Text style={styles.error}>{error}</Text>}
 
-          <ForecastList yesterday={yesterday} days={days} waveSeries={waveSeries} now={now} />
+          <ForecastList yesterday={yesterday} days={days} waveSeries={waveSeries} windSeries={windSeries} now={now} />
 
           <View style={styles.footer}>
             <Pressable onPress={() => load(true)} disabled={loading}>
