@@ -134,9 +134,14 @@ export default function App() {
 
           <ForecastList yesterday={yesterday} days={days} waveSeries={waveSeries} now={now} />
 
-          <Pressable onPress={handleResetKey}>
-            <Text style={styles.reset}>Reset API key</Text>
-          </Pressable>
+          <View style={styles.footer}>
+            <Pressable onPress={() => load(true)} disabled={loading}>
+              <Text style={styles.reset}>{loading ? 'Refreshing…' : 'Force refresh'}</Text>
+            </Pressable>
+            <Pressable onPress={handleResetKey}>
+              <Text style={styles.reset}>Reset API key</Text>
+            </Pressable>
+          </View>
         </ScrollView>
       </SafeAreaView>
     </LinearGradient>
@@ -156,5 +161,6 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   error: { color: colors.falling, marginTop: 16, textAlign: 'center' },
-  reset: { color: colors.textSecondary, textAlign: 'center', marginTop: 24, fontSize: 12 },
+  footer: { flexDirection: 'row', justifyContent: 'center', gap: 20, marginTop: 24 },
+  reset: { color: colors.textSecondary, textAlign: 'center', fontSize: 12 },
 });
