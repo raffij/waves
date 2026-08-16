@@ -24,7 +24,7 @@ export function ForecastList({ days }: Props) {
               return (
                 <View key={extreme.localTime} style={styles.chip}>
                   <Text style={[styles.chipLabel, { color: tint }]}>{extreme.type === 'high' ? 'H' : 'L'}</Text>
-                  <Text style={styles.chipHeight}>{extreme.height.toFixed(1)}m</Text>
+                  <Text style={styles.chipHeight}>{extreme.height.toFixed(1)}</Text>
                   <Text style={styles.chipTime}>{time}</Text>
                 </View>
               );
