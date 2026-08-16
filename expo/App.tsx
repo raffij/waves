@@ -127,12 +127,14 @@ export default function App() {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   flexCenter: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  content: { padding: 20, paddingBottom: 48 },
+  content: { padding: 12, paddingBottom: 32 },
   chartCard: {
     borderTopWidth: 1,
     borderTopColor: colors.cardBorder,
-    paddingTop: 20,
-    marginTop: 20,
+    marginHorizontal: -12,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    marginTop: 12,
   },
   error: { color: colors.falling, marginTop: 16, textAlign: 'center' },
   reset: { color: colors.textSecondary, textAlign: 'center', marginTop: 24, fontSize: 12 },
