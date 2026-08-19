@@ -1,9 +1,11 @@
+import { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useTheme } from '../hooks/useTheme';
 import { TideClock } from '../services/TideClock';
 import type { ForecastDay } from '../services/TideForecast';
 import type { WaveSeries } from '../services/WaveSeries';
 import type { WindSeries } from '../services/WindSeries';
-import { colors } from '../theme';
+import type { Colors } from '../theme';
 
 interface Props {
   yesterday: ForecastDay | null;
@@ -14,12 +16,18 @@ interface Props {
   onSelectDay: (dateKey: string) => void;
 }
 
+type Styles = ReturnType<typeof getStyles>;
+
 function ExtremeChips({
   extremes,
   unitLabel,
+  colors,
+  styles,
 }: {
   extremes: { high: number | null; low: number | null };
   unitLabel: string;
+  colors: Colors;
+  styles: Styles;
 }) {
   if (extremes.high === null || extremes.low === null) return null;
   return (
@@ -41,16 +49,20 @@ function ExtremeChips({
 function ExtraExtremesRow({
   waveExtremes,
   windExtremes,
+  colors,
+  styles,
 }: {
   waveExtremes: { high: number | null; low: number | null } | null;
   windExtremes: { high: number | null; low: number | null } | null;
+  colors: Colors;
+  styles: Styles;
 }) {
   if (!waveExtremes && !windExtremes) return null;
   return (
     <View style={styles.extraRow}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
-        {waveExtremes && <ExtremeChips extremes={waveExtremes} unitLabel="wave" />}
-        {windExtremes && <ExtremeChips extremes={windExtremes} unitLabel="wind" />}
+        {waveExtremes && <ExtremeChips extremes={waveExtremes} unitLabel="wave" colors={colors} styles={styles} />}
+        {windExtremes && <ExtremeChips extremes={windExtremes} unitLabel="wind" colors={colors} styles={styles} />}
       </ScrollView>
     </View>
   );
@@ -62,12 +74,16 @@ function DayRow({
   onSelect,
   waveSeries,
   windSeries,
+  colors,
+  styles,
 }: {
   day: ForecastDay;
   isSelected: boolean;
   onSelect: () => void;
   waveSeries?: WaveSeries | null;
   windSeries?: WindSeries | null;
+  colors: Colors;
+  styles: Styles;
 }) {
   const dayDate = TideClock.dateFromKey(day.dateKey);
   return (
@@ -90,12 +106,17 @@ function DayRow({
       <ExtraExtremesRow
         waveExtremes={waveSeries ? waveSeries.dailyExtremes(dayDate) : null}
         windExtremes={windSeries ? windSeries.dailyExtremes(dayDate) : null}
+        colors={colors}
+        styles={styles}
       />
     </Pressable>
   );
 }
 
 export function ForecastList({ yesterday, days, waveSeries, windSeries, selectedDateKey, onSelectDay }: Props) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => getStyles(colors), [colors]);
+
   return (
     <View style={styles.container}>
       {yesterday && (
@@ -106,6 +127,8 @@ export function ForecastList({ yesterday, days, waveSeries, windSeries, selected
           onSelect={() => onSelectDay(yesterday.dateKey)}
           waveSeries={waveSeries}
           windSeries={windSeries}
+          colors={colors}
+          styles={styles}
         />
       )}
       {days.map((day) => (
@@ -116,32 +139,36 @@ export function ForecastList({ yesterday, days, waveSeries, windSeries, selected
           onSelect={() => onSelectDay(day.dateKey)}
           waveSeries={waveSeries}
           windSeries={windSeries}
+          colors={colors}
+          styles={styles}
         />
       ))}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { marginTop: 8, paddingTop: 14, borderTopWidth: 1, borderTopColor: colors.cardBorder },
-  dayRow: { marginBottom: 14 },
-  fadedRow: { opacity: 0.45 },
-  dayLabel: {
-    color: colors.textSecondary,
-    fontSize: 13,
-    fontWeight: '600',
-    marginBottom: 6,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  chipsRow: { flexDirection: 'row', gap: 18, paddingRight: 4 },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 5,
-  },
-  chipLabel: { fontWeight: '700', fontSize: 12 },
-  chipHeight: { color: colors.textPrimary, fontSize: 13, fontWeight: '600' },
-  chipTime: { color: colors.textSecondary, fontSize: 12 },
-  extraRow: { marginTop: 6, opacity: 0.7 },
-});
+function getStyles(colors: Colors) {
+  return StyleSheet.create({
+    container: { marginTop: 8, paddingTop: 14, borderTopWidth: 1, borderTopColor: colors.cardBorder },
+    dayRow: { marginBottom: 14 },
+    fadedRow: { opacity: 0.45 },
+    dayLabel: {
+      color: colors.textSecondary,
+      fontSize: 13,
+      fontWeight: '600',
+      marginBottom: 6,
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+    },
+    chipsRow: { flexDirection: 'row', gap: 18, paddingRight: 4 },
+    chip: {
+      flexDirection: 'row',
+      alignItems: 'baseline',
+      gap: 5,
+    },
+    chipLabel: { fontWeight: '700', fontSize: 12 },
+    chipHeight: { color: colors.textPrimary, fontSize: 13, fontWeight: '600' },
+    chipTime: { color: colors.textSecondary, fontSize: 12 },
+    extraRow: { marginTop: 6, opacity: 0.7 },
+  });
+}

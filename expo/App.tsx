@@ -1,5 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -17,17 +17,29 @@ import { ForecastList } from './src/components/ForecastList';
 import { TideChart } from './src/components/TideChart';
 import { useApiKey } from './src/hooks/useApiKey';
 import { useForecastData } from './src/hooks/useForecastData';
+import { ThemeProvider, useTheme } from './src/hooks/useTheme';
 import { TideClock } from './src/services/TideClock';
 import { TideForecast } from './src/services/TideForecast';
 import { TideSeries } from './src/services/TideSeries';
 import { WaveSeries } from './src/services/WaveSeries';
 import { WindSeries } from './src/services/WindSeries';
-import { colors } from './src/theme';
+import type { Colors } from './src/theme';
 
 export default function App() {
+  return (
+    <ThemeProvider>
+      <AppContent />
+    </ThemeProvider>
+  );
+}
+
+function AppContent() {
   const { apiKey, saveKey, resetKey } = useApiKey();
   const { data, waveData, windData, fetchedAt, loading, error, load } = useForecastData(apiKey);
   const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
+  const { colors, themeName, toggleTheme } = useTheme();
+  const styles = useMemo(() => getStyles(colors), [colors]);
+  const statusBarStyle = themeName === 'dark' ? 'light-content' : 'dark-content';
 
   if (apiKey === undefined) {
     return (
@@ -40,7 +52,7 @@ export default function App() {
   if (!apiKey) {
     return (
       <LinearGradient colors={[colors.background, colors.backgroundGradientEnd]} style={styles.flex}>
-        <StatusBar barStyle="light-content" />
+        <StatusBar barStyle={statusBarStyle} />
         <ApiKeyPrompt onSubmit={saveKey} />
       </LinearGradient>
     );
@@ -80,7 +92,7 @@ export default function App() {
 
   return (
     <LinearGradient colors={[colors.background, colors.backgroundGradientEnd]} style={styles.flex}>
-      <StatusBar barStyle="light-content" />
+      <StatusBar barStyle={statusBarStyle} />
       <SafeAreaView style={styles.flex}>
         <ScrollView
           contentContainerStyle={styles.content}
@@ -119,6 +131,9 @@ export default function App() {
             <Pressable onPress={() => load(true)} disabled={loading}>
               <Text style={styles.reset}>{loading ? 'Refreshing…' : 'Force refresh'}</Text>
             </Pressable>
+            <Pressable onPress={toggleTheme}>
+              <Text style={styles.reset}>{themeName === 'dark' ? 'Light mode' : 'Dark mode'}</Text>
+            </Pressable>
             <Pressable onPress={resetKey}>
               <Text style={styles.reset}>Reset API key</Text>
             </Pressable>
@@ -129,19 +144,21 @@ export default function App() {
   );
 }
 
-const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  flexCenter: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  content: { padding: 12, paddingBottom: 32 },
-  chartCard: {
-    borderTopWidth: 1,
-    borderTopColor: colors.cardBorder,
-    marginHorizontal: -12,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    marginTop: 12,
-  },
-  error: { color: colors.falling, marginTop: 16, textAlign: 'center' },
-  footer: { flexDirection: 'row', justifyContent: 'center', gap: 20, marginTop: 24 },
-  reset: { color: colors.textSecondary, textAlign: 'center', fontSize: 12 },
-});
+function getStyles(colors: Colors) {
+  return StyleSheet.create({
+    flex: { flex: 1 },
+    flexCenter: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    content: { padding: 12, paddingBottom: 32 },
+    chartCard: {
+      borderTopWidth: 1,
+      borderTopColor: colors.cardBorder,
+      marginHorizontal: -12,
+      paddingHorizontal: 12,
+      paddingVertical: 12,
+      marginTop: 12,
+    },
+    error: { color: colors.falling, marginTop: 16, textAlign: 'center' },
+    footer: { flexDirection: 'row', justifyContent: 'center', gap: 20, marginTop: 24 },
+    reset: { color: colors.textSecondary, textAlign: 'center', fontSize: 12 },
+  });
+}

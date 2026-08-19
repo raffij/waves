@@ -1,11 +1,12 @@
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { type LayoutChangeEvent, PanResponder, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Defs, Line, LinearGradient, Path, Stop } from 'react-native-svg';
+import { useTheme } from '../hooks/useTheme';
 import { TideClock } from '../services/TideClock';
 import type { TideSeries } from '../services/TideSeries';
 import type { WaveSeries } from '../services/WaveSeries';
 import type { WindSeries } from '../services/WindSeries';
-import { colors } from '../theme';
+import type { Colors } from '../theme';
 
 interface Props {
   series: TideSeries;
@@ -66,6 +67,8 @@ const PADDING_BOTTOM = 4;
 const TOOLTIP_WIDTH = 170;
 
 export function TideChart({ series, waveSeries, windSeries, now, startHour = 6, endHour = 22 }: Props) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => getStyles(colors), [colors]);
   const [width, setWidth] = useState(DEFAULT_WIDTH);
   const onLayout = (evt: LayoutChangeEvent) => {
     const measured = evt.nativeEvent.layout.width;
@@ -345,39 +348,43 @@ export function TideChart({ series, waveSeries, windSeries, now, startHour = 6, 
   );
 }
 
-const styles = StyleSheet.create({
-  chartArea: { position: 'relative' },
-  axisRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingLeft: PADDING_LEFT,
-    paddingRight: PADDING_X,
-    marginTop: 4,
-  },
-  axisLabel: { color: colors.textSecondary, fontSize: 12 },
-  emptyState: { padding: 24, alignItems: 'center' },
-  emptyText: { color: colors.textSecondary },
-  tooltip: {
-    position: 'absolute',
-    top: 0,
-    width: TOOLTIP_WIDTH,
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    borderRadius: 8,
-    paddingVertical: 3,
-    paddingHorizontal: 6,
-  },
-  tooltipText: { color: colors.textPrimary, fontSize: 12, fontWeight: '600' },
-  legendRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: 14,
-    marginTop: 8,
-    paddingLeft: PADDING_LEFT,
-    paddingRight: PADDING_X,
-  },
-  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  legendDot: { width: 7, height: 7, borderRadius: 3.5 },
-  legendText: { color: colors.textSecondary, fontSize: 11 },
-});
+function getStyles(colors: Colors) {
+  return StyleSheet.create({
+    chartArea: { position: 'relative' },
+    axisRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      paddingLeft: PADDING_LEFT,
+      paddingRight: PADDING_X,
+      marginTop: 4,
+    },
+    axisLabel: { color: colors.textSecondary, fontSize: 12 },
+    emptyState: { padding: 24, alignItems: 'center' },
+    emptyText: { color: colors.textSecondary },
+    tooltip: {
+      position: 'absolute',
+      top: 0,
+      width: TOOLTIP_WIDTH,
+      alignItems: 'center',
+      // Always a dark bubble regardless of theme, so its text (also always
+      // light) has guaranteed contrast without needing its own theme variant.
+      backgroundColor: 'rgba(0,0,0,0.7)',
+      borderRadius: 8,
+      paddingVertical: 3,
+      paddingHorizontal: 6,
+    },
+    tooltipText: { color: '#f5faff', fontSize: 12, fontWeight: '600' },
+    legendRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'center',
+      gap: 14,
+      marginTop: 8,
+      paddingLeft: PADDING_LEFT,
+      paddingRight: PADDING_X,
+    },
+    legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+    legendDot: { width: 7, height: 7, borderRadius: 3.5 },
+    legendText: { color: colors.textSecondary, fontSize: 11 },
+  });
+}
