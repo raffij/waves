@@ -89,7 +89,7 @@ export function CurrentLevelCard({ current, waveHeight, waveTrend, windSpeed, wi
             <View style={styles.row}>
               <Text style={styles.height}>
                 {windSpeed.toFixed(1)}
-                <Text style={styles.unit}>m/s</Text>
+                <Text style={styles.unit}>mph</Text>
               </Text>
               <TrendArrow trend={windTrend} colors={colors} style={styles.trendIcon} />
             </View>

@@ -127,7 +127,7 @@ export class WaveAPIClient {
     url.searchParams.append('start_date', startDate);
     url.searchParams.append('end_date', endDate);
     url.searchParams.append('hourly', 'wind_speed_10m');
-    url.searchParams.append('wind_speed_unit', 'ms');
+    url.searchParams.append('wind_speed_unit', 'mph');
     url.searchParams.append('timezone', 'Europe/London');
 
     try {

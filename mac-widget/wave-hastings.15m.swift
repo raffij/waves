@@ -268,7 +268,7 @@ final class WaveAPIClient {
             URLQueryItem(name: "start_date", value: startDate),
             URLQueryItem(name: "end_date", value: endDate),
             URLQueryItem(name: "hourly", value: "wind_speed_10m"),
-            URLQueryItem(name: "wind_speed_unit", value: "ms"),
+            URLQueryItem(name: "wind_speed_unit", value: "mph"),
             URLQueryItem(name: "timezone", value: "Europe/London"),
         ]
         if let forecastData = fetchSync(URLRequest(url: forecastComponents.url!)),
@@ -435,7 +435,7 @@ struct ForecastDay {
             result.append(String(format: "--Wave: %.1f–%.1fm", wave.low, wave.high))
         }
         if let wind = windExtremes {
-            result.append(String(format: "--Wind: %.1f–%.1f m/s", wind.low, wind.high))
+            result.append(String(format: "--Wind: %.1f–%.1f mph", wind.low, wind.high))
         }
         return result
     }
@@ -548,7 +548,7 @@ final class TideWidgetPlugin {
         }
         let windSeries = waveWindData.flatMap { data -> ValueSeries? in
             guard let windTime = data.windTime, let windSpeed = data.windSpeed else { return nil }
-            return ValueSeries(times: windTime, values: windSpeed, steadyThreshold: 0.3)
+            return ValueSeries(times: windTime, values: windSpeed, steadyThreshold: 0.7)
         }
 
         let now = Date()
@@ -581,7 +581,7 @@ final class TideWidgetPlugin {
             parts.append(String(format: "Wave %.1fm %@", height, waveSeries.trend(at: now).arrow))
         }
         if let windSeries = windSeries, let speed = windSeries.value(at: now) {
-            parts.append(String(format: "Wind %.1f m/s %@", speed, windSeries.trend(at: now).arrow))
+            parts.append(String(format: "Wind %.1f mph %@", speed, windSeries.trend(at: now).arrow))
         }
         if !parts.isEmpty {
             print(parts.joined(separator: "   "))
@@ -596,7 +596,9 @@ final class TideWidgetPlugin {
             series.append(ChartSeries(label: "Wave", unit: "m", samples: waveSeries.hourlySamples(hours: wakingHours, on: now)))
         }
         if let windSeries = windSeries {
-            series.append(ChartSeries(label: "Wind", unit: "m/s", samples: windSeries.hourlySamples(hours: wakingHours, on: now)))
+            // Leading space: "m" reads fine attached to the number (5.8m),
+            // but a word-unit like "mph" needs a gap (16.3 mph, not 16.3mph).
+            series.append(ChartSeries(label: "Wind", unit: " mph", samples: windSeries.hourlySamples(hours: wakingHours, on: now)))
         }
 
         guard !tideSeries.isEmpty else { return }

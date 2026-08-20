@@ -4,7 +4,7 @@ import type { WindData } from './WaveAPIClient';
 
 // Below this, an hour-over-hour change reads as noise rather than a
 // genuine rise or fall in wind speed.
-const STEADY_THRESHOLD_MS = 0.3;
+const STEADY_THRESHOLD_MPH = 0.7;
 
 export class WindSeries {
   private readonly points: Array<{ time: Date; speed: number | null }>;
@@ -74,7 +74,7 @@ export class WindSeries {
     if (now === null || past === null) return 'unknown';
 
     const diff = now - past;
-    if (Math.abs(diff) < STEADY_THRESHOLD_MS) return 'steady';
+    if (Math.abs(diff) < STEADY_THRESHOLD_MPH) return 'steady';
     return diff > 0 ? 'rising' : 'falling';
   }
 }

@@ -146,7 +146,7 @@ export function TideChart({ series, waveSeries, windSeries, now, startHour = 6, 
   const waveMaxHeight = waveHeights.length > 0 ? Math.max(...waveHeights) : 1;
   const waveSpread = waveMaxHeight - waveMinHeight || 1;
 
-  // Wind scaling: different unit (m/s) with typical range 0-20
+  // Wind scaling: different unit (mph) with typical range 0-40
   const windSpeeds = windSamples.map((s) => s.speed);
   const windMinSpeed = windSpeeds.length > 0 ? Math.min(...windSpeeds) : 0;
   const windMaxSpeed = windSpeeds.length > 0 ? Math.max(...windSpeeds) : 1;
@@ -339,7 +339,7 @@ export function TideChart({ series, waveSeries, windSeries, now, startHour = 6, 
           <View style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: colors.wind }]} />
             <Text style={styles.legendText}>
-              Wind {windMinSpeed.toFixed(1)}–{windMaxSpeed.toFixed(1)} m/s
+              Wind {windMinSpeed.toFixed(1)}–{windMaxSpeed.toFixed(1)} mph
             </Text>
           </View>
         )}
