@@ -108,10 +108,11 @@ function AppContent() {
             <View style={styles.headerBadge}>
               <MaterialCommunityIcons name="waves" size={20} color={colors.onPrimary} />
             </View>
-            <View>
-              <Text style={styles.headerTitle}>Wave Hastings</Text>
-              <Text style={styles.headerSubtitle}>Hastings Pier · East Sussex</Text>
-            </View>
+            <Text style={styles.headerTitle}>Wave Hastings</Text>
+          </View>
+          <View style={styles.locationRow}>
+            <Ionicons name="location-outline" size={12} color={colors.textSecondary} />
+            <Text style={styles.locationText}>Hastings Pier · East Sussex</Text>
           </View>
 
           <CurrentLevelCard
@@ -126,14 +127,12 @@ function AppContent() {
 
           {series && (
             <View style={styles.chartCard}>
-              <Text style={styles.chartCardTitle}>Tide &amp; swell</Text>
               <TideChart series={series} waveSeries={waveSeries} windSeries={windSeries} now={referenceDate} />
             </View>
           )}
 
           {precipitationSeries && (
             <View style={styles.chartCard}>
-              <Text style={styles.chartCardTitle}>Rainfall</Text>
               <PrecipitationChart series={precipitationSeries} now={referenceDate} />
             </View>
           )}
@@ -206,8 +205,8 @@ function getStyles(colors: Colors) {
   return StyleSheet.create({
     flex: { flex: 1 },
     flexCenter: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    content: { padding: 16, paddingBottom: 32 },
-    header: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 18 },
+    content: { padding: 14, paddingBottom: 28 },
+    header: { flexDirection: 'row', alignItems: 'center', gap: 10 },
     headerBadge: {
       width: 34,
       height: 34,
@@ -217,28 +216,23 @@ function getStyles(colors: Colors) {
       justifyContent: 'center',
     },
     headerTitle: { color: colors.textPrimary, fontSize: 18, fontWeight: '800', letterSpacing: -0.3 },
-    headerSubtitle: { color: colors.textSecondary, fontSize: 12, marginTop: 1 },
+    locationRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6, marginLeft: 44, marginBottom: 14 },
+    locationText: { color: colors.textSecondary, fontSize: 12 },
     chartCard: {
       backgroundColor: colors.card,
       borderWidth: 1,
       borderColor: colors.cardBorder,
       borderRadius: 18,
-      padding: 14,
-      marginTop: 12,
+      padding: 12,
+      marginTop: 10,
       shadowColor: colors.shadow,
       shadowOffset: { width: 0, height: 6 },
       shadowOpacity: 1,
       shadowRadius: 14,
       elevation: 2,
     },
-    chartCardTitle: {
-      color: colors.textPrimary,
-      fontSize: 13,
-      fontWeight: '700',
-      marginBottom: 10,
-    },
     error: { color: colors.falling, marginTop: 16, textAlign: 'center' },
-    footer: { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: 10, marginTop: 26 },
+    footer: { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: 10, marginTop: 22 },
     footerButton: {
       flexDirection: 'row',
       alignItems: 'center',
