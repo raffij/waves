@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -46,18 +45,18 @@ function AppContent() {
 
   if (apiKey === undefined) {
     return (
-      <LinearGradient colors={[colors.background, colors.backgroundGradientEnd]} style={styles.flexCenter}>
+      <View style={styles.loadingState}>
         <ActivityIndicator color={colors.primary} />
-      </LinearGradient>
+      </View>
     );
   }
 
   if (!apiKey) {
     return (
-      <LinearGradient colors={[colors.background, colors.backgroundGradientEnd]} style={styles.flex}>
+      <View style={styles.screen}>
         <StatusBar barStyle={statusBarStyle} />
         <ApiKeyPrompt onSubmit={saveKey} />
-      </LinearGradient>
+      </View>
     );
   }
 
@@ -95,7 +94,7 @@ function AppContent() {
   const windTrend = windSeries?.trend(referenceDate) ?? 'unknown';
 
   return (
-    <LinearGradient colors={[colors.background, colors.backgroundGradientEnd]} style={styles.flex}>
+    <View style={styles.screen}>
       <StatusBar barStyle={statusBarStyle} />
       <SafeAreaView style={styles.flex}>
         <ScrollView
@@ -115,31 +114,27 @@ function AppContent() {
           />
 
           {series && (
-            <>
-              <View style={styles.divider} />
+            <View style={styles.section}>
               <TideChart series={series} waveSeries={waveSeries} windSeries={windSeries} now={referenceDate} />
-            </>
+            </View>
           )}
 
           {precipitationSeries && (
-            <>
-              <View style={styles.divider} />
+            <View style={styles.section}>
               <PrecipitationChart series={precipitationSeries} now={referenceDate} />
-            </>
+            </View>
           )}
 
           {error && <Text style={styles.error}>{error}</Text>}
 
-          <View style={styles.divider} />
-
-          <ForecastList
-            yesterday={yesterday}
-            days={days}
-            selectedDateKey={activeDateKey}
-            onSelectDay={setSelectedDateKey}
-          />
-
-          <View style={styles.divider} />
+          <View style={styles.section}>
+            <ForecastList
+              yesterday={yesterday}
+              days={days}
+              selectedDateKey={activeDateKey}
+              onSelectDay={setSelectedDateKey}
+            />
+          </View>
 
           <View style={styles.locationRow}>
             <Ionicons name="location-outline" size={12} color={colors.textSecondary} />
@@ -166,7 +161,7 @@ function AppContent() {
           </View>
         </ScrollView>
       </SafeAreaView>
-    </LinearGradient>
+    </View>
   );
 }
 
@@ -202,25 +197,23 @@ function FooterButton({
 function getStyles(colors: Colors) {
   return StyleSheet.create({
     flex: { flex: 1 },
-    flexCenter: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    content: { padding: 14, paddingBottom: 28 },
-    locationRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 },
-    locationText: { color: colors.textSecondary, fontSize: 12 },
-    divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.cardBorder, marginVertical: 18 },
-    error: { color: colors.falling, marginTop: 16, textAlign: 'center' },
-    footer: { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: 10, marginTop: 22 },
+    screen: { flex: 1, backgroundColor: colors.background },
+    loadingState: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background },
+    content: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 16 },
+    section: { marginTop: 20 },
+    locationRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, marginTop: 18 },
+    locationText: { color: colors.textSecondary, fontSize: 11 },
+    error: { color: colors.falling, marginTop: 12, textAlign: 'center' },
+    footer: { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: 4, marginTop: 4 },
     footerButton: {
+      minHeight: 44,
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 6,
-      paddingVertical: 8,
-      paddingHorizontal: 14,
-      borderRadius: 999,
-      backgroundColor: colors.card,
-      borderWidth: 1,
-      borderColor: colors.cardBorder,
+      gap: 5,
+      paddingHorizontal: 8,
+      borderRadius: 8,
     },
-    footerButtonPressed: { opacity: 0.55 },
-    footerButtonText: { color: colors.textSecondary, fontSize: 12, fontWeight: '600' },
+    footerButtonPressed: { opacity: 0.5 },
+    footerButtonText: { color: colors.textSecondary, fontSize: 12 },
   });
 }
