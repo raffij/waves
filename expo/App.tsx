@@ -1,4 +1,4 @@
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useMemo, useState } from 'react';
 import {
@@ -104,16 +104,12 @@ function AppContent() {
             <RefreshControl tintColor={colors.primary} refreshing={loading} onRefresh={() => load(true)} />
           }
         >
-          <View style={styles.header}>
-            <View style={styles.headerBadge}>
-              <MaterialCommunityIcons name="waves" size={20} color={colors.onPrimary} />
-            </View>
-            <Text style={styles.headerTitle}>Wave Hastings</Text>
-          </View>
           <View style={styles.locationRow}>
             <Ionicons name="location-outline" size={12} color={colors.textSecondary} />
             <Text style={styles.locationText}>Hastings Pier · East Sussex</Text>
           </View>
+
+          <View style={styles.divider} />
 
           <CurrentLevelCard
             current={current}
@@ -126,18 +122,22 @@ function AppContent() {
           />
 
           {series && (
-            <View style={styles.chartCard}>
+            <>
+              <View style={styles.divider} />
               <TideChart series={series} waveSeries={waveSeries} windSeries={windSeries} now={referenceDate} />
-            </View>
+            </>
           )}
 
           {precipitationSeries && (
-            <View style={styles.chartCard}>
+            <>
+              <View style={styles.divider} />
               <PrecipitationChart series={precipitationSeries} now={referenceDate} />
-            </View>
+            </>
           )}
 
           {error && <Text style={styles.error}>{error}</Text>}
+
+          <View style={styles.divider} />
 
           <ForecastList
             yesterday={yesterday}
@@ -147,6 +147,8 @@ function AppContent() {
             selectedDateKey={activeDateKey}
             onSelectDay={setSelectedDateKey}
           />
+
+          <View style={styles.divider} />
 
           <View style={styles.footer}>
             <FooterButton
@@ -206,31 +208,9 @@ function getStyles(colors: Colors) {
     flex: { flex: 1 },
     flexCenter: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     content: { padding: 14, paddingBottom: 28 },
-    header: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-    headerBadge: {
-      width: 34,
-      height: 34,
-      borderRadius: 12,
-      backgroundColor: colors.primary,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    headerTitle: { color: colors.textPrimary, fontSize: 18, fontWeight: '800', letterSpacing: -0.3 },
-    locationRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6, marginLeft: 44, marginBottom: 14 },
+    locationRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     locationText: { color: colors.textSecondary, fontSize: 12 },
-    chartCard: {
-      backgroundColor: colors.card,
-      borderWidth: 1,
-      borderColor: colors.cardBorder,
-      borderRadius: 18,
-      padding: 12,
-      marginTop: 10,
-      shadowColor: colors.shadow,
-      shadowOffset: { width: 0, height: 6 },
-      shadowOpacity: 1,
-      shadowRadius: 14,
-      elevation: 2,
-    },
+    divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.cardBorder, marginVertical: 18 },
     error: { color: colors.falling, marginTop: 16, textAlign: 'center' },
     footer: { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: 10, marginTop: 22 },
     footerButton: {

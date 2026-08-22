@@ -143,18 +143,7 @@ type Styles = ReturnType<typeof getStyles>;
 
 function getStyles(colors: Colors) {
   return StyleSheet.create({
-    card: {
-      backgroundColor: colors.cardElevated,
-      borderWidth: 1,
-      borderColor: colors.cardBorder,
-      borderRadius: 20,
-      padding: 16,
-      shadowColor: colors.shadow,
-      shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: 1,
-      shadowRadius: 18,
-      elevation: 3,
-    },
+    card: {},
     topRow: {
       flexDirection: 'row',
       alignItems: 'center',
