@@ -43,32 +43,42 @@ export function PrecipitationChart({ series, now, startHour = 6, endHour = 22 }:
 
   const maxMm = Math.max(MIN_SCALE_MM, ...bars.map((b) => b.mm ?? 0));
   const total = bars.reduce((sum, b) => sum + (b.mm ?? 0), 0);
+  // A dry forecast means every bar is flush with the floor — visually
+  // indistinguishable from a chart that failed to load. Say so explicitly
+  // instead of leaving what looks like an empty, broken chart.
+  const hasRain = bars.some((b) => (b.mm ?? 0) > 0);
 
   const hourTicks = [startHour, Math.round((startHour + endHour) / 2), endHour];
 
   return (
     <View onLayout={onLayout}>
       <View style={styles.chartArea}>
-        <Svg width={width} height={HEIGHT}>
-          {bars.map((bar, i) => {
-            const mm = bar.mm ?? 0;
-            const barHeight = mm > 0 ? Math.max(2, (mm / maxMm) * plotHeight) : 0;
-            const x = PADDING_X + i * (barWidth + BAR_GAP);
-            const y = floorY - barHeight;
-            return (
-              <Rect
-                key={bar.time.toISOString()}
-                x={x}
-                y={y}
-                width={Math.max(barWidth, 1)}
-                height={barHeight}
-                rx={1.5}
-                fill={colors.precipitation}
-                opacity={mm > 0 ? 0.85 : 0.15}
-              />
-            );
-          })}
-        </Svg>
+        {hasRain ? (
+          <Svg width={width} height={HEIGHT}>
+            {bars.map((bar, i) => {
+              const mm = bar.mm ?? 0;
+              const barHeight = mm > 0 ? Math.max(2, (mm / maxMm) * plotHeight) : 0;
+              const x = PADDING_X + i * (barWidth + BAR_GAP);
+              const y = floorY - barHeight;
+              return (
+                <Rect
+                  key={bar.time.toISOString()}
+                  x={x}
+                  y={y}
+                  width={Math.max(barWidth, 1)}
+                  height={barHeight}
+                  rx={1.5}
+                  fill={colors.precipitation}
+                  opacity={mm > 0 ? 0.85 : 0.15}
+                />
+              );
+            })}
+          </Svg>
+        ) : (
+          <View style={[styles.emptyState, { height: HEIGHT }]}>
+            <Text style={styles.emptyText}>No rain expected</Text>
+          </View>
+        )}
       </View>
       <View style={styles.axisRow}>
         {hourTicks.map((h) => (
@@ -77,12 +87,14 @@ export function PrecipitationChart({ series, now, startHour = 6, endHour = 22 }:
           </Text>
         ))}
       </View>
-      <View style={styles.legendRow}>
-        <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: colors.precipitation }]} />
-          <Text style={styles.legendText}>Rain {total.toFixed(1)}mm total</Text>
+      {hasRain && (
+        <View style={styles.legendRow}>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: colors.precipitation }]} />
+            <Text style={styles.legendText}>Rain {total.toFixed(1)}mm total</Text>
+          </View>
         </View>
-      </View>
+      )}
     </View>
   );
 }
@@ -98,6 +110,8 @@ function getStyles(colors: Colors) {
       marginTop: 4,
     },
     axisLabel: { color: colors.textSecondary, fontSize: 12 },
+    emptyState: { alignItems: 'center', justifyContent: 'center' },
+    emptyText: { color: colors.textSecondary, fontSize: 12 },
     legendRow: {
       flexDirection: 'row',
       flexWrap: 'wrap',
