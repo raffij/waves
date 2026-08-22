@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { TideResponse } from '../models/TideModels';
 import { TideAPIClient } from '../services/TideAPIClient';
-import type { WaveData, WindData } from '../services/WaveAPIClient';
+import type { PrecipitationData, WaveData, WindData } from '../services/WaveAPIClient';
 import { WaveAPIClient } from '../services/WaveAPIClient';
 
 const STATION_ID = 'hastings_pier-hgp-gbr-cco';
@@ -10,6 +10,7 @@ export interface ForecastData {
   data: TideResponse | null;
   waveData: WaveData | null;
   windData: WindData | null;
+  precipitationData: PrecipitationData | null;
   fetchedAt: Date | null;
   loading: boolean;
   error: string | null;
@@ -24,6 +25,7 @@ export function useForecastData(apiKey: string | null | undefined): ForecastData
   const [data, setData] = useState<TideResponse | null>(null);
   const [waveData, setWaveData] = useState<WaveData | null>(null);
   const [windData, setWindData] = useState<WindData | null>(null);
+  const [precipitationData, setPrecipitationData] = useState<PrecipitationData | null>(null);
   const [fetchedAt, setFetchedAt] = useState<Date | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,6 +50,7 @@ export function useForecastData(apiKey: string | null | undefined): ForecastData
       if (waveResult) {
         setWaveData(waveResult.data);
         setWindData(waveResult.wind);
+        setPrecipitationData(waveResult.precipitation);
       }
 
       setLoading(false);
@@ -66,5 +69,5 @@ export function useForecastData(apiKey: string | null | undefined): ForecastData
     }
   }, [apiKey, load]);
 
-  return { data, waveData, windData, fetchedAt, loading, error, load };
+  return { data, waveData, windData, precipitationData, fetchedAt, loading, error, load };
 }

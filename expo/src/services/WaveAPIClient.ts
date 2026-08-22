@@ -15,9 +15,15 @@ export interface WindData {
   wind_speed: (number | null)[];
 }
 
+export interface PrecipitationData {
+  time: string[];
+  precipitation: (number | null)[];
+}
+
 export interface WaveDataResult {
   data: WaveData;
   wind: WindData | null;
+  precipitation: PrecipitationData | null;
   fetchedAt: Date;
 }
 
@@ -38,14 +44,14 @@ export class WaveAPIClient {
       const cached = await AsyncStorage.getItem(CACHE_DATA_KEY);
       if (!cached) return null;
 
-      const { data, wind, cachedAt } = JSON.parse(cached);
+      const { data, wind, precipitation, cachedAt } = JSON.parse(cached);
       const age = Date.now() - cachedAt;
       if (age > CACHE_MAX_AGE_MS) {
         await AsyncStorage.removeItem(CACHE_DATA_KEY);
         return null;
       }
 
-      return { data, wind: wind ?? null, fetchedAt: new Date(cachedAt) };
+      return { data, wind: wind ?? null, precipitation: precipitation ?? null, fetchedAt: new Date(cachedAt) };
     } catch {
       return null;
     }
@@ -61,6 +67,7 @@ export class WaveAPIClient {
         JSON.stringify({
           data: result.data,
           wind: result.wind,
+          precipitation: result.precipitation,
           cachedAt: result.fetchedAt.getTime(),
         }),
       );
@@ -79,11 +86,11 @@ export class WaveAPIClient {
     const marineJson = await this.fetchWave(startDate, endDate);
     if (!marineJson) return null;
 
-    // Wave (marine) data is essential; wind is a nice-to-have overlay.
-    // Fetched independently so a wind request failing (network hiccup,
-    // provider outage, client-side filter) never takes wave data down
-    // with it — see the Promise.all bug this replaced.
-    const wind = await this.fetchWind(startDate, endDate);
+    // Wave (marine) data is essential; wind/precipitation are a nice-to-have
+    // overlay. Fetched independently so a forecast-API request failing
+    // (network hiccup, provider outage, client-side filter) never takes wave
+    // data down with it — see the Promise.all bug this replaced.
+    const { wind, precipitation } = await this.fetchWindAndPrecipitation(startDate, endDate);
 
     return {
       data: {
@@ -91,6 +98,7 @@ export class WaveAPIClient {
         wave_height: marineJson.hourly.wave_height,
       },
       wind,
+      precipitation,
       fetchedAt: new Date(),
     };
   }
@@ -116,28 +124,38 @@ export class WaveAPIClient {
     }
   }
 
-  // wind_speed_10m lives on the general Forecast API, not the Marine API
-  // (the Marine API silently accepts the param but returns all nulls).
-  // Unlike met.no, this supports start_date/end_date, so wind can cover
-  // the same yesterday-to-+5-days range as wave instead of forecast-only.
-  private async fetchWind(startDate: string, endDate: string): Promise<WindData | null> {
+  // wind_speed_10m and precipitation live on the general Forecast API, not the
+  // Marine API (the Marine API silently accepts wind_speed_10m but returns
+  // all nulls, and doesn't offer precipitation at all). Fetched together in
+  // one request since both come from the same endpoint. Unlike met.no, this
+  // supports start_date/end_date, so both cover the same yesterday-to-+5-days
+  // range as wave instead of forecast-only.
+  private async fetchWindAndPrecipitation(
+    startDate: string,
+    endDate: string,
+  ): Promise<{ wind: WindData | null; precipitation: PrecipitationData | null }> {
     const url = new URL('https://api.open-meteo.com/v1/forecast');
     url.searchParams.append('latitude', LATITUDE);
     url.searchParams.append('longitude', LONGITUDE);
     url.searchParams.append('start_date', startDate);
     url.searchParams.append('end_date', endDate);
-    url.searchParams.append('hourly', 'wind_speed_10m');
+    url.searchParams.append('hourly', 'wind_speed_10m,precipitation');
     url.searchParams.append('wind_speed_unit', 'mph');
     url.searchParams.append('timezone', 'Europe/London');
 
     try {
       const response = await fetch(url.toString());
-      if (!response.ok) return null;
+      if (!response.ok) return { wind: null, precipitation: null };
 
-      const json = (await response.json()) as { hourly: { time: string[]; wind_speed_10m: (number | null)[] } };
-      return { time: json.hourly.time, wind_speed: json.hourly.wind_speed_10m };
+      const json = (await response.json()) as {
+        hourly: { time: string[]; wind_speed_10m: (number | null)[]; precipitation: (number | null)[] };
+      };
+      return {
+        wind: { time: json.hourly.time, wind_speed: json.hourly.wind_speed_10m },
+        precipitation: { time: json.hourly.time, precipitation: json.hourly.precipitation },
+      };
     } catch {
-      return null;
+      return { wind: null, precipitation: null };
     }
   }
 

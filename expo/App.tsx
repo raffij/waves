@@ -14,10 +14,12 @@ import {
 import { ApiKeyPrompt } from './src/components/ApiKeyPrompt';
 import { CurrentLevelCard } from './src/components/CurrentLevelCard';
 import { ForecastList } from './src/components/ForecastList';
+import { PrecipitationChart } from './src/components/PrecipitationChart';
 import { TideChart } from './src/components/TideChart';
 import { useApiKey } from './src/hooks/useApiKey';
 import { useForecastData } from './src/hooks/useForecastData';
 import { ThemeProvider, useTheme } from './src/hooks/useTheme';
+import { PrecipitationSeries } from './src/services/PrecipitationSeries';
 import { TideClock } from './src/services/TideClock';
 import { TideForecast } from './src/services/TideForecast';
 import { TideSeries } from './src/services/TideSeries';
@@ -35,7 +37,7 @@ export default function App() {
 
 function AppContent() {
   const { apiKey, saveKey, resetKey } = useApiKey();
-  const { data, waveData, windData, fetchedAt, loading, error, load } = useForecastData(apiKey);
+  const { data, waveData, windData, precipitationData, fetchedAt, loading, error, load } = useForecastData(apiKey);
   const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
   const { colors, themeName, toggleTheme } = useTheme();
   const styles = useMemo(() => getStyles(colors), [colors]);
@@ -68,6 +70,7 @@ function AppContent() {
   const series = data ? new TideSeries(data.timeSeries) : null;
   const waveSeries = waveData ? new WaveSeries(waveData) : null;
   const windSeries = windData ? new WindSeries(windData) : null;
+  const precipitationSeries = precipitationData ? new PrecipitationSeries(precipitationData) : null;
   const forecast = data ? new TideForecast(data.extremes) : null;
   const yesterday = forecast?.yesterday(now) ?? null;
   const days = forecast?.days(now, 5) ?? [];
@@ -113,6 +116,12 @@ function AppContent() {
           {series && (
             <View style={styles.chartCard}>
               <TideChart series={series} waveSeries={waveSeries} windSeries={windSeries} now={referenceDate} />
+            </View>
+          )}
+
+          {precipitationSeries && (
+            <View style={styles.chartCard}>
+              <PrecipitationChart series={precipitationSeries} now={referenceDate} />
             </View>
           )}
 
