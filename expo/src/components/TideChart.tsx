@@ -59,7 +59,7 @@ function smoothPath(points: Array<{ x: number; y: number }>): string {
 }
 
 const DEFAULT_WIDTH = 320;
-const HEIGHT = 150;
+const HEIGHT = 115;
 const PADDING_X = 8;
 const PADDING_LEFT = PADDING_X;
 const PADDING_TOP = 26; // extra room for the scrub tooltip

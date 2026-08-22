@@ -22,6 +22,10 @@ const BAR_GAP = 2;
 // Below this, the tallest bar in the window would be too short to see —
 // clamp the scale so a light drizzle hour still reads as a visible bar.
 const MIN_SCALE_MM = 1;
+// A dry hour renders as this instead of nothing, so an all-dry forecast
+// reads as a full row of "measured: zero" ticks rather than a chart that
+// failed to load with no data at all.
+const BASELINE_HEIGHT = 3;
 
 export function PrecipitationChart({ series, now, startHour = 6, endHour = 22 }: Props) {
   const { colors } = useTheme();
@@ -52,7 +56,7 @@ export function PrecipitationChart({ series, now, startHour = 6, endHour = 22 }:
         <Svg width={width} height={HEIGHT}>
           {bars.map((bar, i) => {
             const mm = bar.mm ?? 0;
-            const barHeight = mm > 0 ? Math.max(2, (mm / maxMm) * plotHeight) : 0;
+            const barHeight = mm > 0 ? Math.max(BASELINE_HEIGHT + 1, (mm / maxMm) * plotHeight) : BASELINE_HEIGHT;
             const x = PADDING_X + i * (barWidth + BAR_GAP);
             const y = floorY - barHeight;
             return (
@@ -64,7 +68,7 @@ export function PrecipitationChart({ series, now, startHour = 6, endHour = 22 }:
                 height={barHeight}
                 rx={1.5}
                 fill={colors.precipitation}
-                opacity={mm > 0 ? 0.85 : 0.15}
+                opacity={mm > 0 ? 0.85 : 0.25}
               />
             );
           })}
@@ -80,7 +84,7 @@ export function PrecipitationChart({ series, now, startHour = 6, endHour = 22 }:
       <View style={styles.legendRow}>
         <View style={styles.legendItem}>
           <View style={[styles.legendDot, { backgroundColor: colors.precipitation }]} />
-          <Text style={styles.legendText}>Rain {total.toFixed(1)}mm total</Text>
+          <Text style={styles.legendText}>{total > 0 ? `Rain ${total.toFixed(1)}mm total` : 'No rain expected'}</Text>
         </View>
       </View>
     </View>
