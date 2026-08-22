@@ -55,7 +55,12 @@ function DayTile({
       accessibilityRole="button"
       accessibilityLabel={`${day.label}, high ${high !== null ? high.toFixed(1) : 'unavailable'} metres, low ${low !== null ? low.toFixed(1) : 'unavailable'}`}
       accessibilityState={{ selected: isSelected }}
-      style={({ pressed }) => [styles.tile, { width }, isSelected && styles.tileSelected, pressed && styles.tilePressed]}
+      style={({ pressed }) => [
+        styles.tile,
+        { width },
+        isSelected && styles.tileSelected,
+        pressed && styles.tilePressed,
+      ]}
     >
       {labelLines(day.label).map((line) => (
         <Text key={line} style={[styles.dayLabel, isSelected && styles.dayLabelSelected]} numberOfLines={1}>
