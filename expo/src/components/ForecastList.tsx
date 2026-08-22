@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '../hooks/useTheme';
 import { TideClock } from '../services/TideClock';
 import type { ForecastDay } from '../services/TideForecast';
@@ -73,11 +73,9 @@ function ExtraExtremesRow({
 }) {
   if (!waveExtremes && !windExtremes) return null;
   return (
-    <View style={styles.extraRow}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
-        {waveExtremes && <ExtremeChips extremes={waveExtremes} unitLabel="wave" colors={colors} styles={styles} />}
-        {windExtremes && <ExtremeChips extremes={windExtremes} unitLabel="wind" colors={colors} styles={styles} />}
-      </ScrollView>
+    <View style={[styles.extraRow, styles.chipsRow]}>
+      {waveExtremes && <ExtremeChips extremes={waveExtremes} unitLabel="wave" colors={colors} styles={styles} />}
+      {windExtremes && <ExtremeChips extremes={windExtremes} unitLabel="wind" colors={colors} styles={styles} />}
     </View>
   );
 }
@@ -103,7 +101,7 @@ function DayRow({
   return (
     <Pressable onPress={onSelect} style={[styles.dayRow, isSelected && styles.dayRowSelected]}>
       <Text style={[styles.dayLabel, isSelected && styles.dayLabelSelected]}>{day.label}</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
+      <View style={styles.chipsRow}>
         {day.extremes.map((extreme) => {
           const tint = extreme.type === 'high' ? colors.high : colors.low;
           const parsed = TideClock.parseISODate(extreme.localTime);
@@ -119,7 +117,7 @@ function DayRow({
             />
           );
         })}
-      </ScrollView>
+      </View>
       <ExtraExtremesRow
         waveExtremes={waveSeries ? waveSeries.dailyExtremes(dayDate) : null}
         windExtremes={windSeries ? windSeries.dailyExtremes(dayDate) : null}
@@ -197,7 +195,7 @@ function getStyles(colors: Colors) {
       letterSpacing: 0.5,
     },
     dayLabelSelected: { color: colors.primary },
-    chipsRow: { flexDirection: 'row', gap: 8, paddingRight: 4 },
+    chipsRow: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 6, columnGap: 8 },
     chip: {
       flexDirection: 'row',
       alignItems: 'baseline',
