@@ -30,7 +30,7 @@ function TrendArrow({ trend, colors, style }: { trend: Trend; colors: Colors; st
     steady: colors.textSecondary,
     unknown: colors.textSecondary,
   };
-  return <Ionicons name={trendIcon[trend]} size={16} color={trendColor[trend]} style={style} />;
+  return <Ionicons name={trendIcon[trend]} size={13} color={trendColor[trend]} style={style} />;
 }
 
 export function CurrentLevelCard({ current, waveHeight, waveTrend, windSpeed, windTrend, fetchedAt, dayLabel }: Props) {
@@ -122,9 +122,9 @@ function getStyles(colors: Colors) {
       alignItems: 'flex-end',
       marginTop: 2,
     },
-    height: { color: colors.textPrimary, fontSize: 48, fontWeight: '700' },
-    unit: { fontSize: 18, fontWeight: '500', color: colors.textSecondary },
-    trendIcon: { marginBottom: 8, marginLeft: 2 },
+    height: { color: colors.textPrimary, fontSize: 34, fontWeight: '700' },
+    unit: { fontSize: 14, fontWeight: '500', color: colors.textSecondary },
+    trendIcon: { marginBottom: 5, marginLeft: 2 },
     updated: { color: colors.textSecondary, fontSize: 11 },
     contentRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8, gap: 16 },
     tideSection: { flex: 1 },
