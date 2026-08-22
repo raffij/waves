@@ -12,6 +12,12 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Hastings Pier" />
+    <link rel="apple-touch-icon" href="icon.png" />
+    <!-- Metro's web export only auto-injects theme-color and favicon.ico —
+         unlike Expo's older webpack export, it doesn't generate a PWA
+         manifest, so this is hand-authored to get proper "Add to Home
+         Screen" install support (icon, standalone display) on Android/Chrome. -->
+    <link rel="manifest" href="manifest.json" />
     <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
     <style id="expo-reset">
       /* These styles make the body full-height */
@@ -23,10 +29,16 @@
       /* These styles disable body scrolling if you are using <ScrollView> */
       body {
         overflow: hidden;
+        /* Without this, padding-top below adds to the 100% height instead of
+           being carved out of it, so the box overflows the viewport and
+           overflow:hidden silently clips content off the bottom. */
+        box-sizing: border-box;
         /* With status-bar-style=black-translucent, content draws under the
            status bar/notch — pad it back out using the safe-area inset that
-           viewport-fit=cover unlocks, so nothing sits behind it. */
-        padding-top: env(safe-area-inset-top);
+           viewport-fit=cover unlocks, so nothing sits behind it. Capped
+           since the standalone (home screen) inset reports well beyond the
+           actual status bar height, leaving an oversized gap up top. */
+        padding-top: min(env(safe-area-inset-top), 24px);
       }
       /* These styles make the root element full-height */
       #root {
