@@ -6,6 +6,7 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   checks:
@@ -39,8 +40,23 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      actions: write
     steps:
       - name: Merge pull request
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh pr merge --squash --delete-branch "${{ github.event.pull_request.number }}" --repo "${{ github.repository }}"
+
+      # The squash merge above runs as GITHUB_TOKEN, so the resulting push to
+      # main is a GITHUB_TOKEN-authored event — GitHub deliberately doesn't
+      # let those trigger further workflow runs (to avoid recursive loops),
+      # so ci.yml's own `push` trigger and deploy-web.yml never fire on their
+      # own. workflow_dispatch is the documented exception to that rule, so
+      # dispatch both explicitly once the merge lands.
+      - name: Trigger main-branch workflows
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run ci.yml --ref main --repo "${{ github.repository }}"
+          gh workflow run deploy-web.yml --ref main --repo "${{ github.repository }}"
