@@ -22,6 +22,10 @@ const BAR_GAP = 2;
 // Below this, the tallest bar in the window would be too short to see —
 // clamp the scale so a light drizzle hour still reads as a visible bar.
 const MIN_SCALE_MM = 1;
+// A dry hour renders as this instead of nothing, so an all-dry forecast
+// reads as a full row of "measured: zero" ticks rather than a chart that
+// failed to load with no data at all.
+const BASELINE_HEIGHT = 3;
 
 export function PrecipitationChart({ series, now, startHour = 6, endHour = 22 }: Props) {
   const { colors } = useTheme();
@@ -43,42 +47,32 @@ export function PrecipitationChart({ series, now, startHour = 6, endHour = 22 }:
 
   const maxMm = Math.max(MIN_SCALE_MM, ...bars.map((b) => b.mm ?? 0));
   const total = bars.reduce((sum, b) => sum + (b.mm ?? 0), 0);
-  // A dry forecast means every bar is flush with the floor — visually
-  // indistinguishable from a chart that failed to load. Say so explicitly
-  // instead of leaving what looks like an empty, broken chart.
-  const hasRain = bars.some((b) => (b.mm ?? 0) > 0);
 
   const hourTicks = [startHour, Math.round((startHour + endHour) / 2), endHour];
 
   return (
     <View onLayout={onLayout}>
       <View style={styles.chartArea}>
-        {hasRain ? (
-          <Svg width={width} height={HEIGHT}>
-            {bars.map((bar, i) => {
-              const mm = bar.mm ?? 0;
-              const barHeight = mm > 0 ? Math.max(2, (mm / maxMm) * plotHeight) : 0;
-              const x = PADDING_X + i * (barWidth + BAR_GAP);
-              const y = floorY - barHeight;
-              return (
-                <Rect
-                  key={bar.time.toISOString()}
-                  x={x}
-                  y={y}
-                  width={Math.max(barWidth, 1)}
-                  height={barHeight}
-                  rx={1.5}
-                  fill={colors.precipitation}
-                  opacity={mm > 0 ? 0.85 : 0.15}
-                />
-              );
-            })}
-          </Svg>
-        ) : (
-          <View style={[styles.emptyState, { height: HEIGHT }]}>
-            <Text style={styles.emptyText}>No rain expected</Text>
-          </View>
-        )}
+        <Svg width={width} height={HEIGHT}>
+          {bars.map((bar, i) => {
+            const mm = bar.mm ?? 0;
+            const barHeight = mm > 0 ? Math.max(BASELINE_HEIGHT + 1, (mm / maxMm) * plotHeight) : BASELINE_HEIGHT;
+            const x = PADDING_X + i * (barWidth + BAR_GAP);
+            const y = floorY - barHeight;
+            return (
+              <Rect
+                key={bar.time.toISOString()}
+                x={x}
+                y={y}
+                width={Math.max(barWidth, 1)}
+                height={barHeight}
+                rx={1.5}
+                fill={colors.precipitation}
+                opacity={mm > 0 ? 0.85 : 0.25}
+              />
+            );
+          })}
+        </Svg>
       </View>
       <View style={styles.axisRow}>
         {hourTicks.map((h) => (
@@ -87,14 +81,12 @@ export function PrecipitationChart({ series, now, startHour = 6, endHour = 22 }:
           </Text>
         ))}
       </View>
-      {hasRain && (
-        <View style={styles.legendRow}>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: colors.precipitation }]} />
-            <Text style={styles.legendText}>Rain {total.toFixed(1)}mm total</Text>
-          </View>
+      <View style={styles.legendRow}>
+        <View style={styles.legendItem}>
+          <View style={[styles.legendDot, { backgroundColor: colors.precipitation }]} />
+          <Text style={styles.legendText}>{total > 0 ? `Rain ${total.toFixed(1)}mm total` : 'No rain expected'}</Text>
         </View>
-      )}
+      </View>
     </View>
   );
 }
@@ -110,8 +102,6 @@ function getStyles(colors: Colors) {
       marginTop: 4,
     },
     axisLabel: { color: colors.textSecondary, fontSize: 12 },
-    emptyState: { alignItems: 'center', justifyContent: 'center' },
-    emptyText: { color: colors.textSecondary, fontSize: 12 },
     legendRow: {
       flexDirection: 'row',
       flexWrap: 'wrap',
