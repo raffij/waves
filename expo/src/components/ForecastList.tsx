@@ -1,11 +1,11 @@
 import { useMemo } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '../hooks/useTheme';
 import { TideClock } from '../services/TideClock';
 import type { ForecastDay } from '../services/TideForecast';
 import type { WaveSeries } from '../services/WaveSeries';
 import type { WindSeries } from '../services/WindSeries';
-import type { Colors } from '../theme';
+import { type Colors, withAlpha } from '../theme';
 
 interface Props {
   yesterday: ForecastDay | null;
@@ -17,6 +17,28 @@ interface Props {
 }
 
 type Styles = ReturnType<typeof getStyles>;
+
+function Chip({
+  label,
+  value,
+  time,
+  tint,
+  styles,
+}: {
+  label: string;
+  value: string;
+  time: string;
+  tint: string;
+  styles: Styles;
+}) {
+  return (
+    <View style={[styles.chip, { backgroundColor: withAlpha(tint, 0.12) }]}>
+      <Text style={[styles.chipLabel, { color: tint }]}>{label}</Text>
+      <Text style={styles.chipHeight}>{value}</Text>
+      {time ? <Text style={styles.chipTime}>{time}</Text> : null}
+    </View>
+  );
+}
 
 function ExtremeChips({
   extremes,
@@ -32,16 +54,8 @@ function ExtremeChips({
   if (extremes.high === null || extremes.low === null) return null;
   return (
     <>
-      <View style={styles.chip}>
-        <Text style={[styles.chipLabel, { color: colors.high }]}>H</Text>
-        <Text style={styles.chipHeight}>{extremes.high.toFixed(1)}</Text>
-        <Text style={[styles.chipTime, { fontSize: 10 }]}>{unitLabel}</Text>
-      </View>
-      <View style={styles.chip}>
-        <Text style={[styles.chipLabel, { color: colors.low }]}>L</Text>
-        <Text style={styles.chipHeight}>{extremes.low.toFixed(1)}</Text>
-        <Text style={[styles.chipTime, { fontSize: 10 }]}>{unitLabel}</Text>
-      </View>
+      <Chip label="H" value={extremes.high.toFixed(1)} time={unitLabel} tint={colors.high} styles={styles} />
+      <Chip label="L" value={extremes.low.toFixed(1)} time={unitLabel} tint={colors.low} styles={styles} />
     </>
   );
 }
@@ -59,11 +73,9 @@ function ExtraExtremesRow({
 }) {
   if (!waveExtremes && !windExtremes) return null;
   return (
-    <View style={styles.extraRow}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
-        {waveExtremes && <ExtremeChips extremes={waveExtremes} unitLabel="wave" colors={colors} styles={styles} />}
-        {windExtremes && <ExtremeChips extremes={windExtremes} unitLabel="wind" colors={colors} styles={styles} />}
-      </ScrollView>
+    <View style={[styles.extraRow, styles.chipsRow]}>
+      {waveExtremes && <ExtremeChips extremes={waveExtremes} unitLabel="wave" colors={colors} styles={styles} />}
+      {windExtremes && <ExtremeChips extremes={windExtremes} unitLabel="wind" colors={colors} styles={styles} />}
     </View>
   );
 }
@@ -87,22 +99,25 @@ function DayRow({
 }) {
   const dayDate = TideClock.dateFromKey(day.dateKey);
   return (
-    <Pressable onPress={onSelect} style={[styles.dayRow, !isSelected && styles.fadedRow]}>
-      <Text style={styles.dayLabel}>{day.label}</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
+    <Pressable onPress={onSelect} style={[styles.dayRow, isSelected && styles.dayRowSelected]}>
+      <Text style={[styles.dayLabel, isSelected && styles.dayLabelSelected]}>{day.label}</Text>
+      <View style={styles.chipsRow}>
         {day.extremes.map((extreme) => {
           const tint = extreme.type === 'high' ? colors.high : colors.low;
           const parsed = TideClock.parseISODate(extreme.localTime);
           const time = parsed ? TideClock.format(parsed, { hour: '2-digit', minute: '2-digit', hour12: false }) : '';
           return (
-            <View key={extreme.localTime} style={styles.chip}>
-              <Text style={[styles.chipLabel, { color: tint }]}>{extreme.type === 'high' ? 'H' : 'L'}</Text>
-              <Text style={styles.chipHeight}>{extreme.height.toFixed(1)}</Text>
-              <Text style={styles.chipTime}>{time}</Text>
-            </View>
+            <Chip
+              key={extreme.localTime}
+              label={extreme.type === 'high' ? 'H' : 'L'}
+              value={extreme.height.toFixed(1)}
+              time={time}
+              tint={tint}
+              styles={styles}
+            />
           );
         })}
-      </ScrollView>
+      </View>
       <ExtraExtremesRow
         waveExtremes={waveSeries ? waveSeries.dailyExtremes(dayDate) : null}
         windExtremes={windSeries ? windSeries.dailyExtremes(dayDate) : null}
@@ -119,6 +134,7 @@ export function ForecastList({ yesterday, days, waveSeries, windSeries, selected
 
   return (
     <View style={styles.container}>
+      <Text style={styles.sectionTitle}>Forecast</Text>
       {yesterday && (
         <DayRow
           key={yesterday.dateKey}
@@ -149,26 +165,48 @@ export function ForecastList({ yesterday, days, waveSeries, windSeries, selected
 
 function getStyles(colors: Colors) {
   return StyleSheet.create({
-    container: { marginTop: 8, paddingTop: 14, borderTopWidth: 1, borderTopColor: colors.cardBorder },
-    dayRow: { marginBottom: 14 },
-    fadedRow: { opacity: 0.45 },
+    container: { marginTop: 20 },
+    sectionTitle: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      fontWeight: '700',
+      textTransform: 'uppercase',
+      letterSpacing: 0.8,
+      marginBottom: 10,
+    },
+    dayRow: {
+      marginBottom: 8,
+      paddingVertical: 10,
+      paddingHorizontal: 12,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: 'transparent',
+    },
+    dayRowSelected: {
+      backgroundColor: colors.card,
+      borderColor: withAlpha(colors.primary, 0.35),
+    },
     dayLabel: {
       color: colors.textSecondary,
       fontSize: 13,
       fontWeight: '600',
-      marginBottom: 6,
+      marginBottom: 8,
       textTransform: 'uppercase',
       letterSpacing: 0.5,
     },
-    chipsRow: { flexDirection: 'row', gap: 18, paddingRight: 4 },
+    dayLabelSelected: { color: colors.primary },
+    chipsRow: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 6, columnGap: 8 },
     chip: {
       flexDirection: 'row',
       alignItems: 'baseline',
       gap: 5,
+      paddingVertical: 4,
+      paddingHorizontal: 8,
+      borderRadius: 999,
     },
     chipLabel: { fontWeight: '700', fontSize: 12 },
     chipHeight: { color: colors.textPrimary, fontSize: 13, fontWeight: '600' },
-    chipTime: { color: colors.textSecondary, fontSize: 12 },
-    extraRow: { marginTop: 6, opacity: 0.7 },
+    chipTime: { color: colors.textSecondary, fontSize: 11 },
+    extraRow: { marginTop: 8 },
   });
 }

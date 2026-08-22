@@ -1,3 +1,4 @@
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useMemo, useState } from 'react';
 import {
@@ -103,6 +104,16 @@ function AppContent() {
             <RefreshControl tintColor={colors.primary} refreshing={loading} onRefresh={() => load(true)} />
           }
         >
+          <View style={styles.header}>
+            <View style={styles.headerBadge}>
+              <MaterialCommunityIcons name="waves" size={20} color={colors.onPrimary} />
+            </View>
+            <View>
+              <Text style={styles.headerTitle}>Wave Hastings</Text>
+              <Text style={styles.headerSubtitle}>Hastings Pier · East Sussex</Text>
+            </View>
+          </View>
+
           <CurrentLevelCard
             current={current}
             waveHeight={waveHeight}
@@ -115,12 +126,14 @@ function AppContent() {
 
           {series && (
             <View style={styles.chartCard}>
+              <Text style={styles.chartCardTitle}>Tide &amp; swell</Text>
               <TideChart series={series} waveSeries={waveSeries} windSeries={windSeries} now={referenceDate} />
             </View>
           )}
 
           {precipitationSeries && (
             <View style={styles.chartCard}>
+              <Text style={styles.chartCardTitle}>Rainfall</Text>
               <PrecipitationChart series={precipitationSeries} now={referenceDate} />
             </View>
           )}
@@ -137,15 +150,22 @@ function AppContent() {
           />
 
           <View style={styles.footer}>
-            <Pressable onPress={() => load(true)} disabled={loading}>
-              <Text style={styles.reset}>{loading ? 'Refreshing…' : 'Force refresh'}</Text>
-            </Pressable>
-            <Pressable onPress={toggleTheme}>
-              <Text style={styles.reset}>{themeName === 'dark' ? 'Light mode' : 'Dark mode'}</Text>
-            </Pressable>
-            <Pressable onPress={resetKey}>
-              <Text style={styles.reset}>Reset API key</Text>
-            </Pressable>
+            <FooterButton
+              icon="refresh-outline"
+              label={loading ? 'Refreshing…' : 'Refresh'}
+              onPress={() => load(true)}
+              disabled={loading}
+              colors={colors}
+              styles={styles}
+            />
+            <FooterButton
+              icon={themeName === 'dark' ? 'sunny-outline' : 'moon-outline'}
+              label={themeName === 'dark' ? 'Light mode' : 'Dark mode'}
+              onPress={toggleTheme}
+              colors={colors}
+              styles={styles}
+            />
+            <FooterButton icon="key-outline" label="Reset key" onPress={resetKey} colors={colors} styles={styles} />
           </View>
         </ScrollView>
       </SafeAreaView>
@@ -153,21 +173,84 @@ function AppContent() {
   );
 }
 
+type Styles = ReturnType<typeof getStyles>;
+
+function FooterButton({
+  icon,
+  label,
+  onPress,
+  disabled,
+  colors,
+  styles,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  onPress: () => void;
+  disabled?: boolean;
+  colors: Colors;
+  styles: Styles;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      style={({ pressed }) => [styles.footerButton, (pressed || disabled) && styles.footerButtonPressed]}
+    >
+      <Ionicons name={icon} size={15} color={colors.textSecondary} />
+      <Text style={styles.footerButtonText}>{label}</Text>
+    </Pressable>
+  );
+}
+
 function getStyles(colors: Colors) {
   return StyleSheet.create({
     flex: { flex: 1 },
     flexCenter: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    content: { padding: 12, paddingBottom: 32 },
+    content: { padding: 16, paddingBottom: 32 },
+    header: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 18 },
+    headerBadge: {
+      width: 34,
+      height: 34,
+      borderRadius: 12,
+      backgroundColor: colors.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    headerTitle: { color: colors.textPrimary, fontSize: 18, fontWeight: '800', letterSpacing: -0.3 },
+    headerSubtitle: { color: colors.textSecondary, fontSize: 12, marginTop: 1 },
     chartCard: {
-      borderTopWidth: 1,
-      borderTopColor: colors.cardBorder,
-      marginHorizontal: -12,
-      paddingHorizontal: 12,
-      paddingVertical: 12,
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      borderRadius: 18,
+      padding: 14,
       marginTop: 12,
+      shadowColor: colors.shadow,
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 1,
+      shadowRadius: 14,
+      elevation: 2,
+    },
+    chartCardTitle: {
+      color: colors.textPrimary,
+      fontSize: 13,
+      fontWeight: '700',
+      marginBottom: 10,
     },
     error: { color: colors.falling, marginTop: 16, textAlign: 'center' },
-    footer: { flexDirection: 'row', justifyContent: 'center', gap: 20, marginTop: 24 },
-    reset: { color: colors.textSecondary, textAlign: 'center', fontSize: 12 },
+    footer: { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: 10, marginTop: 26 },
+    footerButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingVertical: 8,
+      paddingHorizontal: 14,
+      borderRadius: 999,
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+    },
+    footerButtonPressed: { opacity: 0.55 },
+    footerButtonText: { color: colors.textSecondary, fontSize: 12, fontWeight: '600' },
   });
 }

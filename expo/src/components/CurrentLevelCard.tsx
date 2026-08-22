@@ -1,9 +1,9 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '../hooks/useTheme';
 import type { CurrentLevel, Trend } from '../services/TideSeries';
-import type { Colors } from '../theme';
+import { type Colors, withAlpha } from '../theme';
 
 interface Props {
   current: CurrentLevel | null;
@@ -23,120 +23,195 @@ const trendIcon: Record<Trend, keyof typeof Ionicons.glyphMap> = {
   unknown: 'help',
 };
 
-function TrendArrow({ trend, colors, style }: { trend: Trend; colors: Colors; style: object }) {
+function TrendBadge({ trend, colors, styles }: { trend: Trend; colors: Colors; styles: Styles }) {
   const trendColor: Record<Trend, string> = {
     rising: colors.rising,
     falling: colors.falling,
     steady: colors.textSecondary,
     unknown: colors.textSecondary,
   };
-  return <Ionicons name={trendIcon[trend]} size={13} color={trendColor[trend]} style={style} />;
+  const tint = trendColor[trend];
+  return (
+    <View style={[styles.trendBadge, { backgroundColor: withAlpha(tint, 0.16) }]}>
+      <Ionicons name={trendIcon[trend]} size={11} color={tint} />
+    </View>
+  );
+}
+
+function Stat({
+  icon,
+  label,
+  value,
+  unit,
+  trend,
+  tint,
+  colors,
+  styles,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string | null;
+  unit: string;
+  trend: Trend;
+  tint: string;
+  colors: Colors;
+  styles: Styles;
+}) {
+  return (
+    <View style={styles.stat}>
+      <View style={styles.statLabelRow}>
+        <View style={[styles.statIconWrap, { backgroundColor: withAlpha(tint, 0.14) }]}>{icon}</View>
+        <Text style={styles.statLabel}>{label}</Text>
+      </View>
+      {value !== null ? (
+        <View style={styles.statValueRow}>
+          <Text style={styles.statValue}>
+            {value}
+            <Text style={styles.statUnit}>{unit}</Text>
+          </Text>
+          <TrendBadge trend={trend} colors={colors} styles={styles} />
+        </View>
+      ) : (
+        <Text style={styles.statValue}>—</Text>
+      )}
+    </View>
+  );
 }
 
 export function CurrentLevelCard({ current, waveHeight, waveTrend, windSpeed, windTrend, fetchedAt, dayLabel }: Props) {
   const { colors } = useTheme();
   const styles = useMemo(() => getStyles(colors), [colors]);
 
+  const updatedTime = fetchedAt
+    ? fetchedAt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/London' })
+    : null;
+
   return (
     <View style={styles.card}>
       <View style={styles.topRow}>
-        <Text style={styles.label}>Hastings Pier</Text>
+        <Text style={styles.title}>Current conditions</Text>
         {dayLabel ? (
-          <Text style={styles.updated}>{dayLabel}</Text>
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>{dayLabel}</Text>
+          </View>
         ) : (
-          fetchedAt && (
-            <Text style={styles.updated}>
-              Updated{' '}
-              {fetchedAt.toLocaleTimeString('en-GB', {
-                hour: '2-digit',
-                minute: '2-digit',
-                timeZone: 'Europe/London',
-              })}
-            </Text>
+          updatedTime && (
+            <View style={styles.badge}>
+              <View style={styles.liveDot} />
+              <Text style={styles.badgeText}>Updated {updatedTime}</Text>
+            </View>
           )
         )}
       </View>
       <View style={styles.contentRow}>
-        <View style={styles.tideSection}>
-          <Text style={styles.sectionLabel}>Tide</Text>
-          {current ? (
-            <View style={styles.row}>
-              <Text style={styles.height}>
-                {current.height.toFixed(1)}
-                <Text style={styles.unit}>m</Text>
-              </Text>
-              <TrendArrow trend={current.trend} colors={colors} style={styles.trendIcon} />
-            </View>
-          ) : (
-            <Text style={styles.height}>—</Text>
-          )}
-        </View>
-        {waveHeight !== null && (
-          <View style={styles.waveSection}>
-            <Text style={styles.sectionLabel}>Wave</Text>
-            <View style={styles.row}>
-              <Text style={styles.height}>
-                {waveHeight.toFixed(1)}
-                <Text style={styles.unit}>m</Text>
-              </Text>
-              <TrendArrow trend={waveTrend} colors={colors} style={styles.trendIcon} />
-            </View>
-          </View>
-        )}
-        {windSpeed !== null && (
-          <View style={styles.windSection}>
-            <Text style={styles.sectionLabel}>Wind</Text>
-            <View style={styles.row}>
-              <Text style={styles.height}>
-                {windSpeed.toFixed(1)}
-                <Text style={styles.unit}>mph</Text>
-              </Text>
-              <TrendArrow trend={windTrend} colors={colors} style={styles.trendIcon} />
-            </View>
-          </View>
-        )}
+        <Stat
+          icon={<Ionicons name="water" size={13} color={colors.primary} />}
+          label="Tide"
+          value={current ? current.height.toFixed(1) : null}
+          unit="m"
+          trend={current?.trend ?? 'unknown'}
+          tint={colors.primary}
+          colors={colors}
+          styles={styles}
+        />
+        <Stat
+          icon={<MaterialCommunityIcons name="waves" size={13} color={colors.rising} />}
+          label="Wave"
+          value={waveHeight !== null ? waveHeight.toFixed(1) : null}
+          unit="m"
+          trend={waveTrend}
+          tint={colors.rising}
+          colors={colors}
+          styles={styles}
+        />
+        <Stat
+          icon={<Feather name="wind" size={13} color={colors.wind} />}
+          label="Wind"
+          value={windSpeed !== null ? windSpeed.toFixed(1) : null}
+          unit="mph"
+          trend={windTrend}
+          tint={colors.wind}
+          colors={colors}
+          styles={styles}
+        />
       </View>
     </View>
   );
 }
 
+type Styles = ReturnType<typeof getStyles>;
+
 function getStyles(colors: Colors) {
   return StyleSheet.create({
     card: {
-      paddingTop: 4,
+      backgroundColor: colors.cardElevated,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      borderRadius: 20,
+      padding: 16,
+      shadowColor: colors.shadow,
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 1,
+      shadowRadius: 18,
+      elevation: 3,
     },
     topRow: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
     },
-    label: {
+    title: {
       color: colors.textSecondary,
-      fontSize: 13,
-      fontWeight: '600',
+      fontSize: 12,
+      fontWeight: '700',
       textTransform: 'uppercase',
-      letterSpacing: 1,
+      letterSpacing: 0.8,
     },
-    row: {
+    badge: {
       flexDirection: 'row',
-      alignItems: 'flex-end',
-      marginTop: 2,
+      alignItems: 'center',
+      gap: 5,
+      paddingVertical: 3,
+      paddingHorizontal: 8,
+      borderRadius: 999,
+      backgroundColor: colors.card,
     },
-    height: { color: colors.textPrimary, fontSize: 34, fontWeight: '700' },
-    unit: { fontSize: 14, fontWeight: '500', color: colors.textSecondary },
-    trendIcon: { marginBottom: 5, marginLeft: 2 },
-    updated: { color: colors.textSecondary, fontSize: 11 },
-    contentRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8, gap: 16 },
-    tideSection: { flex: 1 },
-    waveSection: { flex: 1 },
-    windSection: { flex: 1 },
-    sectionLabel: {
+    liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.rising },
+    badgeText: { color: colors.textSecondary, fontSize: 11, fontWeight: '600' },
+    contentRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 14, gap: 12 },
+    stat: { flex: 1 },
+    statLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
+    statIconWrap: {
+      width: 22,
+      height: 22,
+      borderRadius: 7,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    statLabel: {
       color: colors.textSecondary,
       fontSize: 11,
       fontWeight: '600',
-      marginBottom: 4,
       textTransform: 'uppercase',
       letterSpacing: 0.5,
+    },
+    statValueRow: { flexDirection: 'row', alignItems: 'center' },
+    statValue: {
+      color: colors.textPrimary,
+      fontSize: 30,
+      fontWeight: '800',
+      letterSpacing: -0.5,
+      fontVariant: ['tabular-nums'],
+    },
+    statUnit: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
+    trendBadge: {
+      width: 20,
+      height: 20,
+      borderRadius: 10,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginLeft: 6,
+      marginBottom: 3,
     },
   });
 }

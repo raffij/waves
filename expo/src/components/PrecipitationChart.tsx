@@ -4,7 +4,7 @@ import Svg, { Rect } from 'react-native-svg';
 import { useTheme } from '../hooks/useTheme';
 import type { PrecipitationSeries } from '../services/PrecipitationSeries';
 import { TideClock } from '../services/TideClock';
-import type { Colors } from '../theme';
+import { type Colors, withAlpha } from '../theme';
 
 interface Props {
   series: PrecipitationSeries;
@@ -82,7 +82,7 @@ export function PrecipitationChart({ series, now, startHour = 6, endHour = 22 }:
         ))}
       </View>
       <View style={styles.legendRow}>
-        <View style={styles.legendItem}>
+        <View style={[styles.legendItem, { backgroundColor: withAlpha(colors.precipitation, 0.12) }]}>
           <View style={[styles.legendDot, { backgroundColor: colors.precipitation }]} />
           <Text style={styles.legendText}>{total > 0 ? `Rain ${total.toFixed(1)}mm total` : 'No rain expected'}</Text>
         </View>
@@ -111,8 +111,15 @@ function getStyles(colors: Colors) {
       paddingLeft: PADDING_X,
       paddingRight: PADDING_X,
     },
-    legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-    legendDot: { width: 7, height: 7, borderRadius: 3.5 },
-    legendText: { color: colors.textSecondary, fontSize: 11 },
+    legendItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      paddingVertical: 4,
+      paddingHorizontal: 8,
+      borderRadius: 999,
+    },
+    legendDot: { width: 6, height: 6, borderRadius: 3 },
+    legendText: { color: colors.textSecondary, fontSize: 11, fontWeight: '600' },
   });
 }
