@@ -6,7 +6,7 @@ import { TideClock } from '../services/TideClock';
 import type { TideSeries } from '../services/TideSeries';
 import type { WaveSeries } from '../services/WaveSeries';
 import type { WindSeries } from '../services/WindSeries';
-import type { Colors } from '../theme';
+import { type Colors, withAlpha } from '../theme';
 
 interface Props {
   series: TideSeries;
@@ -321,14 +321,14 @@ export function TideChart({ series, waveSeries, windSeries, now, startHour = 6, 
         ))}
       </View>
       <View style={styles.legendRow}>
-        <View style={styles.legendItem}>
+        <View style={[styles.legendItem, { backgroundColor: withAlpha(colors.primary, 0.12) }]}>
           <View style={[styles.legendDot, { backgroundColor: colors.primary }]} />
           <Text style={styles.legendText}>
             Tide {tideMinHeight.toFixed(1)}–{tideMaxHeight.toFixed(1)}m
           </Text>
         </View>
         {waveHeights.length > 0 && (
-          <View style={styles.legendItem}>
+          <View style={[styles.legendItem, { backgroundColor: withAlpha(colors.rising, 0.12) }]}>
             <View style={[styles.legendDot, { backgroundColor: colors.rising }]} />
             <Text style={styles.legendText}>
               Wave {waveMinHeight.toFixed(1)}–{waveMaxHeight.toFixed(1)}m
@@ -336,7 +336,7 @@ export function TideChart({ series, waveSeries, windSeries, now, startHour = 6, 
           </View>
         )}
         {windSpeeds.length > 0 && (
-          <View style={styles.legendItem}>
+          <View style={[styles.legendItem, { backgroundColor: withAlpha(colors.wind, 0.12) }]}>
             <View style={[styles.legendDot, { backgroundColor: colors.wind }]} />
             <Text style={styles.legendText}>
               Wind {windMinSpeed.toFixed(1)}–{windMaxSpeed.toFixed(1)} mph
@@ -383,8 +383,15 @@ function getStyles(colors: Colors) {
       paddingLeft: PADDING_LEFT,
       paddingRight: PADDING_X,
     },
-    legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-    legendDot: { width: 7, height: 7, borderRadius: 3.5 },
-    legendText: { color: colors.textSecondary, fontSize: 11 },
+    legendItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      paddingVertical: 4,
+      paddingHorizontal: 8,
+      borderRadius: 999,
+    },
+    legendDot: { width: 6, height: 6, borderRadius: 3 },
+    legendText: { color: colors.textSecondary, fontSize: 11, fontWeight: '600' },
   });
 }
