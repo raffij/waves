@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { type LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-native';
+import { type LayoutChangeEvent, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '../hooks/useTheme';
 import type { ForecastDay } from '../services/TideForecast';
 import { type Colors, withAlpha } from '../theme';
@@ -77,25 +77,27 @@ export function ForecastList({ yesterday, days, selectedDateKey, onSelectDay }: 
   const allDays = yesterday ? [yesterday, ...days] : days;
 
   return (
-    <View style={styles.grid} onLayout={onLayout}>
-      {allDays.map((day) => (
-        <DayTile
-          key={day.dateKey}
-          day={day}
-          isSelected={day.dateKey === selectedDateKey}
-          onSelect={() => onSelectDay(day.dateKey)}
-          width={tileWidth}
-          colors={colors}
-          styles={styles}
-        />
-      ))}
+    <View onLayout={onLayout}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.grid}>
+        {allDays.map((day) => (
+          <DayTile
+            key={day.dateKey}
+            day={day}
+            isSelected={day.dateKey === selectedDateKey}
+            onSelect={() => onSelectDay(day.dateKey)}
+            width={tileWidth}
+            colors={colors}
+            styles={styles}
+          />
+        ))}
+      </ScrollView>
     </View>
   );
 }
 
 function getStyles(colors: Colors) {
   return StyleSheet.create({
-    grid: { flexDirection: 'row', flexWrap: 'wrap', gap: GAP },
+    grid: { flexDirection: 'row', gap: GAP },
     tile: {
       alignItems: 'center',
       paddingVertical: 10,
