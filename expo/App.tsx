@@ -142,8 +142,6 @@ function AppContent() {
           <ForecastList
             yesterday={yesterday}
             days={days}
-            waveSeries={waveSeries}
-            windSeries={windSeries}
             selectedDateKey={activeDateKey}
             onSelectDay={setSelectedDateKey}
           />
