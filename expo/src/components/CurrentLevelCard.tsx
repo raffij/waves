@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '../hooks/useTheme';
 import type { CurrentLevel, Trend } from '../services/TideSeries';
-import { type Colors, withAlpha } from '../theme';
+import type { Colors } from '../theme';
 
 interface Props {
   current: CurrentLevel | null;
@@ -44,7 +44,6 @@ function Stat({
   value,
   unit,
   trend,
-  tint,
   colors,
   styles,
 }: {
@@ -53,7 +52,6 @@ function Stat({
   value: string | null;
   unit: string;
   trend: Trend;
-  tint: string;
   colors: Colors;
   styles: Styles;
 }) {
@@ -110,7 +108,6 @@ export function CurrentLevelCard({ current, waveHeight, waveTrend, windSpeed, wi
           value={current ? current.height.toFixed(1) : null}
           unit="m"
           trend={current?.trend ?? 'unknown'}
-          tint={colors.primary}
           colors={colors}
           styles={styles}
         />
@@ -120,7 +117,6 @@ export function CurrentLevelCard({ current, waveHeight, waveTrend, windSpeed, wi
           value={waveHeight !== null ? waveHeight.toFixed(1) : null}
           unit="m"
           trend={waveTrend}
-          tint={colors.rising}
           colors={colors}
           styles={styles}
         />
@@ -130,7 +126,6 @@ export function CurrentLevelCard({ current, waveHeight, waveTrend, windSpeed, wi
           value={windSpeed !== null ? windSpeed.toFixed(1) : null}
           unit="mph"
           trend={windTrend}
-          tint={colors.wind}
           colors={colors}
           styles={styles}
         />
