@@ -104,13 +104,6 @@ function AppContent() {
             <RefreshControl tintColor={colors.primary} refreshing={loading} onRefresh={() => load(true)} />
           }
         >
-          <View style={styles.locationRow}>
-            <Ionicons name="location-outline" size={12} color={colors.textSecondary} />
-            <Text style={styles.locationText}>Hastings Pier · East Sussex</Text>
-          </View>
-
-          <View style={styles.divider} />
-
           <CurrentLevelCard
             current={current}
             waveHeight={waveHeight}
@@ -147,6 +140,11 @@ function AppContent() {
           />
 
           <View style={styles.divider} />
+
+          <View style={styles.locationRow}>
+            <Ionicons name="location-outline" size={12} color={colors.textSecondary} />
+            <Text style={styles.locationText}>Hastings Pier · East Sussex</Text>
+          </View>
 
           <View style={styles.footer}>
             <FooterButton
@@ -206,7 +204,7 @@ function getStyles(colors: Colors) {
     flex: { flex: 1 },
     flexCenter: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     content: { padding: 14, paddingBottom: 28 },
-    locationRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+    locationRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 },
     locationText: { color: colors.textSecondary, fontSize: 12 },
     divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.cardBorder, marginVertical: 18 },
     error: { color: colors.falling, marginTop: 16, textAlign: 'center' },
