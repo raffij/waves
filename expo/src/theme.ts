@@ -14,6 +14,7 @@ export interface Colors {
   rising: string;
   falling: string;
   wind: string;
+  precipitation: string;
 }
 
 export const darkColors: Colors = {
@@ -31,6 +32,7 @@ export const darkColors: Colors = {
   rising: '#7ee787',
   falling: '#ff8a80',
   wind: '#ffb86c',
+  precipitation: '#7aa2ff',
 };
 
 export const lightColors: Colors = {
@@ -48,4 +50,5 @@ export const lightColors: Colors = {
   rising: '#15803d',
   falling: '#dc2626',
   wind: '#c2650a',
+  precipitation: '#3457d5',
 };
