@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '../hooks/useTheme';
 import type { CurrentLevel, Trend } from '../services/TideSeries';
-import { type Colors, withAlpha } from '../theme';
+import type { Colors } from '../theme';
 
 interface Props {
   current: CurrentLevel | null;
@@ -32,8 +32,8 @@ function TrendBadge({ trend, colors, styles }: { trend: Trend; colors: Colors; s
   };
   const tint = trendColor[trend];
   return (
-    <View style={[styles.trendBadge, { backgroundColor: withAlpha(tint, 0.16) }]}>
-      <Ionicons name={trendIcon[trend]} size={11} color={tint} />
+    <View style={styles.trendBadge}>
+      <Ionicons name={trendIcon[trend]} size={13} color={tint} />
     </View>
   );
 }
@@ -44,7 +44,6 @@ function Stat({
   value,
   unit,
   trend,
-  tint,
   colors,
   styles,
 }: {
@@ -53,14 +52,13 @@ function Stat({
   value: string | null;
   unit: string;
   trend: Trend;
-  tint: string;
   colors: Colors;
   styles: Styles;
 }) {
   return (
     <View style={styles.stat}>
       <View style={styles.statLabelRow}>
-        <View style={[styles.statIconWrap, { backgroundColor: withAlpha(tint, 0.14) }]}>{icon}</View>
+        <View style={styles.statIconWrap}>{icon}</View>
         <Text style={styles.statLabel}>{label}</Text>
       </View>
       {value !== null ? (
@@ -110,7 +108,6 @@ export function CurrentLevelCard({ current, waveHeight, waveTrend, windSpeed, wi
           value={current ? current.height.toFixed(1) : null}
           unit="m"
           trend={current?.trend ?? 'unknown'}
-          tint={colors.primary}
           colors={colors}
           styles={styles}
         />
@@ -120,7 +117,6 @@ export function CurrentLevelCard({ current, waveHeight, waveTrend, windSpeed, wi
           value={waveHeight !== null ? waveHeight.toFixed(1) : null}
           unit="m"
           trend={waveTrend}
-          tint={colors.rising}
           colors={colors}
           styles={styles}
         />
@@ -130,7 +126,6 @@ export function CurrentLevelCard({ current, waveHeight, waveTrend, windSpeed, wi
           value={windSpeed !== null ? windSpeed.toFixed(1) : null}
           unit="mph"
           trend={windTrend}
-          tint={colors.wind}
           colors={colors}
           styles={styles}
         />
@@ -150,30 +145,23 @@ function getStyles(colors: Colors) {
       justifyContent: 'space-between',
     },
     title: {
-      color: colors.textSecondary,
-      fontSize: 12,
+      color: colors.textPrimary,
+      fontSize: 15,
       fontWeight: '700',
-      textTransform: 'uppercase',
-      letterSpacing: 0.8,
     },
     badge: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 5,
-      paddingVertical: 3,
-      paddingHorizontal: 8,
-      borderRadius: 999,
-      backgroundColor: colors.card,
     },
     liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.rising },
     badgeText: { color: colors.textSecondary, fontSize: 11, fontWeight: '600' },
-    contentRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 14, gap: 12 },
+    contentRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 16, gap: 8 },
     stat: { flex: 1 },
-    statLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
+    statLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 6 },
     statIconWrap: {
-      width: 22,
-      height: 22,
-      borderRadius: 7,
+      width: 18,
+      height: 18,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -182,25 +170,24 @@ function getStyles(colors: Colors) {
       fontSize: 11,
       fontWeight: '600',
       textTransform: 'uppercase',
-      letterSpacing: 0.5,
+      letterSpacing: 0.3,
     },
     statValueRow: { flexDirection: 'row', alignItems: 'center' },
     statValue: {
       color: colors.textPrimary,
-      fontSize: 30,
+      fontSize: 28,
       fontWeight: '800',
-      letterSpacing: -0.5,
+      letterSpacing: -0.4,
       fontVariant: ['tabular-nums'],
     },
     statUnit: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
     trendBadge: {
-      width: 20,
+      width: 18,
       height: 20,
-      borderRadius: 10,
       alignItems: 'center',
       justifyContent: 'center',
-      marginLeft: 6,
-      marginBottom: 3,
+      marginLeft: 4,
+      marginBottom: 2,
     },
   });
 }
