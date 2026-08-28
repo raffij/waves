@@ -138,40 +138,42 @@ export function TideChart({ series, waveSeries, windSeries, now, startHour = 6, 
   const tideHeights = tideSamples.map((s) => s.height);
   const tideMinHeight = Math.min(...tideHeights);
   const tideMaxHeight = Math.max(...tideHeights);
-  const tideSpread = tideMaxHeight - tideMinHeight || 1;
+  // Axes always start at 0 so bar/line heights read as true magnitudes
+  // rather than an exaggerated view of the data's own min-max spread.
+  const tideSpread = tideMaxHeight || 1;
 
   // Wave scaling: separate axis to show smaller wave heights clearly
   const waveHeights = waveSamples.map((s) => s.height);
   const waveMinHeight = waveHeights.length > 0 ? Math.min(...waveHeights) : 0;
   const waveMaxHeight = waveHeights.length > 0 ? Math.max(...waveHeights) : 1;
-  const waveSpread = waveMaxHeight - waveMinHeight || 1;
+  const waveSpread = waveMaxHeight || 1;
 
   // Wind scaling: different unit (mph) with typical range 0-40
   const windSpeeds = windSamples.map((s) => s.speed);
   const windMinSpeed = windSpeeds.length > 0 ? Math.min(...windSpeeds) : 0;
   const windMaxSpeed = windSpeeds.length > 0 ? Math.max(...windSpeeds) : 1;
-  const windSpread = windMaxSpeed - windMinSpeed || 1;
+  const windSpread = windMaxSpeed || 1;
 
   const toTideXY = (time: Date, height: number) => {
     const x = PADDING_LEFT + ((time.getTime() - start.getTime()) / totalMs) * plotWidth;
-    const y = PADDING_TOP + (1 - (height - tideMinHeight) / tideSpread) * plotHeight;
+    const y = PADDING_TOP + (1 - height / tideSpread) * plotHeight;
     return { x, y };
   };
 
   const toWaveXY = (time: Date, height: number) => {
     const x = PADDING_LEFT + ((time.getTime() - start.getTime()) / totalMs) * plotWidth;
-    const y = PADDING_TOP + (1 - (height - waveMinHeight) / waveSpread) * plotHeight;
+    const y = PADDING_TOP + (1 - height / waveSpread) * plotHeight;
     return { x, y };
   };
 
   const toWindXY = (time: Date, speed: number) => {
     const x = PADDING_LEFT + ((time.getTime() - start.getTime()) / totalMs) * plotWidth;
-    const y = PADDING_TOP + (1 - (speed - windMinSpeed) / windSpread) * plotHeight;
+    const y = PADDING_TOP + (1 - speed / windSpread) * plotHeight;
     return { x, y };
   };
 
-  const tideMidHeight = (tideMinHeight + tideMaxHeight) / 2;
-  const tideGridLines = [tideMaxHeight, tideMidHeight, tideMinHeight].map((value) => ({
+  const tideMidHeight = tideMaxHeight / 2;
+  const tideGridLines = [tideMaxHeight, tideMidHeight, 0].map((value) => ({
     value,
     y: toTideXY(start, value).y,
   }));
