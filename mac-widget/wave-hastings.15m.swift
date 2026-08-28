@@ -378,14 +378,17 @@ enum HourlyChart {
         return String(repeating: " ", count: left) + text + String(repeating: " ", count: right)
     }
 
+    // The axis floor is always 0, not the series' own minimum, so bar
+    // heights read as true magnitudes rather than an exaggerated view of
+    // the data's own min-max spread.
     private static func barRow(for samples: [Double?], cellWidth: Int) -> (row: String, min: Double, max: Double)? {
         let valid = samples.compactMap { $0 }
         guard let minV = valid.min(), let maxV = valid.max() else { return nil }
-        let spread = maxV - minV
+        let spread = maxV
         var row = ""
         for sample in samples {
             if let sample = sample {
-                let fraction = spread > 0 ? (sample - minV) / spread : 0.5
+                let fraction = spread > 0 ? sample / spread : 0.5
                 let levelIndex = min(levels.count - 1, max(0, Int((fraction * Double(levels.count - 1)).rounded())))
                 row += padCenter(String(levels[levelIndex]), width: cellWidth)
             } else {
