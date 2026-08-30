@@ -20,9 +20,6 @@ export const LOCATIONS: Location[] = [
     id: 'morecambe',
     name: 'Morecambe',
     region: 'Lancashire',
-    // TODO: verify against TideCheck's actual station id/slug for Morecambe —
-    // could not be confirmed from this environment (tidecheck.com is
-    // network-blocked here), so this is an educated guess pending testing.
     stationId: 'fes2022-morecambe',
     latitude: '54.07',
     longitude: '-2.87',
