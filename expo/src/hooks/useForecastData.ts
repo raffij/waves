@@ -1,8 +1,9 @@
+import type { UseQueryResult } from '@tanstack/react-query';
 import { useQueries, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
-import type { Location } from '../models/Location';
-import type { TideResponse } from '../models/TideModels';
+import { DEFAULT_LOCATION, type Location } from '../models/Location';
 import { PrecipitationSeries } from '../services/PrecipitationSeries';
+import type { TideDataResult } from '../services/TideAPIClient';
 import { TideAPIClient } from '../services/TideAPIClient';
 import { TideForecast } from '../services/TideForecast';
 import { TideSeries } from '../services/TideSeries';
@@ -11,11 +12,6 @@ import { WaveAPIClient } from '../services/WaveAPIClient';
 import { WaveSeries } from '../services/WaveSeries';
 import { WindSeries } from '../services/WindSeries';
 
-interface TideResult {
-  data: TideResponse;
-  fetchedAt: Date;
-}
-
 interface TideView {
   series: TideSeries;
   forecast: TideForecast;
@@ -23,7 +19,7 @@ interface TideView {
 }
 
 interface WaveView {
-  waveSeries: WaveSeries | null;
+  waveSeries: WaveSeries;
   windSeries: WindSeries | null;
   precipitationSeries: PrecipitationSeries | null;
 }
@@ -37,24 +33,30 @@ export interface ForecastData {
   fetchedAt: Date | null;
   isFetching: boolean;
   error: Error | null;
-  refresh: (force?: boolean) => Promise<void>;
+  /** Force a cache-bypassing refetch of both tide and wave/wind/precipitation. */
+  refresh: () => Promise<void>;
 }
 
-function tideQueryKey(location: Location, apiKey: string | null | undefined) {
-  return ['tide', location.stationId, apiKey] as const;
+function tideQueryKey(location: Location | undefined, apiKey: string | null | undefined) {
+  return ['tide', location?.stationId, apiKey] as const;
 }
 
-function waveQueryKey(location: Location, apiKey: string | null | undefined) {
-  return ['wave', location.id, apiKey] as const;
+// Wave/wind/precipitation come from Open-Meteo, which needs no API key, so
+// the wave key isn't scoped to it — resetting/re-entering the TideCheck key
+// shouldn't discard and re-fetch wave data too.
+function waveQueryKey(location: Location | undefined) {
+  return ['wave', location?.id] as const;
 }
 
 // `force` picks between each client's cache-first load and its
 // cache-bypassing forceRefresh — both go through the same TanStack Query
 // cache entry either way, just via loadTideData()/loadWaveData() (normal
 // load, gated by `enabled`) or forceRefresh() (pull-to-refresh, the
-// footer's Force refresh link).
+// footer's Force refresh link). Both throw rather than returning null on
+// failure, so TanStack Query keeps the last-good data on screen instead of
+// overwriting it with an empty result.
 function tideQueryFn(location: Location, apiKey: string, force: boolean) {
-  return async (): Promise<TideResult> => {
+  return async (): Promise<TideDataResult> => {
     const client = new TideAPIClient(location.stationId, apiKey);
     const result = force ? await client.forceRefresh() : await client.loadTideData();
     if (!result) throw new Error('Could not load tide data. Check your connection or API key.');
@@ -63,9 +65,11 @@ function tideQueryFn(location: Location, apiKey: string, force: boolean) {
 }
 
 function waveQueryFn(location: Location, force: boolean) {
-  return async (): Promise<WaveDataResult | null> => {
+  return async (): Promise<WaveDataResult> => {
     const client = new WaveAPIClient(location.id, location.latitude, location.longitude);
-    return force ? await client.forceRefresh() : await client.loadWaveData();
+    const result = force ? await client.forceRefresh() : await client.loadWaveData();
+    if (!result) throw new Error('Could not load wave data.');
+    return result;
   };
 }
 
@@ -73,7 +77,7 @@ function waveQueryFn(location: Location, force: boolean) {
 // is stable — that's what lets TanStack Query skip rebuilding these view
 // models on a render that didn't change the underlying fetch result (e.g.
 // toggling theme, or picking a different forecast day).
-function selectTide(result: TideResult): TideView {
+function selectTide(result: TideDataResult): TideView {
   return {
     series: new TideSeries(result.data.timeSeries),
     forecast: new TideForecast(result.data.extremes),
@@ -81,8 +85,7 @@ function selectTide(result: TideResult): TideView {
   };
 }
 
-function selectWave(result: WaveDataResult | null): WaveView {
-  if (!result) return { waveSeries: null, windSeries: null, precipitationSeries: null };
+function selectWave(result: WaveDataResult): WaveView {
   return {
     waveSeries: new WaveSeries(result.data),
     windSeries: result.wind ? new WindSeries(result.wind) : null,
@@ -90,68 +93,83 @@ function selectWave(result: WaveDataResult | null): WaveView {
   };
 }
 
+// Wave/wind/precipitation are a nice-to-have overlay (see WaveAPIClient's
+// own comment on fetching them independently of tide) — a wave-query error
+// is deliberately left out of the combined `error`, so a wave outage never
+// blocks the tide UI or shows a scary error for a non-essential chart.
+function combineForecastData([tide, wave]: [UseQueryResult<TideView, Error>, UseQueryResult<WaveView, Error>]): Omit<
+  ForecastData,
+  'refresh'
+> {
+  return {
+    series: tide.data?.series ?? null,
+    forecast: tide.data?.forecast ?? null,
+    fetchedAt: tide.data?.fetchedAt ?? null,
+    waveSeries: wave.data?.waveSeries ?? null,
+    windSeries: wave.data?.windSeries ?? null,
+    precipitationSeries: wave.data?.precipitationSeries ?? null,
+    isFetching: tide.isFetching || wave.isFetching,
+    error: tide.error ?? null,
+  };
+}
+
 // Fetches and coordinates tide + wave/wind together, keyed off the
 // TideCheck API key and the selected location. TanStack Query loads each
 // automatically once a key is available and refetches on its own whenever
-// the location (or key) changes — `refresh(true)` is only needed to force a
+// the location (or key) changes — `refresh()` is only needed to force a
 // cache-bypassing refresh (pull-to-refresh, the footer's Force refresh
 // link).
-export function useForecastData(apiKey: string | null | undefined, location: Location): ForecastData {
+export function useForecastData(apiKey: string | null | undefined, location: Location | undefined): ForecastData {
   const queryClient = useQueryClient();
+  const ready = !!apiKey && !!location;
 
   const forecastData = useQueries({
     queries: [
       {
         queryKey: tideQueryKey(location, apiKey),
-        queryFn: tideQueryFn(location, apiKey as string, false),
-        enabled: !!apiKey,
+        queryFn: tideQueryFn(location ?? DEFAULT_LOCATION, apiKey ?? '', false),
+        enabled: ready,
         select: selectTide,
       },
       {
-        queryKey: waveQueryKey(location, apiKey),
-        queryFn: waveQueryFn(location, false),
-        enabled: !!apiKey,
+        queryKey: waveQueryKey(location),
+        queryFn: waveQueryFn(location ?? DEFAULT_LOCATION, false),
+        enabled: ready,
         select: selectWave,
       },
     ],
-    combine: ([tide, wave]) => ({
-      series: tide.data?.series ?? null,
-      forecast: tide.data?.forecast ?? null,
-      fetchedAt: tide.data?.fetchedAt ?? null,
-      waveSeries: wave.data?.waveSeries ?? null,
-      windSeries: wave.data?.windSeries ?? null,
-      precipitationSeries: wave.data?.precipitationSeries ?? null,
-      isFetching: tide.isFetching || wave.isFetching,
-      error: tide.error ?? null,
-    }),
+    combine: combineForecastData,
   });
 
-  const refresh = useCallback(
-    async (force = false) => {
-      if (!apiKey) return;
+  const refresh = useCallback(async () => {
+    if (!ready) return;
 
-      if (!force) {
-        await Promise.all([
-          queryClient.refetchQueries({ queryKey: tideQueryKey(location, apiKey) }),
-          queryClient.refetchQueries({ queryKey: waveQueryKey(location, apiKey) }),
-        ]);
-        return;
-      }
+    const tideKey = tideQueryKey(location, apiKey);
+    const waveKey = waveQueryKey(location);
 
-      // fetchQuery (unlike refetchQueries) takes a queryFn override, which is
-      // how the cache-bypassing forceRefresh() call gets used instead of the
-      // registered cache-first queryFn above. allSettled: a failed tide fetch
-      // shouldn't stop the wave fetchQuery call, or reject refresh()'s own promise.
-      await Promise.allSettled([
+    // fetchQuery only applies a queryFn override (needed to swap in the
+    // cache-bypassing forceRefresh() call below) when the query is idle —
+    // if a normal fetch is already in flight, it just returns that fetch's
+    // result instead. cancelQueries first guarantees the override actually
+    // takes effect. allSettled: a failed tide fetch shouldn't stop the wave
+    // fetchQuery call, or reject refresh()'s own promise.
+    await Promise.allSettled([
+      queryClient.cancelQueries({ queryKey: tideKey }).then(() =>
         queryClient.fetchQuery({
-          queryKey: tideQueryKey(location, apiKey),
+          queryKey: tideKey,
           queryFn: tideQueryFn(location, apiKey, true),
+          staleTime: 0,
         }),
-        queryClient.fetchQuery({ queryKey: waveQueryKey(location, apiKey), queryFn: waveQueryFn(location, true) }),
-      ]);
-    },
-    [apiKey, location, queryClient],
-  );
+      ),
+      queryClient.cancelQueries({ queryKey: waveKey }).then(() =>
+        queryClient.fetchQuery({
+          queryKey: waveKey,
+          queryFn: waveQueryFn(location, true),
+          staleTime: 0,
+        }),
+      ),
+    ]);
+  }, [ready, apiKey, location, queryClient]);
 
   return { ...forecastData, refresh };
 }

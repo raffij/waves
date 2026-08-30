@@ -53,7 +53,7 @@ function AppContent() {
   const styles = useMemo(() => getStyles(colors), [colors]);
   const statusBarStyle = themeName === 'dark' ? 'light-content' : 'dark-content';
 
-  if (apiKey === undefined) {
+  if (apiKey === undefined || location === undefined) {
     return (
       <View style={styles.loadingState}>
         <ActivityIndicator color={colors.primary} />
@@ -104,9 +104,7 @@ function AppContent() {
       <SafeAreaView style={styles.flex}>
         <ScrollView
           contentContainerStyle={styles.content}
-          refreshControl={
-            <RefreshControl tintColor={colors.primary} refreshing={isFetching} onRefresh={() => refresh(true)} />
-          }
+          refreshControl={<RefreshControl tintColor={colors.primary} refreshing={isFetching} onRefresh={refresh} />}
         >
           <CurrentLevelCard
             current={current}
@@ -156,7 +154,7 @@ function AppContent() {
             <FooterButton
               icon="refresh-outline"
               label={isFetching ? 'Refreshing…' : 'Refresh'}
-              onPress={() => refresh(true)}
+              onPress={refresh}
               disabled={isFetching}
               colors={colors}
               styles={styles}

@@ -32,7 +32,10 @@ export class WaveAPIClient {
   ) {}
 
   private get cacheDataKey(): string {
-    return `wave-hastings-wave-cache-${this.locationId}`;
+    // Keyed on the actual request parameters (not just locationId) so an
+    // edited latitude/longitude for a location can't keep serving stale
+    // data for the old coordinates out of the cache.
+    return `wave-hastings-wave-cache-${this.locationId}-${this.latitude}-${this.longitude}`;
   }
 
   async loadWaveData(): Promise<WaveDataResult | null> {
