@@ -117,7 +117,13 @@ function AppContent() {
 
           {series && (
             <View style={styles.section}>
-              <TideChart series={series} waveSeries={waveSeries} windSeries={windSeries} now={referenceDate} />
+              <TideChart
+                series={series}
+                waveSeries={waveSeries}
+                windSeries={windSeries}
+                now={referenceDate}
+                isToday={isToday}
+              />
             </View>
           )}
 

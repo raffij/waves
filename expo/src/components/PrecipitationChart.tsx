@@ -91,7 +91,7 @@ export function PrecipitationChart({ series, now, isToday = true, startHour = 6,
             const y = floorY - barHeight;
             const barCenterX = x + Math.max(barWidth, 1) / 2;
             const baseOpacity = mm > 0 ? 0.85 : 0.25;
-            const opacity = barCenterX < pastFadeEndX ? baseOpacity * PAST_OPACITY_SCALE : baseOpacity;
+            const opacity = isToday && barCenterX < pastFadeEndX ? baseOpacity * PAST_OPACITY_SCALE : baseOpacity;
             return (
               <Rect
                 key={bar.time.toISOString()}
