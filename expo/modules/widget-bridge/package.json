@@ -1,0 +1,8 @@
+{
+  "name": "widget-bridge",
+  "version": "1.0.0",
+  "description": "Hands the app's TideCheck API key and selected location to the iOS home-screen widget via a shared App Group.",
+  "main": "index.ts",
+  "author": "Raffi",
+  "license": "MIT"
+}

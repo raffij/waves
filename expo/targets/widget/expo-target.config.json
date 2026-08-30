@@ -1,0 +1,14 @@
+{
+  "type": "widget",
+  "name": "wave_hastings_widget",
+  "displayName": "Wave Hastings",
+  "colors": {
+    "$accent": "#38bdf8",
+    "$widgetBackground": "#03122b"
+  },
+  "deploymentTarget": "16.0",
+  "frameworks": ["SwiftUI", "WidgetKit"],
+  "entitlements": {
+    "com.apple.security.application-groups": ["group.com.anonymous.hastings-tide"]
+  }
+}
