@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { ApiKeyPrompt } from './src/components/ApiKeyPrompt';
 import { CurrentLevelCard } from './src/components/CurrentLevelCard';
+import { DayInsights } from './src/components/DayInsights';
 import { ForecastList } from './src/components/ForecastList';
 import { PrecipitationChart } from './src/components/PrecipitationChart';
 import { TideChart } from './src/components/TideChart';
@@ -22,6 +23,7 @@ import { useForecastData } from './src/hooks/useForecastData';
 import { useLocation } from './src/hooks/useLocation';
 import { ThemeProvider, useTheme } from './src/hooks/useTheme';
 import { useWidgetSync } from './src/hooks/useWidgetSync';
+import { buildDayInsights } from './src/services/DayInsights';
 import { TideClock } from './src/services/TideClock';
 import type { Colors } from './src/theme';
 
@@ -48,8 +50,18 @@ function AppContent() {
   const { apiKey, saveKey, resetKey } = useApiKey();
   const { location, toggleLocation } = useLocation();
   useWidgetSync(apiKey, location);
-  const { series, forecast, waveSeries, windSeries, precipitationSeries, fetchedAt, isFetching, error, refresh } =
-    useForecastData(apiKey, location);
+  const {
+    series,
+    forecast,
+    waveSeries,
+    windSeries,
+    precipitationSeries,
+    daylightSeries,
+    fetchedAt,
+    isFetching,
+    error,
+    refresh,
+  } = useForecastData(apiKey, location);
   const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
   const { colors, themeName, toggleTheme } = useTheme();
   const styles = useMemo(() => getStyles(colors), [colors]);
@@ -99,6 +111,22 @@ function AppContent() {
   const windSpeed = windSeries?.speedAt(referenceDate) ?? null;
   const windTrend = windSeries?.trend(referenceDate) ?? 'unknown';
 
+  // Plain expression, not useMemo — the hooks above sit before AppContent's
+  // early returns and this doesn't, so it can't be a hook. Cheap anyway
+  // (a handful of hourly lookups), and it matches how the derived values
+  // above are computed each render.
+  const insights =
+    series && forecast
+      ? buildDayInsights({
+          forecast,
+          windSeries,
+          precipitationSeries,
+          daylightSeries,
+          reference: referenceDate,
+          isToday,
+        })
+      : null;
+
   return (
     <View style={styles.screen}>
       <StatusBar barStyle={statusBarStyle} />
@@ -136,6 +164,12 @@ function AppContent() {
           )}
 
           {error && <Text style={styles.error}>{error.message}</Text>}
+
+          {insights && (
+            <View style={styles.section}>
+              <DayInsights insights={insights} />
+            </View>
+          )}
 
           <View style={styles.section}>
             <ForecastList
