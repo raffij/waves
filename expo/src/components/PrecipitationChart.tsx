@@ -54,6 +54,18 @@ export function PrecipitationChart({ series, now, startHour = 6, endHour = 22 }:
   const maxMm = Math.max(MIN_SCALE_MM, ...bars.map((b) => b.mm ?? 0));
   const total = bars.reduce((sum, b) => sum + (b.mm ?? 0), 0);
 
+  // Searches the full series, not just this window, so it can point past
+  // a dry evening at tomorrow morning's first shower.
+  const nextRainTime = series.nextRainAfter(now);
+  const nextRainLabel = nextRainTime
+    ? ` · Next rain ${TideClock.format(
+        nextRainTime,
+        TideClock.dateKey(nextRainTime) === TideClock.dateKey(now)
+          ? { hour: '2-digit', minute: '2-digit', hour12: false }
+          : { weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false },
+      )}`
+    : '';
+
   const totalMs = end.getTime() - start.getTime();
   const currentX = PADDING_X + ((now.getTime() - start.getTime()) / totalMs) * plotWidth;
   // Clamped: a `now` before the window means nothing's elapsed yet (no
@@ -99,7 +111,9 @@ export function PrecipitationChart({ series, now, startHour = 6, endHour = 22 }:
       <View style={styles.legendRow}>
         <View style={styles.legendItem}>
           <View style={[styles.legendDot, { backgroundColor: colors.precipitation }]} />
-          <Text style={styles.legendText}>{total > 0 ? `Rain ${total.toFixed(1)}mm total` : 'No rain expected'}</Text>
+          <Text style={styles.legendText}>
+            {(total > 0 ? `Rain ${total.toFixed(1)}mm total` : 'No rain expected') + nextRainLabel}
+          </Text>
         </View>
       </View>
     </View>
