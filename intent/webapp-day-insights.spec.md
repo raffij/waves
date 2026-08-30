@@ -248,15 +248,30 @@ mean by `WIND_BAND_*` into `calm | breezy | windy`.
 **Rain clause** (omitted entirely if `precipitationSeries` is null; judged
 over `RAIN_WINDOW_START_HOUR`–`RAIN_WINDOW_END_HOUR` = 06:00–22:00, matching
 `PrecipitationChart`'s own display span so the two can't disagree — **not**
-the daylight window, which was the source of a "None expected" vs. visible
-bars contradiction; see `plan.md`):
-- `wet` = hours in that window with `mm > WET_HOUR_MM`
-- `from` = `isToday ? reference : windowStart`; `upcoming` = `wet` hours not
-  yet finished as of `from`
-- `upcoming` empty → `"staying dry"` / `None expected`
-- first upcoming hour is still ahead → `"rain likely from ${HH:MM}"` / `From ${HH:MM}`
-- raining now, last upcoming hour ends by `windowEnd` → `"rain clearing by ${HH:MM}"` / `Clearing by ${HH:MM}`
-- raining past `windowEnd` → `"rain on and off through the day"` / `On and off`
+the daylight window). Wet hours (`mm > WET_HOUR_MM`) are grouped into
+contiguous **spells**; on `today`, spells that have already ended are
+dropped. Phrasing is **tense-aware** (`past` / `today` / `future`, from
+`reference`'s date vs. now — a `past` day never says "likely"):
+
+- no spells → `stayed dry` / `staying dry` / `likely dry` · value `None`
+- one spell `[start, end]` (`end` = last wet hour + 1h):
+  - a coverage phrase is chosen: `for most of the day` if the spell is
+    ≥ `RAIN_DOMINATES_FRACTION` of the window, else
+    `through the morning` / `through the afternoon` /
+    `through the middle of the day` if it is ≥ `RAIN_LONG_SPELL_HOURS`,
+    else none
+  - `today` & already raining → `rain until ${end}` · value `Until ${end}`
+  - otherwise → `rain ${likely}${coverage}, ${start} to ${end}` (or
+    `rain ${likely}from ${start} to ${end}` with no coverage phrase) ·
+    value `${start}–${end}`
+- multiple spells → `showers on and off` / `showers came and went` (past) /
+  `showers likely` (future), suffixed ` in the morning` / ` in the
+  afternoon` / ` through the day` · value `On and off`
+
+This replaces the earlier "rain likely from X" / "clearing by X" / "on and
+off" set, which gave a past day a future tense and never bounded a spell
+(it read "rain from 10:00" for a shower that ran 10:00–15:00). See
+`plan.md` for the change record.
 
 **Assembly.** `sentence = windClause + (rainClause ? ", " + rainClause : "") + "."`.
 When `windSeries` is null, the rain clause (capitalised) stands alone. When
@@ -276,7 +291,8 @@ marginal all day"`.
 - Next tide: `${e.type === 'high' ? 'High' : 'Low'} ${TideClock.format(parseISODate(e.localTime), { hour: '2-digit', minute: '2-digit', hour12: false })}`
 - Wind: reuse the wind-clause band + `afternoonPeak`; `Building to ~22mph` /
   `Easing` / `${Band} (~${round(currentOrMeanMph)}mph)`
-- Rain: `From 16:00` / `None expected` / `Clearing by 14:00`
+- Rain: `10:00–15:00` (bounded spell) / `Until 15:00` (raining now) /
+  `On and off` / `None`
 - Sun: `isToday && reference < sunrise` → `Sunrise ${HH:MM}`, else
   `Sunset ${HH:MM}`
 
@@ -333,13 +349,19 @@ marginal all day"`.
 Manual matrix (deployed web build, `expo start --web`):
 
 1. **Calm dry day** → "Calm all day, staying dry."; a best window spanning
-   most of daylight; Rain value `None expected`.
+   most of daylight; Rain value `None`.
 2. **Wind building** → "…wind building to ~Nmph by mid-afternoon"; best
    window sits in the morning.
-3. **Afternoon rain** → rain clause "rain likely from HH:MM"; best window
-   ends at/before that hour.
-4. **Rain all day** → "rain on and off through the day"; best window likely
-   `none` ("marginal all day").
+3. **Afternoon rain (single spell)** → "rain through the afternoon, HH:MM to
+   HH:MM" (or bare "rain from HH:MM to HH:MM" if short); Rain value the
+   bounded range; best window ends at/before the spell start.
+4. **Rain most of the day** → "rain for most of the day, HH:MM to HH:MM";
+   best window likely `none` ("marginal all day").
+4a. **Past day with a midday spell** (view "Yesterday") → past tense, no
+   "likely": "rain through the middle of the day, 10:00 to 15:00"; Rain
+   value `10:00–15:00`.
+4b. **Scattered showers** → "showers on and off in the afternoon" (or
+   "came and went" for a past day); Rain value `On and off`.
 5. **Overlay missing** (simulate Forecast API failure) → sentence "Tide
    data only …"; only the Next tide value shows; best window uses the
    `FALLBACK_DAY_*` range; no error banner.

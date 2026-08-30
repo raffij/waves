@@ -22,6 +22,8 @@ export const FALLBACK_DAY_END_HOUR = 21;
 // the bars can never disagree about whether it rains.
 export const RAIN_WINDOW_START_HOUR = 6;
 export const RAIN_WINDOW_END_HOUR = 22;
+export const RAIN_DOMINATES_FRACTION = 0.55; // a single spell covering this share of the window reads as "most of the day"
+export const RAIN_LONG_SPELL_HOURS = 4; // at/above this, a spell gets a "through the morning/afternoon/middle" phrase
 
 export interface DayInsightValue {
   label: string;
@@ -144,8 +146,53 @@ function windValue(w: WindShape): string {
 // --- rain ----------------------------------------------------------------
 
 interface RainInfo {
-  clause: string; // lower-case fragment for the sentence, e.g. "rain likely from 16:00"
-  value: string; // short label for the values row, e.g. "From 16:00"
+  clause: string; // lower-case fragment for the sentence, e.g. "rain through the middle of the day, 10:00 to 15:00"
+  value: string; // short label for the values row, e.g. "10:00–15:00"
+}
+
+interface RainSpell {
+  start: Date;
+  end: Date; // last wet hour + 1h
+  hours: number;
+}
+
+type DayTense = 'past' | 'today' | 'future';
+
+function dayTense(reference: Date): DayTense {
+  const todayKey = TideClock.dateKey(new Date());
+  const refKey = TideClock.dateKey(reference);
+  if (refKey < todayKey) return 'past';
+  if (refKey > todayKey) return 'future';
+  return 'today';
+}
+
+// Contiguous runs of wet hours within the window.
+function rainSpells(bars: Array<{ time: Date; mm: number | null }>): RainSpell[] {
+  const spells: RainSpell[] = [];
+  let run: Date[] = [];
+  const flush = () => {
+    if (run.length === 0) return;
+    spells.push({ start: run[0], end: new Date(run[run.length - 1].getTime() + HOUR_MS), hours: run.length });
+    run = [];
+  };
+  for (const b of bars) {
+    if ((b.mm ?? 0) > WET_HOUR_MM) run.push(b.time);
+    else flush();
+  }
+  flush();
+  return spells;
+}
+
+// Where in the day a spell sits, for spells long enough to be worth
+// characterising — otherwise "" and the caller just states the times.
+function rainCoverage(spell: RainSpell, totalBars: number, windowStart: Date, windowEnd: Date): string {
+  if (totalBars > 0 && spell.hours / totalBars >= RAIN_DOMINATES_FRACTION) return 'for most of the day';
+  if (spell.hours < RAIN_LONG_SPELL_HOURS) return '';
+  const midday = windowStart.getTime() + (windowEnd.getTime() - windowStart.getTime()) / 2;
+  const startsBeforeMidday = spell.start.getTime() < midday;
+  const endsAfterMidday = spell.end.getTime() > midday;
+  if (startsBeforeMidday && endsAfterMidday) return 'through the middle of the day';
+  return endsAfterMidday ? 'through the afternoon' : 'through the morning';
 }
 
 function rainInfo(input: DayInsightsInput, precip: PrecipitationSeries | null): RainInfo | null {
@@ -153,24 +200,42 @@ function rainInfo(input: DayInsightsInput, precip: PrecipitationSeries | null): 
 
   const windowStart = TideClock.londonDateAtHour(input.reference, RAIN_WINDOW_START_HOUR);
   const windowEnd = TideClock.londonDateAtHour(input.reference, RAIN_WINDOW_END_HOUR);
-  const wet = precip.hourlyBars(windowStart, windowEnd).filter((b) => (b.mm ?? 0) > WET_HOUR_MM);
+  const bars = precip.hourlyBars(windowStart, windowEnd);
+  const tense = dayTense(input.reference);
 
-  // On today, only rain that hasn't finished yet is worth mentioning; on
-  // another day, the whole window is "ahead".
-  const from = input.isToday ? input.reference : windowStart;
-  const upcoming = wet.filter((b) => b.time.getTime() + HOUR_MS > from.getTime());
-  if (upcoming.length === 0) return { clause: 'staying dry', value: 'None expected' };
+  // On today, spells that have already finished aren't worth mentioning.
+  const spells = rainSpells(bars).filter((s) => tense !== 'today' || s.end.getTime() > input.reference.getTime());
 
-  const first = upcoming[0];
-  if (first.time.getTime() > from.getTime()) {
-    return { clause: `rain likely from ${hhmm(first.time)}`, value: `From ${hhmm(first.time)}` };
+  if (spells.length === 0) {
+    return {
+      clause: tense === 'past' ? 'stayed dry' : tense === 'future' ? 'likely dry' : 'staying dry',
+      value: 'None',
+    };
   }
 
-  const lastEnds = new Date(upcoming[upcoming.length - 1].time.getTime() + HOUR_MS);
-  if (lastEnds.getTime() <= windowEnd.getTime()) {
-    return { clause: `rain clearing by ${hhmm(lastEnds)}`, value: `Clearing by ${hhmm(lastEnds)}` };
+  const midday = windowStart.getTime() + (windowEnd.getTime() - windowStart.getTime()) / 2;
+
+  if (spells.length > 1) {
+    const allBeforeMidday = spells.every((s) => s.end.getTime() <= midday);
+    const allAfterMidday = spells.every((s) => s.start.getTime() >= midday);
+    const when = allBeforeMidday ? ' in the morning' : allAfterMidday ? ' in the afternoon' : ' through the day';
+    const lead =
+      tense === 'future' ? 'showers likely' : tense === 'past' ? 'showers came and went' : 'showers on and off';
+    return { clause: `${lead}${when}`, value: 'On and off' };
   }
-  return { clause: 'rain on and off through the day', value: 'On and off' };
+
+  const s = spells[0];
+  const range = `${hhmm(s.start)} to ${hhmm(s.end)}`;
+
+  // Today, rain already under way — the start is behind us, so lead with the end.
+  if (tense === 'today' && s.start.getTime() <= input.reference.getTime()) {
+    return { clause: `rain until ${hhmm(s.end)}`, value: `Until ${hhmm(s.end)}` };
+  }
+
+  const coverage = rainCoverage(s, bars.length, windowStart, windowEnd);
+  const likely = tense === 'future' ? 'likely ' : '';
+  const clause = coverage ? `rain ${likely}${coverage}, ${range}` : `rain ${likely}from ${range}`;
+  return { clause, value: `${hhmm(s.start)}–${hhmm(s.end)}` };
 }
 
 // --- best window -------------------------------------------------------------
