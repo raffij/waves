@@ -249,7 +249,14 @@ function getStyles(colors: Colors) {
     flex: { flex: 1 },
     screen: { flex: 1, backgroundColor: colors.background },
     loadingState: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background },
-    content: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 16 },
+    content: {
+      width: '100%',
+      maxWidth: 640,
+      alignSelf: 'center',
+      paddingHorizontal: 16,
+      paddingTop: 8,
+      paddingBottom: 16,
+    },
     section: { marginTop: 20 },
     locationRow: {
       flexDirection: 'row',

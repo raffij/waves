@@ -43,7 +43,14 @@ export function ApiKeyPrompt({ onSubmit }: Props) {
 
 function getStyles(colors: Colors) {
   return StyleSheet.create({
-    container: { flex: 1, justifyContent: 'center', paddingHorizontal: 20 },
+    container: {
+      flex: 1,
+      justifyContent: 'center',
+      width: '100%',
+      maxWidth: 640,
+      alignSelf: 'center',
+      paddingHorizontal: 20,
+    },
     title: { color: colors.textPrimary, fontSize: 22, fontWeight: '800', letterSpacing: -0.3, marginBottom: 8 },
     body: { color: colors.textSecondary, fontSize: 14, lineHeight: 20, marginBottom: 20 },
     input: {
