@@ -33,15 +33,18 @@ Keep the same branch name throughout unless asked otherwise.
 Generate architecture diagrams with the [Archify](https://github.com/tt-a1i/archify)
 skill (`npx skills add tt-a1i/archify -g` if it isn't already installed), not
 hand-rolled Mermaid or SVG. It renders a typed JSON spec into a self-contained,
-explorable HTML diagram — dark/light themes, pan/zoom, guided views — matching
-the reference look in
-[chrisgreg/boop's `docs/architecture.png`](https://github.com/chrisgreg/boop/blob/main/docs/architecture.png):
-JetBrains Mono, a dotted-grid dark canvas, typed/colored component boxes
-(frontend/backend/database/cloud/security/messagebus/external), straight
-orthogonal routing with labeled edges, dashed boundary regions around related
-components, and a legend with per-type counts.
+explorable HTML diagram — dark/light themes, pan/zoom, guided views.
 
-Convention for this repo, mirroring that example:
+Every diagram in this repo must match this look:
+
+- JetBrains Mono throughout.
+- A dotted-grid dark canvas.
+- Typed, colored component boxes (frontend/backend/database/cloud/security/messagebus/external).
+- Straight orthogonal routing with labeled edges.
+- Dashed boundary regions around related components.
+- A legend with per-type counts.
+
+Convention for this repo:
 
 - Author the typed source at `docs/architecture/<name>.architecture.json`
   (schema in Archify's `schemas/architecture.schema.json`).
