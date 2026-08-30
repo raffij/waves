@@ -26,10 +26,12 @@ const MIN_SCALE_MM = 1;
 // reads as a full row of "measured: zero" ticks rather than a chart that
 // failed to load with no data at all.
 const BASELINE_HEIGHT = 3;
-// Veils the elapsed portion of the chart under the screen background color,
-// so what's still ahead in the day reads at full strength and what's
-// already passed visibly recedes. Matches TideChart's fade.
-const PAST_FADE_OPACITY = 0.4;
+// Bars for hours already behind "now" render at this fraction of their
+// normal opacity, so what's still ahead in the day reads at full strength
+// and what's already passed visibly recedes. Matches TideChart's fade
+// (recolors each bar directly rather than overlaying a translucent layer,
+// since that barely registers against an already-faint dry-hour bar).
+const PAST_OPACITY_SCALE = 0.6;
 
 export function PrecipitationChart({ series, now, startHour = 6, endHour = 22 }: Props) {
   const { colors } = useTheme();
@@ -69,6 +71,9 @@ export function PrecipitationChart({ series, now, startHour = 6, endHour = 22 }:
             const barHeight = mm > 0 ? Math.max(BASELINE_HEIGHT + 1, (mm / maxMm) * plotHeight) : BASELINE_HEIGHT;
             const x = PADDING_X + i * (barWidth + BAR_GAP);
             const y = floorY - barHeight;
+            const barCenterX = x + Math.max(barWidth, 1) / 2;
+            const baseOpacity = mm > 0 ? 0.85 : 0.25;
+            const opacity = barCenterX < pastFadeEndX ? baseOpacity * PAST_OPACITY_SCALE : baseOpacity;
             return (
               <Rect
                 key={bar.time.toISOString()}
@@ -78,20 +83,10 @@ export function PrecipitationChart({ series, now, startHour = 6, endHour = 22 }:
                 height={barHeight}
                 rx={1.5}
                 fill={colors.precipitation}
-                opacity={mm > 0 ? 0.85 : 0.25}
+                opacity={opacity}
               />
             );
           })}
-          {pastFadeEndX > PADDING_X && (
-            <Rect
-              x={PADDING_X}
-              y={PADDING_TOP}
-              width={pastFadeEndX - PADDING_X}
-              height={plotHeight}
-              fill={colors.background}
-              opacity={PAST_FADE_OPACITY}
-            />
-          )}
         </Svg>
       </View>
       <View style={styles.axisRow}>
