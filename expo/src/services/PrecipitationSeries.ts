@@ -44,4 +44,14 @@ export class PrecipitationSeries {
     const dayEnd = new Date(dayStart.getTime() + 86_400_000 - 1000);
     return this.totalBetween(dayStart, dayEnd);
   }
+
+  // The next hour (from `from` onward, inclusive) with measurable rain —
+  // searches the full series rather than any particular display window, so
+  // it can point at tomorrow morning even while the rest of today is dry.
+  nextRainAfter(from: Date): Date | null {
+    const fromHour = new Date(from);
+    fromHour.setMinutes(0, 0, 0);
+    const match = this.points.find((p) => p.time.getTime() >= fromHour.getTime() && (p.mm ?? 0) > 0);
+    return match?.time ?? null;
+  }
 }
