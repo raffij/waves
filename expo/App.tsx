@@ -121,7 +121,6 @@ function AppContent() {
         precipitationSeries,
         daylightSeries,
         reference: referenceDate,
-        isToday,
       })
     : null;
 

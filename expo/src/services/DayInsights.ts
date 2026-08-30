@@ -3,14 +3,10 @@ import type { PrecipitationSeries } from './PrecipitationSeries';
 import { TideClock } from './TideClock';
 import type { WindSeries } from './WindSeries';
 
-// Tuning knobs for the day-insights readout. "Good" here is a
-// walk-on-the-pier judgement — light wind, little/no rain, in daylight —
-// not a water-sports one; tide is reported but never scored. Retune by
-// editing these.
-export const MAX_COMFORTABLE_WIND_MPH = 16; // ~Beaufort 4/5 boundary; above this a pier walk is unpleasant
-export const WET_HOUR_MM = 0.2; // hourly precip total above this counts as a "wet hour" for window scoring
-export const MIN_WINDOW_HOURS = 2; // a fully-ahead window shorter than this isn't worth calling out
-export const MIN_REMAINING_WINDOW_HOURS = 1; // today: if less of an in-progress window is left, look past it
+// Tuning knobs for the day-insights readout. It's a walk-on-the-pier
+// judgement — wind band, rain spell, what to wear — not a water-sports
+// one; tide is reported but never scored. Retune by editing these.
+export const WET_HOUR_MM = 0.2; // hourly precip total above this counts as a "wet hour"
 export const WIND_BAND_BREEZY_MPH = 12; // sentence bands: <12 calm, 12–24 breezy, ≥24 windy
 export const WIND_BAND_WINDY_MPH = 24;
 export const FALLBACK_DAY_START_HOUR = 7; // daylight bounds used only when sunrise/sunset is unavailable
@@ -23,11 +19,12 @@ export const RAIN_WINDOW_END_HOUR = 22;
 export const RAIN_DOMINATES_FRACTION = 0.55; // a single spell covering this share of the window reads as "most of the day"
 export const RAIN_LONG_SPELL_HOURS = 4; // at/above this, a spell gets a "through the morning/afternoon/middle" phrase
 
-export type BestWindow = { kind: 'window'; label: string } | { kind: 'none'; label: string };
-
 export interface DayInsights {
   summarySentence: string;
-  bestWindow: BestWindow;
+  // What to take out on the pier. Rain gets top billing (big coat), and a
+  // windy day calls for a dry robe rather than an umbrella. Null when the
+  // day is dry, or already over.
+  gearAdvice: string | null;
 }
 
 export interface DayInsightsInput {
@@ -35,7 +32,6 @@ export interface DayInsightsInput {
   precipitationSeries: PrecipitationSeries | null;
   daylightSeries: DaylightSeries | null;
   reference: Date;
-  isToday: boolean;
 }
 
 const HOUR_MS = 3_600_000;
@@ -173,9 +169,14 @@ function rainCoverage(spell: RainSpell, totalBars: number, windowStart: Date, wi
   return endsAfterMidday ? 'through the afternoon' : 'through the morning';
 }
 
-// Lower-case fragment for the summary sentence, e.g.
-// "rain through the middle of the day, 10:00 to 15:00".
-function rainClause(input: DayInsightsInput, precip: PrecipitationSeries | null): string | null {
+// Lower-case fragment for the summary sentence, plus whether the day is
+// actually wet — the gear advice keys off `wet`, not off parsing `text`.
+interface RainClause {
+  text: string;
+  wet: boolean;
+}
+
+function rainClause(input: DayInsightsInput, precip: PrecipitationSeries | null): RainClause | null {
   if (!precip) return null;
 
   const windowStart = TideClock.londonDateAtHour(input.reference, RAIN_WINDOW_START_HOUR);
@@ -187,7 +188,8 @@ function rainClause(input: DayInsightsInput, precip: PrecipitationSeries | null)
   const spells = rainSpells(bars).filter((s) => tense !== 'today' || s.end.getTime() > input.reference.getTime());
 
   if (spells.length === 0) {
-    return tense === 'past' ? 'stayed dry' : tense === 'future' ? 'likely dry' : 'staying dry';
+    const text = tense === 'past' ? 'stayed dry' : tense === 'future' ? 'likely dry' : 'staying dry';
+    return { text, wet: false };
   }
 
   const midday = windowStart.getTime() + (windowEnd.getTime() - windowStart.getTime()) / 2;
@@ -198,7 +200,7 @@ function rainClause(input: DayInsightsInput, precip: PrecipitationSeries | null)
     const when = allBeforeMidday ? ' in the morning' : allAfterMidday ? ' in the afternoon' : ' through the day';
     const lead =
       tense === 'future' ? 'showers likely' : tense === 'past' ? 'showers came and went' : 'showers on and off';
-    return `${lead}${when}`;
+    return { text: `${lead}${when}`, wet: true };
   }
 
   const s = spells[0];
@@ -206,68 +208,31 @@ function rainClause(input: DayInsightsInput, precip: PrecipitationSeries | null)
 
   // Today, rain already under way — the start is behind us, so lead with the end.
   if (tense === 'today' && s.start.getTime() <= input.reference.getTime()) {
-    return `rain until ${hhmm(s.end)}`;
+    return { text: `rain until ${hhmm(s.end)}`, wet: true };
   }
 
   const coverage = rainCoverage(s, bars.length, windowStart, windowEnd);
   const likely = tense === 'future' ? 'likely ' : '';
-  return coverage ? `rain ${likely}${coverage}, ${range}` : `rain ${likely}from ${range}`;
+  return { text: coverage ? `rain ${likely}${coverage}, ${range}` : `rain ${likely}from ${range}`, wet: true };
 }
 
-// --- best window -------------------------------------------------------------
+// --- gear advice ------------------------------------------------------------
 
-function bestWindow(
-  input: DayInsightsInput,
-  slots: Slot[],
-  windSeries: WindSeries | null,
-  precip: PrecipitationSeries | null,
-): BestWindow {
-  const nowMs = input.reference.getTime();
+// A windy day here means an umbrella is a lost cause — carry a dry robe
+// instead. Peak matters as much as the mean, so a breezy day that gusts
+// into the windy band still counts.
+function dayIsWindy(wind: WindShape | null): boolean {
+  if (!wind) return false;
+  return wind.morningBand === 'windy' || wind.afternoonBand === 'windy' || wind.afternoonPeak >= WIND_BAND_WINDY_MPH;
+}
 
-  const isGood = (s: Slot): boolean => {
-    const mph = windSeries?.speedAt(s.at) ?? null;
-    if (mph === null || mph > MAX_COMFORTABLE_WIND_MPH) return false;
-    if (precip && (precip.mmAt(s.at) ?? 0) > WET_HOUR_MM) return false;
-    return true;
-  };
-
-  const runs: Slot[][] = [];
-  let run: Slot[] = [];
-  for (const s of slots) {
-    if (isGood(s)) {
-      run.push(s);
-    } else if (run.length) {
-      runs.push(run);
-      run = [];
-    }
-  }
-  if (run.length) runs.push(run);
-
-  const candidates = runs
-    .map((r) => (input.isToday ? r.filter((s) => s.at.getTime() + HOUR_MS > nowMs) : r))
-    .filter((r) => r.length > 0)
-    .map((r) => {
-      const endAt = new Date(r[r.length - 1].at.getTime() + HOUR_MS);
-      const inProgress = input.isToday && r[0].at.getTime() <= nowMs;
-      const startAt = inProgress ? input.reference : r[0].at;
-      const lengthHours = (endAt.getTime() - startAt.getTime()) / HOUR_MS;
-      return { startAt, endAt, lengthHours, inProgress };
-    })
-    .filter((w) => w.lengthHours >= (w.inProgress ? MIN_REMAINING_WINDOW_HOURS : MIN_WINDOW_HOURS));
-
-  if (candidates.length === 0) {
-    // A real window existed earlier today, it's just behind us now — say so
-    // rather than calling a calm morning "marginal".
-    const hadWindowToday = input.isToday && runs.some((r) => r.length >= MIN_WINDOW_HOURS);
-    return {
-      kind: 'none',
-      label: hadWindowToday ? 'Best window has passed for today' : 'Conditions look marginal all day',
-    };
-  }
-
-  candidates.sort((a, b) => a.startAt.getTime() - b.startAt.getTime() || b.lengthHours - a.lengthHours);
-  const w = candidates[0];
-  return { kind: 'window', label: `${w.inProgress ? 'now' : hhmm(w.startAt)}–${hhmm(w.endAt)}` };
+// Rain leads: if it's wet, that's a big-coat day. Wind then decides
+// dry robe vs umbrella. Nothing to say on a dry day, or one that's done.
+function gearAdvice(input: DayInsightsInput, wind: WindShape | null, rain: RainClause | null): string | null {
+  if (!rain?.wet || dayTense(input.reference) === 'past') return null;
+  return dayIsWindy(wind)
+    ? 'Big coat, and a dry robe rather than an umbrella — too windy for one.'
+    : 'Big coat, and an umbrella will be fine.';
 }
 
 // --- entry point --------------------------------------------------------------
@@ -278,13 +243,13 @@ export function buildDayInsights(input: DayInsightsInput): DayInsights {
   const rain = rainClause(input, input.precipitationSeries);
 
   let summarySentence: string;
-  if (wind && rain) summarySentence = `${windClause(wind)}, ${rain}.`;
+  if (wind && rain) summarySentence = `${windClause(wind)}, ${rain.text}.`;
   else if (wind) summarySentence = `${windClause(wind)}.`;
-  else if (rain) summarySentence = `${capitalize(rain)}.`;
+  else if (rain) summarySentence = `${capitalize(rain.text)}.`;
   else summarySentence = 'Tide data only — wind and rain forecast unavailable.';
 
   return {
     summarySentence,
-    bestWindow: bestWindow(input, slots, input.windSeries, input.precipitationSeries),
+    gearAdvice: gearAdvice(input, wind, rain),
   };
 }
