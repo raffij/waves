@@ -1,9 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const CACHE_DATA_KEY = 'wave-hastings-wave-cache';
 const CACHE_MAX_AGE_MS = 6 * 60 * 60 * 1000; // 6 hours
-const LATITUDE = '50.86';
-const LONGITUDE = '0.60';
 
 export interface WaveData {
   time: string[];
@@ -28,6 +25,16 @@ export interface WaveDataResult {
 }
 
 export class WaveAPIClient {
+  constructor(
+    private readonly locationId: string,
+    private readonly latitude: string,
+    private readonly longitude: string,
+  ) {}
+
+  private get cacheDataKey(): string {
+    return `wave-hastings-wave-cache-${this.locationId}`;
+  }
+
   async loadWaveData(): Promise<WaveDataResult | null> {
     const cached = await this.getCached();
     if (cached) return cached;
@@ -35,19 +42,19 @@ export class WaveAPIClient {
   }
 
   async forceRefresh(): Promise<WaveDataResult | null> {
-    await AsyncStorage.removeItem(CACHE_DATA_KEY);
+    await AsyncStorage.removeItem(this.cacheDataKey);
     return this.fetchAndCache();
   }
 
   private async getCached(): Promise<WaveDataResult | null> {
     try {
-      const cached = await AsyncStorage.getItem(CACHE_DATA_KEY);
+      const cached = await AsyncStorage.getItem(this.cacheDataKey);
       if (!cached) return null;
 
       const { data, wind, precipitation, cachedAt } = JSON.parse(cached);
       const age = Date.now() - cachedAt;
       if (age > CACHE_MAX_AGE_MS) {
-        await AsyncStorage.removeItem(CACHE_DATA_KEY);
+        await AsyncStorage.removeItem(this.cacheDataKey);
         return null;
       }
 
@@ -63,7 +70,7 @@ export class WaveAPIClient {
 
     try {
       await AsyncStorage.setItem(
-        CACHE_DATA_KEY,
+        this.cacheDataKey,
         JSON.stringify({
           data: result.data,
           wind: result.wind,
@@ -108,8 +115,8 @@ export class WaveAPIClient {
     endDate: string,
   ): Promise<{ hourly: { time: string[]; wave_height: (number | null)[] } } | null> {
     const marineUrl = new URL('https://marine-api.open-meteo.com/v1/marine');
-    marineUrl.searchParams.append('latitude', LATITUDE);
-    marineUrl.searchParams.append('longitude', LONGITUDE);
+    marineUrl.searchParams.append('latitude', this.latitude);
+    marineUrl.searchParams.append('longitude', this.longitude);
     marineUrl.searchParams.append('start_date', startDate);
     marineUrl.searchParams.append('end_date', endDate);
     marineUrl.searchParams.append('hourly', 'wave_height');
@@ -135,8 +142,8 @@ export class WaveAPIClient {
     endDate: string,
   ): Promise<{ wind: WindData | null; precipitation: PrecipitationData | null }> {
     const url = new URL('https://api.open-meteo.com/v1/forecast');
-    url.searchParams.append('latitude', LATITUDE);
-    url.searchParams.append('longitude', LONGITUDE);
+    url.searchParams.append('latitude', this.latitude);
+    url.searchParams.append('longitude', this.longitude);
     url.searchParams.append('start_date', startDate);
     url.searchParams.append('end_date', endDate);
     url.searchParams.append('hourly', 'wind_speed_10m,precipitation');

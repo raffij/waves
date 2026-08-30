@@ -16,7 +16,7 @@ export function ApiKeyPrompt({ onSubmit }: Props) {
     <View style={styles.container}>
       <Text style={styles.title}>Connect TideCheck</Text>
       <Text style={styles.body}>
-        Add your TideCheck API key to see live tide, wave, wind, and rain conditions for Hastings Pier.
+        Add your TideCheck API key to see live tide, wave, wind, and rain conditions for Hastings and Morecambe.
       </Text>
       <TextInput
         style={styles.input}

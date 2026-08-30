@@ -18,6 +18,7 @@ import { PrecipitationChart } from './src/components/PrecipitationChart';
 import { TideChart } from './src/components/TideChart';
 import { useApiKey } from './src/hooks/useApiKey';
 import { useForecastData } from './src/hooks/useForecastData';
+import { useLocation } from './src/hooks/useLocation';
 import { ThemeProvider, useTheme } from './src/hooks/useTheme';
 import { PrecipitationSeries } from './src/services/PrecipitationSeries';
 import { TideClock } from './src/services/TideClock';
@@ -37,7 +38,11 @@ export default function App() {
 
 function AppContent() {
   const { apiKey, saveKey, resetKey } = useApiKey();
-  const { data, waveData, windData, precipitationData, fetchedAt, loading, error, load } = useForecastData(apiKey);
+  const { location, toggleLocation } = useLocation();
+  const { data, waveData, windData, precipitationData, fetchedAt, loading, error, load } = useForecastData(
+    apiKey,
+    location,
+  );
   const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
   const { colors, themeName, toggleTheme } = useTheme();
   const styles = useMemo(() => getStyles(colors), [colors]);
@@ -136,10 +141,16 @@ function AppContent() {
             />
           </View>
 
-          <View style={styles.locationRow}>
+          <Pressable
+            onPress={toggleLocation}
+            style={({ pressed }) => [styles.locationRow, pressed && styles.locationRowPressed]}
+          >
             <Ionicons name="location-outline" size={12} color={colors.textSecondary} />
-            <Text style={styles.locationText}>Hastings Pier · East Sussex</Text>
-          </View>
+            <Text style={styles.locationText}>
+              {location.name} · {location.region}
+            </Text>
+            <Ionicons name="swap-horizontal-outline" size={12} color={colors.textSecondary} />
+          </Pressable>
 
           <View style={styles.footer}>
             <FooterButton
@@ -201,7 +212,15 @@ function getStyles(colors: Colors) {
     loadingState: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background },
     content: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 16 },
     section: { marginTop: 20 },
-    locationRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, marginTop: 18 },
+    locationRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 4,
+      marginTop: 18,
+      minHeight: 44,
+    },
+    locationRowPressed: { opacity: 0.5 },
     locationText: { color: colors.textSecondary, fontSize: 11 },
     error: { color: colors.falling, marginTop: 12, textAlign: 'center' },
     footer: { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: 4, marginTop: 4 },
