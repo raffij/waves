@@ -21,9 +21,11 @@ there's a plain-text spec to diff instead of an opaque `.pbxproj`.
    ```
 3. In Xcode, select both the `WaveHastingsDesktop` and
    `WaveHastingsWidgetExtension` targets → Signing & Capabilities → set your
-   own Team. Xcode will offer to register the `group.com.anonymous.hastings-tide`
-   App Group and the two bundle IDs automatically; accept it, or change the
-   identifiers in `project.yml` first if you want your own.
+   own Team. Xcode will offer to register the App Group
+   (`<TeamID>.group.com.anonymous.hastings-tide` — `project.yml` writes it as
+   `$(TeamIdentifierPrefix)group.…` so it picks up whatever Team you set) and
+   the two bundle IDs automatically; accept it, or change the identifiers in
+   `project.yml` first if you want your own.
 4. Build and run `WaveHastingsDesktop` once — this registers the widget with
    the system. A small window opens; paste your
    [TideCheck](https://tidecheck.com) API key, pick a location, and hit Save.
@@ -51,3 +53,10 @@ there's a plain-text spec to diff instead of an opaque `.pbxproj`.
 - `com.apple.security.application-groups` needs a paid Apple Developer
   account to register for real; a personal free-tier Team ID can still build
   and run this locally.
+- On macOS a sandboxed process only gets a *shared* App Group container when
+  the identifier is namespaced by the Team ID — a bare `group.com.…` id (fine
+  on iOS) just hands each process its own private `UserDefaults` suite, so the
+  widget never sees the key SettingsView saved and shows the "open Wave
+  Hastings" placeholder forever. Hence the `$(TeamIdentifierPrefix)` in
+  `project.yml`; `SharedConfigStore` reads the expanded id back out of its own
+  signed entitlements at runtime so no Team ID is committed.

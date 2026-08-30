@@ -30,7 +30,7 @@ targets:
         com.apple.security.app-sandbox: true
         com.apple.security.network.client: true
         com.apple.security.application-groups:
-          - group.com.anonymous.hastings-tide
+          - $(TeamIdentifierPrefix)group.com.anonymous.hastings-tide
     dependencies:
       - target: WaveHastingsWidgetExtension
         embed: true
@@ -60,7 +60,7 @@ targets:
         com.apple.security.app-sandbox: true
         com.apple.security.network.client: true
         com.apple.security.application-groups:
-          - group.com.anonymous.hastings-tide
+          - $(TeamIdentifierPrefix)group.com.anonymous.hastings-tide
 
 schemes:
   WaveHastingsDesktop:
