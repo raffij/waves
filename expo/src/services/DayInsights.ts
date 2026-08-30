@@ -1,8 +1,6 @@
-import type { Extreme } from '../models/TideModels';
 import type { DaylightSeries } from './DaylightSeries';
 import type { PrecipitationSeries } from './PrecipitationSeries';
 import { TideClock } from './TideClock';
-import type { TideForecast } from './TideForecast';
 import type { WindSeries } from './WindSeries';
 
 // Tuning knobs for the day-insights readout. "Good" here is a
@@ -25,21 +23,14 @@ export const RAIN_WINDOW_END_HOUR = 22;
 export const RAIN_DOMINATES_FRACTION = 0.55; // a single spell covering this share of the window reads as "most of the day"
 export const RAIN_LONG_SPELL_HOURS = 4; // at/above this, a spell gets a "through the morning/afternoon/middle" phrase
 
-export interface DayInsightValue {
-  label: string;
-  value: string;
-}
-
 export type BestWindow = { kind: 'window'; label: string } | { kind: 'none'; label: string };
 
 export interface DayInsights {
   summarySentence: string;
-  values: DayInsightValue[];
   bestWindow: BestWindow;
 }
 
 export interface DayInsightsInput {
-  forecast: TideForecast;
   windSeries: WindSeries | null;
   precipitationSeries: PrecipitationSeries | null;
   daylightSeries: DaylightSeries | null;
@@ -105,7 +96,6 @@ interface WindShape {
   morningBand: WindBand;
   afternoonBand: WindBand;
   afternoonPeak: number;
-  overallMean: number;
 }
 
 function windShape(slots: Slot[], windSeries: WindSeries | null): WindShape | null {
@@ -125,7 +115,6 @@ function windShape(slots: Slot[], windSeries: WindSeries | null): WindShape | nu
     morningBand: bandFor(morning.length ? mean(morning) : overallMean),
     afternoonBand: bandFor(afternoon.length ? mean(afternoon) : overallMean),
     afternoonPeak: Math.max(...(afternoon.length ? afternoon : all)),
-    overallMean,
   };
 }
 
@@ -137,18 +126,7 @@ function windClause(w: WindShape): string {
   return `${BAND_WORD[w.morningBand]} this morning, easing through the afternoon`;
 }
 
-function windValue(w: WindShape): string {
-  if (w.morningBand === w.afternoonBand) return `${BAND_WORD[w.morningBand]} (~${Math.round(w.overallMean)}mph)`;
-  if (BAND_RANK[w.afternoonBand] > BAND_RANK[w.morningBand]) return `Building to ~${Math.round(w.afternoonPeak)}mph`;
-  return 'Easing';
-}
-
 // --- rain ----------------------------------------------------------------
-
-interface RainInfo {
-  clause: string; // lower-case fragment for the sentence, e.g. "rain through the middle of the day, 10:00 to 15:00"
-  value: string; // short label for the values row, e.g. "10:00–15:00"
-}
 
 interface RainSpell {
   start: Date;
@@ -195,7 +173,9 @@ function rainCoverage(spell: RainSpell, totalBars: number, windowStart: Date, wi
   return endsAfterMidday ? 'through the afternoon' : 'through the morning';
 }
 
-function rainInfo(input: DayInsightsInput, precip: PrecipitationSeries | null): RainInfo | null {
+// Lower-case fragment for the summary sentence, e.g.
+// "rain through the middle of the day, 10:00 to 15:00".
+function rainClause(input: DayInsightsInput, precip: PrecipitationSeries | null): string | null {
   if (!precip) return null;
 
   const windowStart = TideClock.londonDateAtHour(input.reference, RAIN_WINDOW_START_HOUR);
@@ -207,10 +187,7 @@ function rainInfo(input: DayInsightsInput, precip: PrecipitationSeries | null): 
   const spells = rainSpells(bars).filter((s) => tense !== 'today' || s.end.getTime() > input.reference.getTime());
 
   if (spells.length === 0) {
-    return {
-      clause: tense === 'past' ? 'stayed dry' : tense === 'future' ? 'likely dry' : 'staying dry',
-      value: 'None',
-    };
+    return tense === 'past' ? 'stayed dry' : tense === 'future' ? 'likely dry' : 'staying dry';
   }
 
   const midday = windowStart.getTime() + (windowEnd.getTime() - windowStart.getTime()) / 2;
@@ -221,7 +198,7 @@ function rainInfo(input: DayInsightsInput, precip: PrecipitationSeries | null): 
     const when = allBeforeMidday ? ' in the morning' : allAfterMidday ? ' in the afternoon' : ' through the day';
     const lead =
       tense === 'future' ? 'showers likely' : tense === 'past' ? 'showers came and went' : 'showers on and off';
-    return { clause: `${lead}${when}`, value: 'On and off' };
+    return `${lead}${when}`;
   }
 
   const s = spells[0];
@@ -229,13 +206,12 @@ function rainInfo(input: DayInsightsInput, precip: PrecipitationSeries | null): 
 
   // Today, rain already under way — the start is behind us, so lead with the end.
   if (tense === 'today' && s.start.getTime() <= input.reference.getTime()) {
-    return { clause: `rain until ${hhmm(s.end)}`, value: `Until ${hhmm(s.end)}` };
+    return `rain until ${hhmm(s.end)}`;
   }
 
   const coverage = rainCoverage(s, bars.length, windowStart, windowEnd);
   const likely = tense === 'future' ? 'likely ' : '';
-  const clause = coverage ? `rain ${likely}${coverage}, ${range}` : `rain ${likely}from ${range}`;
-  return { clause, value: `${hhmm(s.start)}–${hhmm(s.end)}` };
+  return coverage ? `rain ${likely}${coverage}, ${range}` : `rain ${likely}from ${range}`;
 }
 
 // --- best window -------------------------------------------------------------
@@ -294,49 +270,21 @@ function bestWindow(
   return { kind: 'window', label: `${w.inProgress ? 'now' : hhmm(w.startAt)}–${hhmm(w.endAt)}` };
 }
 
-// --- values ---------------------------------------------------------------
-
-function nextTideValue(extreme: Extreme | null): DayInsightValue | null {
-  if (!extreme) return null;
-  const at = TideClock.parseLondonWallTime(extreme.localTime);
-  if (!at) return null;
-  return { label: 'Next tide', value: `${extreme.type === 'high' ? 'High' : 'Low'} ${hhmm(at)}` };
-}
-
-function sunValue(input: DayInsightsInput): DayInsightValue | null {
-  const sunrise = input.daylightSeries?.sunrise(input.reference) ?? null;
-  const sunset = input.daylightSeries?.sunset(input.reference) ?? null;
-  if (input.isToday && sunrise && input.reference.getTime() < sunrise.getTime()) {
-    return { label: 'Sun', value: `Sunrise ${hhmm(sunrise)}` };
-  }
-  if (sunset) return { label: 'Sun', value: `Sunset ${hhmm(sunset)}` };
-  return null;
-}
-
 // --- entry point --------------------------------------------------------------
 
 export function buildDayInsights(input: DayInsightsInput): DayInsights {
   const slots = daylightSlots(input);
   const wind = windShape(slots, input.windSeries);
-  const rain = rainInfo(input, input.precipitationSeries);
+  const rain = rainClause(input, input.precipitationSeries);
 
   let summarySentence: string;
-  if (wind && rain) summarySentence = `${windClause(wind)}, ${rain.clause}.`;
+  if (wind && rain) summarySentence = `${windClause(wind)}, ${rain}.`;
   else if (wind) summarySentence = `${windClause(wind)}.`;
-  else if (rain) summarySentence = `${capitalize(rain.clause)}.`;
+  else if (rain) summarySentence = `${capitalize(rain)}.`;
   else summarySentence = 'Tide data only — wind and rain forecast unavailable.';
-
-  const values: DayInsightValue[] = [];
-  const nextTide = nextTideValue(input.forecast.nextExtreme(input.reference));
-  if (nextTide) values.push(nextTide);
-  if (wind) values.push({ label: 'Wind', value: windValue(wind) });
-  if (rain) values.push({ label: 'Rain', value: rain.value });
-  const sun = sunValue(input);
-  if (sun) values.push(sun);
 
   return {
     summarySentence,
-    values,
     bestWindow: bestWindow(input, slots, input.windSeries, input.precipitationSeries),
   };
 }
