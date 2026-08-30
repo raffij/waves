@@ -1,9 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { TideResponse } from '../models/TideModels';
 
-const CACHE_DATA_KEY = 'wave-hastings-tide-cache';
-const CACHE_TIMESTAMP_KEY = 'wave-hastings-tide-cache-timestamp';
-
 export interface TideDataResult {
   data: TideResponse;
   fetchedAt: Date;
@@ -18,6 +15,14 @@ export class TideAPIClient {
     private readonly apiKey: string,
     private readonly cacheMaxAgeMs: number = 6 * 60 * 60 * 1000,
   ) {}
+
+  private get cacheDataKey(): string {
+    return `wave-hastings-tide-cache-${this.stationId}`;
+  }
+
+  private get cacheTimestampKey(): string {
+    return `wave-hastings-tide-cache-timestamp-${this.stationId}`;
+  }
 
   async loadTideData(): Promise<TideDataResult | null> {
     const cached = await this.readCache();
@@ -37,7 +42,7 @@ export class TideAPIClient {
   }
 
   async forceRefresh(): Promise<TideDataResult | null> {
-    await AsyncStorage.multiRemove([CACHE_DATA_KEY, CACHE_TIMESTAMP_KEY]);
+    await AsyncStorage.multiRemove([this.cacheDataKey, this.cacheTimestampKey]);
     return this.loadTideData();
   }
 
@@ -60,8 +65,8 @@ export class TideAPIClient {
   private async readCache(): Promise<TideDataResult | null> {
     try {
       const [json, timestamp] = await Promise.all([
-        AsyncStorage.getItem(CACHE_DATA_KEY),
-        AsyncStorage.getItem(CACHE_TIMESTAMP_KEY),
+        AsyncStorage.getItem(this.cacheDataKey),
+        AsyncStorage.getItem(this.cacheTimestampKey),
       ]);
       if (!json || !timestamp) return null;
       return { data: JSON.parse(json) as TideResponse, fetchedAt: new Date(timestamp) };
@@ -72,8 +77,8 @@ export class TideAPIClient {
 
   private async writeCache(data: TideResponse, fetchedAt: Date): Promise<void> {
     await Promise.all([
-      AsyncStorage.setItem(CACHE_DATA_KEY, JSON.stringify(data)),
-      AsyncStorage.setItem(CACHE_TIMESTAMP_KEY, fetchedAt.toISOString()),
+      AsyncStorage.setItem(this.cacheDataKey, JSON.stringify(data)),
+      AsyncStorage.setItem(this.cacheTimestampKey, fetchedAt.toISOString()),
     ]);
   }
 }
