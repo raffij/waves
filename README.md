@@ -37,7 +37,7 @@ expo/                         React Native / Expo app (iOS, Android, web)
   src/hooks/                   useForecastData, useApiKey, useLocation,
                                useWidgetSync, useTheme
   src/services/               API clients, interpolating series, TideClock,
-                               DayInsights, DaylightSeries
+                               DayInsights, DaylightSeries, DayWindow
   modules/widget-bridge/       local Expo Module: pushes config to the iOS widget
   targets/widget/              iOS home-screen widget (Swift/SwiftUI, WidgetKit)
 mac-widget/

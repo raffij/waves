@@ -2,16 +2,20 @@ import { useMemo, useRef, useState } from 'react';
 import { type LayoutChangeEvent, PanResponder, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Defs, Line, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 import { useTheme } from '../hooks/useTheme';
+import type { DaylightSeries } from '../services/DaylightSeries';
+import { DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR } from '../services/DayWindow';
 import { TideClock } from '../services/TideClock';
 import type { TideSeries } from '../services/TideSeries';
 import type { WaveSeries } from '../services/WaveSeries';
 import type { WindSeries } from '../services/WindSeries';
 import type { Colors } from '../theme';
+import { daylightBands } from './daylight';
 
 interface Props {
   series: TideSeries;
   waveSeries?: WaveSeries | null;
   windSeries?: WindSeries | null;
+  daylightSeries?: DaylightSeries | null;
   now: Date;
   /** Whether `now` is the real current moment vs. a same-hour projection onto another day (see App.tsx). The past-hours fade only makes sense for today. */
   isToday?: boolean;
@@ -72,7 +76,16 @@ const TOOLTIP_WIDTH = 170;
 // already passed visibly recedes.
 const PAST_FADE_OPACITY = 0.55;
 
-export function TideChart({ series, waveSeries, windSeries, now, isToday = true, startHour = 6, endHour = 22 }: Props) {
+export function TideChart({
+  series,
+  waveSeries,
+  windSeries,
+  daylightSeries,
+  now,
+  isToday = true,
+  startHour = DAY_WINDOW_START_HOUR,
+  endHour = DAY_WINDOW_END_HOUR,
+}: Props) {
   const { colors } = useTheme();
   const styles = useMemo(() => getStyles(colors), [colors]);
   const [width, setWidth] = useState(DEFAULT_WIDTH);
@@ -221,6 +234,10 @@ export function TideChart({ series, waveSeries, windSeries, now, isToday = true,
 
   const hourTicks = [startHour, Math.round((startHour + endHour) / 2), endHour];
 
+  // Shading for the hours outside sunrise–sunset, so the curve reads
+  // against when it's actually light on the pier.
+  const daylight = daylightBands({ series: daylightSeries, start, end, plotLeft: PADDING_LEFT, plotWidth });
+
   return (
     <View onLayout={onLayout}>
       <View style={styles.chartArea}>
@@ -231,6 +248,29 @@ export function TideChart({ series, waveSeries, windSeries, now, isToday = true,
               <Stop offset="1" stopColor={colors.primary} stopOpacity={0.02} />
             </LinearGradient>
           </Defs>
+          {daylight.night.map((band) => (
+            <Rect
+              key={band.key}
+              x={band.x}
+              y={PADDING_TOP}
+              width={band.width}
+              height={plotHeight}
+              fill={colors.night}
+            />
+          ))}
+          {daylight.marks.map((mark) => (
+            <Line
+              key={mark.key}
+              x1={mark.x}
+              y1={PADDING_TOP}
+              x2={mark.x}
+              y2={floorY}
+              stroke={colors.textSecondary}
+              strokeDasharray="2,3"
+              strokeWidth={1}
+              opacity={0.4}
+            />
+          ))}
           {tideGridLines.map((g) => (
             <Line
               key={g.value}
@@ -366,6 +406,12 @@ export function TideChart({ series, waveSeries, windSeries, now, isToday = true,
             </Text>
           </View>
         )}
+        {daylight.label && (
+          <View style={styles.legendItem}>
+            <View style={styles.legendNightSwatch} />
+            <Text style={styles.legendText}>{daylight.label}</Text>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -414,6 +460,17 @@ function getStyles(colors: Colors) {
       paddingVertical: 2,
     },
     legendDot: { width: 7, height: 7, borderRadius: 4 },
+    // A square rather than a dot: it stands for the shaded night band, not
+    // a plotted series, and the night fill alone is too faint to find
+    // without an outline.
+    legendNightSwatch: {
+      width: 7,
+      height: 7,
+      borderRadius: 2,
+      backgroundColor: colors.night,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+    },
     legendText: { color: colors.textSecondary, fontSize: 11, fontWeight: '600' },
   });
 }
