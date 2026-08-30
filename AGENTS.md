@@ -1,5 +1,10 @@
 # Repository notes
 
+## Open PRs ready for review, not as drafts
+
+Create pull requests in this repo ready for review, not as drafts. This
+overrides the default draft-PR behavior for this project specifically.
+
 ## Check PR merge status before pushing more commits to a branch
 
 Before pushing additional commits to a branch that already has an open PR,
