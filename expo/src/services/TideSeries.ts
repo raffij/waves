@@ -27,7 +27,7 @@ export class TideSeries {
   constructor(series: SeriesPoint[]) {
     this.points = series
       .map((p): Point | null => {
-        const date = TideClock.parseISODate(p.time);
+        const date = TideClock.parseLondonWallTime(p.time);
         return date ? [date, p.height] : null;
       })
       .filter((p): p is Point => p !== null)

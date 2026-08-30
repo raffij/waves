@@ -9,7 +9,7 @@ export class PrecipitationSeries {
 
   constructor(data: PrecipitationData) {
     this.points = data.time.map((timeStr, i) => ({
-      time: new Date(timeStr),
+      time: TideClock.parseLondonWallTime(timeStr) ?? new Date(Number.NaN),
       mm: data.precipitation[i] ?? null,
     }));
   }
