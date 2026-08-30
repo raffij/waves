@@ -26,6 +26,10 @@ const MIN_SCALE_MM = 1;
 // reads as a full row of "measured: zero" ticks rather than a chart that
 // failed to load with no data at all.
 const BASELINE_HEIGHT = 3;
+// Veils the elapsed portion of the chart under the screen background color,
+// so what's still ahead in the day reads at full strength and what's
+// already passed visibly recedes. Matches TideChart's fade.
+const PAST_FADE_OPACITY = 0.4;
 
 export function PrecipitationChart({ series, now, startHour = 6, endHour = 22 }: Props) {
   const { colors } = useTheme();
@@ -47,6 +51,12 @@ export function PrecipitationChart({ series, now, startHour = 6, endHour = 22 }:
 
   const maxMm = Math.max(MIN_SCALE_MM, ...bars.map((b) => b.mm ?? 0));
   const total = bars.reduce((sum, b) => sum + (b.mm ?? 0), 0);
+
+  const totalMs = end.getTime() - start.getTime();
+  const currentX = PADDING_X + ((now.getTime() - start.getTime()) / totalMs) * plotWidth;
+  // Clamped: a `now` before the window means nothing's elapsed yet (no
+  // fade), a `now` past it means the whole window is behind us (fade it all).
+  const pastFadeEndX = Math.min(Math.max(currentX, PADDING_X), width - PADDING_X);
 
   const hourTicks = [startHour, Math.round((startHour + endHour) / 2), endHour];
 
@@ -72,6 +82,16 @@ export function PrecipitationChart({ series, now, startHour = 6, endHour = 22 }:
               />
             );
           })}
+          {pastFadeEndX > PADDING_X && (
+            <Rect
+              x={PADDING_X}
+              y={PADDING_TOP}
+              width={pastFadeEndX - PADDING_X}
+              height={plotHeight}
+              fill={colors.background}
+              opacity={PAST_FADE_OPACITY}
+            />
+          )}
         </Svg>
       </View>
       <View style={styles.axisRow}>

@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { type LayoutChangeEvent, PanResponder, StyleSheet, Text, View } from 'react-native';
-import Svg, { Circle, Defs, Line, LinearGradient, Path, Stop } from 'react-native-svg';
+import Svg, { Circle, Defs, Line, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 import { useTheme } from '../hooks/useTheme';
 import { TideClock } from '../services/TideClock';
 import type { TideSeries } from '../services/TideSeries';
@@ -65,6 +65,10 @@ const PADDING_LEFT = PADDING_X;
 const PADDING_TOP = 26; // extra room for the scrub tooltip
 const PADDING_BOTTOM = 4;
 const TOOLTIP_WIDTH = 170;
+// Veils the elapsed portion of the chart under the screen background color,
+// so what's still ahead in the day reads at full strength and what's
+// already passed visibly recedes.
+const PAST_FADE_OPACITY = 0.4;
 
 export function TideChart({ series, waveSeries, windSeries, now, startHour = 6, endHour = 22 }: Props) {
   const { colors } = useTheme();
@@ -197,6 +201,11 @@ export function TideChart({ series, waveSeries, windSeries, now, startHour = 6, 
   const windPath = smoothPath(windPoints);
 
   const currentX = PADDING_LEFT + ((now.getTime() - start.getTime()) / totalMs) * plotWidth;
+  // Clamped separately from currentX (which stays unclamped so the "now"
+  // line only ever draws when it's truly inside the window): a `now`
+  // before the window means nothing's elapsed yet (no fade), and a `now`
+  // past it means the whole window is behind us (fade it all).
+  const pastFadeEndX = Math.min(Math.max(currentX, PADDING_LEFT), width - PADDING_X);
 
   const isScrubbing = scrubX !== null;
   const activeTime =
@@ -260,6 +269,16 @@ export function TideChart({ series, waveSeries, windSeries, now, startHour = 6, 
               strokeLinecap="round"
               strokeLinejoin="round"
               opacity={0.6}
+            />
+          )}
+          {pastFadeEndX > PADDING_LEFT && (
+            <Rect
+              x={PADDING_LEFT}
+              y={PADDING_TOP}
+              width={pastFadeEndX - PADDING_LEFT}
+              height={plotHeight}
+              fill={colors.background}
+              opacity={PAST_FADE_OPACITY}
             />
           )}
           {!isScrubbing && currentX >= PADDING_LEFT && currentX <= width - PADDING_X && (
