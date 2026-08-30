@@ -1,6 +1,6 @@
 import type { UseQueryResult } from '@tanstack/react-query';
 import { useQueries, useQueryClient } from '@tanstack/react-query';
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { DEFAULT_LOCATION, type Location } from '../models/Location';
 import { PrecipitationSeries } from '../services/PrecipitationSeries';
 import type { TideDataResult } from '../services/TideAPIClient';
@@ -36,6 +36,13 @@ export interface ForecastData {
   /** Force a cache-bypassing refetch of both tide and wave/wind/precipitation. */
   refresh: () => Promise<void>;
 }
+
+// Tighter than each client's own 6h AsyncStorage cache — a page load or
+// location switch that lands on a cache hit older than this triggers a
+// background refresh, so a session left open a while (or a location
+// switched back to) doesn't sit on significantly stale data until the
+// next manual refresh.
+const STALE_REFRESH_MS = 60 * 60 * 1000;
 
 function tideQueryKey(location: Location | undefined, apiKey: string | null | undefined) {
   return ['tide', location?.stationId, apiKey] as const;
@@ -170,6 +177,19 @@ export function useForecastData(apiKey: string | null | undefined, location: Loc
       ),
     ]);
   }, [ready, apiKey, location, queryClient]);
+
+  // Runs whenever fetchedAt lands on a real value: the initial load for a
+  // given location/key, or a location switch resolving into its own cache
+  // hit. A fetch that's already fresh, or one refresh() itself just
+  // completed, leaves fetchedAt unchanged (or freshly "now"), so this
+  // can't loop — it only ever fires once per stale landing.
+  useEffect(() => {
+    const fetchedAt = forecastData.fetchedAt;
+    if (!fetchedAt) return;
+    if (Date.now() - fetchedAt.getTime() > STALE_REFRESH_MS) {
+      refresh();
+    }
+  }, [forecastData.fetchedAt, refresh]);
 
   return { ...forecastData, refresh };
 }
