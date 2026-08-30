@@ -21,12 +21,7 @@ import { useApiKey } from './src/hooks/useApiKey';
 import { useForecastData } from './src/hooks/useForecastData';
 import { useLocation } from './src/hooks/useLocation';
 import { ThemeProvider, useTheme } from './src/hooks/useTheme';
-import { PrecipitationSeries } from './src/services/PrecipitationSeries';
 import { TideClock } from './src/services/TideClock';
-import { TideForecast } from './src/services/TideForecast';
-import { TideSeries } from './src/services/TideSeries';
-import { WaveSeries } from './src/services/WaveSeries';
-import { WindSeries } from './src/services/WindSeries';
 import type { Colors } from './src/theme';
 
 // TideCheck's free tier allows 50 requests/day, and TideAPIClient/
@@ -51,10 +46,8 @@ export default function App() {
 function AppContent() {
   const { apiKey, saveKey, resetKey } = useApiKey();
   const { location, toggleLocation } = useLocation();
-  const { data, waveData, windData, precipitationData, fetchedAt, loading, error, load } = useForecastData(
-    apiKey,
-    location,
-  );
+  const { series, forecast, waveSeries, windSeries, precipitationSeries, fetchedAt, isFetching, error, refresh } =
+    useForecastData(apiKey, location);
   const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
   const { colors, themeName, toggleTheme } = useTheme();
   const styles = useMemo(() => getStyles(colors), [colors]);
@@ -84,11 +77,6 @@ function AppContent() {
   // through +5 days) anchored on the real "now" — selecting a day only
   // changes which one is highlighted and which data the top card/chart
   // reflect, not the list's own range.
-  const series = data ? new TideSeries(data.timeSeries) : null;
-  const waveSeries = waveData ? new WaveSeries(waveData) : null;
-  const windSeries = windData ? new WindSeries(windData) : null;
-  const precipitationSeries = precipitationData ? new PrecipitationSeries(precipitationData) : null;
-  const forecast = data ? new TideForecast(data.extremes) : null;
   const yesterday = forecast?.yesterday(now) ?? null;
   const days = forecast?.days(now, 5) ?? [];
 
@@ -117,7 +105,7 @@ function AppContent() {
         <ScrollView
           contentContainerStyle={styles.content}
           refreshControl={
-            <RefreshControl tintColor={colors.primary} refreshing={loading} onRefresh={() => load(true)} />
+            <RefreshControl tintColor={colors.primary} refreshing={isFetching} onRefresh={() => refresh(true)} />
           }
         >
           <CurrentLevelCard
@@ -142,7 +130,7 @@ function AppContent() {
             </View>
           )}
 
-          {error && <Text style={styles.error}>{error}</Text>}
+          {error && <Text style={styles.error}>{error.message}</Text>}
 
           <View style={styles.section}>
             <ForecastList
@@ -167,9 +155,9 @@ function AppContent() {
           <View style={styles.footer}>
             <FooterButton
               icon="refresh-outline"
-              label={loading ? 'Refreshing…' : 'Refresh'}
-              onPress={() => load(true)}
-              disabled={loading}
+              label={isFetching ? 'Refreshing…' : 'Refresh'}
+              onPress={() => refresh(true)}
+              disabled={isFetching}
               colors={colors}
               styles={styles}
             />
