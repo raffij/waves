@@ -411,3 +411,43 @@ one PR, opened ready for review (not draft), per `AGENTS.md`:
    `intent/` docs (intent, spec, plan).
 
 Before pushing, check the PR hasn't already merged (`AGENTS.md`).
+
+Both landed as PR #24 (squash-merged as `30eba36`).
+
+## Follow-up 1 — tense-aware, bounded rain summary
+
+PR #24 was merged before this landed, so it goes on a fresh branch off the
+new `main` as its own PR (`AGENTS.md`).
+
+The first cut summarised rain as "rain likely from HH:MM" / "clearing by
+HH:MM" / "on and off". Viewing a **past** day exposed two problems the user
+flagged: it read a past day in a forecast tense ("likely"), and it never
+bounded a spell — a shower that ran 10:00–15:00 showed as "rain from
+10:00", losing both the end and the sense that rain owned the middle of the
+day.
+
+`rainInfo` (in `DayInsights.ts`) now:
+
+- groups wet hours into contiguous **spells**;
+- picks tense from `reference`'s date vs. today (`past` / `today` /
+  `future`) — `past` drops "likely", `today` keeps "until HH:MM" for a
+  spell already under way;
+- for a single spell, adds a coverage phrase — `for most of the day`
+  (≥ `RAIN_DOMINATES_FRACTION` of the 06:00–22:00 window) or
+  `through the morning` / `afternoon` / `middle of the day`
+  (≥ `RAIN_LONG_SPELL_HOURS`) — and always states `start to end`;
+- for multiple spells, `showers on and off / came and went / likely` +
+  ` in the morning` / ` in the afternoon` / ` through the day`.
+
+Rain value becomes the bounded range (`10:00–15:00`), `Until 15:00`,
+`On and off`, or `None`.
+
+**Verified** (`expo start --web`, real cached data): Yesterday →
+"Breezy all day, rain through the middle of the day, 10:00 to 15:00." ·
+"Rain 10:00–15:00"; Today (scattered) → "…showers on and off in the
+afternoon."; Tomorrow → "…rain likely from 06:00 to 07:00." Biome + `tsc`
+clean, no console errors.
+
+**Known follow-up:** the **wind** clause still uses "this morning" /
+"by mid-afternoon" for past days — mildly odd, not corrected here to keep
+the diff focused on the reported issue.
