@@ -13,6 +13,8 @@ interface Props {
   waveSeries?: WaveSeries | null;
   windSeries?: WindSeries | null;
   now: Date;
+  /** Whether `now` is the real current moment vs. a same-hour projection onto another day (see App.tsx). The past-hours fade only makes sense for today. */
+  isToday?: boolean;
   startHour?: number;
   endHour?: number;
 }
@@ -70,7 +72,7 @@ const TOOLTIP_WIDTH = 170;
 // already passed visibly recedes.
 const PAST_FADE_OPACITY = 0.55;
 
-export function TideChart({ series, waveSeries, windSeries, now, startHour = 6, endHour = 22 }: Props) {
+export function TideChart({ series, waveSeries, windSeries, now, isToday = true, startHour = 6, endHour = 22 }: Props) {
   const { colors } = useTheme();
   const styles = useMemo(() => getStyles(colors), [colors]);
   const [width, setWidth] = useState(DEFAULT_WIDTH);
@@ -271,7 +273,7 @@ export function TideChart({ series, waveSeries, windSeries, now, startHour = 6, 
               opacity={0.6}
             />
           )}
-          {pastFadeEndX > PADDING_LEFT && (
+          {isToday && pastFadeEndX > PADDING_LEFT && (
             <Rect
               x={PADDING_LEFT}
               y={PADDING_TOP}
