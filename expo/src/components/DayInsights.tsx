@@ -9,7 +9,8 @@ interface Props {
 }
 
 // The "so what" line above the charts: a one-sentence read on the day,
-// and — when it's wet — what to take out on the pier.
+// and a one-word call on what to bring ("Dry robe" / "Umbrella" / "Wet" /
+// "Dry"), skipped once the day is over.
 export function DayInsights({ insights }: Props) {
   const { colors } = useTheme();
   const styles = useMemo(() => getStyles(colors), [colors]);

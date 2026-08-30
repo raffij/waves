@@ -19,12 +19,17 @@ export const RAIN_WINDOW_END_HOUR = 22;
 export const RAIN_DOMINATES_FRACTION = 0.55; // a single spell covering this share of the window reads as "most of the day"
 export const RAIN_LONG_SPELL_HOURS = 4; // at/above this, a spell gets a "through the morning/afternoon/middle" phrase
 
+// The day boiled down to one word for what to bring: a dry robe if rain's
+// coming and it's too windy for an umbrella, an umbrella if it's calmer,
+// "Wet" if the rain's been and gone but the pier's still wet underfoot,
+// "Dry" otherwise.
+export type GearAdvice = 'Dry robe' | 'Umbrella' | 'Wet' | 'Dry';
+
 export interface DayInsights {
   summarySentence: string;
-  // What to take out on the pier. Rain gets top billing (big coat), and a
-  // windy day calls for a dry robe rather than an umbrella. Null when the
-  // day is dry, or already over.
-  gearAdvice: string | null;
+  // The day in one word for what to bring (see GearAdvice). Null for a day
+  // that's already over.
+  gearAdvice: GearAdvice | null;
 }
 
 export interface DayInsightsInput {
@@ -169,11 +174,15 @@ function rainCoverage(spell: RainSpell, totalBars: number, windowStart: Date, wi
   return endsAfterMidday ? 'through the afternoon' : 'through the morning';
 }
 
-// Lower-case fragment for the summary sentence, plus whether the day is
-// actually wet — the gear advice keys off `wet`, not off parsing `text`.
+// Lower-case fragment for the summary sentence, plus the flags the gear
+// advice keys off (it never parses `text`):
+//   wet       — rain is still to come or under way in the rest of the day
+//   groundWet — today only: rain fell earlier but is done, so the pier
+//               stays wet underfoot even though `wet` is false
 interface RainClause {
   text: string;
   wet: boolean;
+  groundWet: boolean;
 }
 
 function rainClause(input: DayInsightsInput, precip: PrecipitationSeries | null): RainClause | null {
@@ -184,12 +193,15 @@ function rainClause(input: DayInsightsInput, precip: PrecipitationSeries | null)
   const bars = precip.hourlyBars(windowStart, windowEnd);
   const tense = dayTense(input.reference);
 
-  // On today, spells that have already finished aren't worth mentioning.
-  const spells = rainSpells(bars).filter((s) => tense !== 'today' || s.end.getTime() > input.reference.getTime());
+  // On today, spells that have already finished aren't worth mentioning in
+  // the sentence — but they still leave the ground wet, so track that.
+  const allSpells = rainSpells(bars);
+  const spells = allSpells.filter((s) => tense !== 'today' || s.end.getTime() > input.reference.getTime());
+  const groundWet = tense === 'today' && spells.length === 0 && allSpells.length > 0;
 
   if (spells.length === 0) {
     const text = tense === 'past' ? 'stayed dry' : tense === 'future' ? 'likely dry' : 'staying dry';
-    return { text, wet: false };
+    return { text, wet: false, groundWet };
   }
 
   const midday = windowStart.getTime() + (windowEnd.getTime() - windowStart.getTime()) / 2;
@@ -200,7 +212,7 @@ function rainClause(input: DayInsightsInput, precip: PrecipitationSeries | null)
     const when = allBeforeMidday ? ' in the morning' : allAfterMidday ? ' in the afternoon' : ' through the day';
     const lead =
       tense === 'future' ? 'showers likely' : tense === 'past' ? 'showers came and went' : 'showers on and off';
-    return { text: `${lead}${when}`, wet: true };
+    return { text: `${lead}${when}`, wet: true, groundWet: false };
   }
 
   const s = spells[0];
@@ -208,12 +220,16 @@ function rainClause(input: DayInsightsInput, precip: PrecipitationSeries | null)
 
   // Today, rain already under way — the start is behind us, so lead with the end.
   if (tense === 'today' && s.start.getTime() <= input.reference.getTime()) {
-    return { text: `rain until ${hhmm(s.end)}`, wet: true };
+    return { text: `rain until ${hhmm(s.end)}`, wet: true, groundWet: false };
   }
 
   const coverage = rainCoverage(s, bars.length, windowStart, windowEnd);
   const likely = tense === 'future' ? 'likely ' : '';
-  return { text: coverage ? `rain ${likely}${coverage}, ${range}` : `rain ${likely}from ${range}`, wet: true };
+  return {
+    text: coverage ? `rain ${likely}${coverage}, ${range}` : `rain ${likely}from ${range}`,
+    wet: true,
+    groundWet: false,
+  };
 }
 
 // --- gear advice ------------------------------------------------------------
@@ -226,13 +242,11 @@ function dayIsWindy(wind: WindShape | null): boolean {
   return wind.morningBand === 'windy' || wind.afternoonBand === 'windy' || wind.afternoonPeak >= WIND_BAND_WINDY_MPH;
 }
 
-// Rain leads: if it's wet, that's a big-coat day. Wind then decides
-// dry robe vs umbrella. Nothing to say on a dry day, or one that's done.
-function gearAdvice(input: DayInsightsInput, wind: WindShape | null, rain: RainClause | null): string | null {
-  if (!rain?.wet || dayTense(input.reference) === 'past') return null;
-  return dayIsWindy(wind)
-    ? 'Big coat, and a dry robe rather than an umbrella — too windy for one.'
-    : 'Big coat, and an umbrella will be fine.';
+function gearAdvice(input: DayInsightsInput, wind: WindShape | null, rain: RainClause | null): GearAdvice | null {
+  if (!rain || dayTense(input.reference) === 'past') return null;
+  if (rain.wet) return dayIsWindy(wind) ? 'Dry robe' : 'Umbrella';
+  if (rain.groundWet) return 'Wet';
+  return 'Dry';
 }
 
 // --- entry point --------------------------------------------------------------
