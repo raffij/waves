@@ -9,6 +9,8 @@ import type { Colors } from '../theme';
 interface Props {
   series: PrecipitationSeries;
   now: Date;
+  /** Whether `now` is the real current moment vs. a same-hour projection onto another day (see App.tsx). */
+  isToday?: boolean;
   startHour?: number;
   endHour?: number;
 }
@@ -31,9 +33,9 @@ const BASELINE_HEIGHT = 3;
 // and what's already passed visibly recedes. Matches TideChart's fade
 // (recolors each bar directly rather than overlaying a translucent layer,
 // since that barely registers against an already-faint dry-hour bar).
-const PAST_OPACITY_SCALE = 0.6;
+const PAST_OPACITY_SCALE = 0.5;
 
-export function PrecipitationChart({ series, now, startHour = 6, endHour = 22 }: Props) {
+export function PrecipitationChart({ series, now, isToday = true, startHour = 6, endHour = 22 }: Props) {
   const { colors } = useTheme();
   const styles = useMemo(() => getStyles(colors), [colors]);
   const [width, setWidth] = useState(DEFAULT_WIDTH);
@@ -55,8 +57,12 @@ export function PrecipitationChart({ series, now, startHour = 6, endHour = 22 }:
   const total = bars.reduce((sum, b) => sum + (b.mm ?? 0), 0);
 
   // Searches the full series, not just this window, so it can point past
-  // a dry evening at tomorrow morning's first shower.
-  const nextRainTime = series.nextRainAfter(now);
+  // a dry evening at tomorrow morning's first shower. Anchored on the real
+  // "now" only when viewing today — `now` for another day is a same-hour
+  // projection (see App.tsx), not a real cutoff within that day, so a
+  // future/past day is searched from its own 6am window start instead,
+  // finding that day's first rain rather than skipping its early hours.
+  const nextRainTime = series.nextRainAfter(isToday ? now : start);
   const nextRainLabel = nextRainTime
     ? ` · Next rain ${TideClock.format(
         nextRainTime,

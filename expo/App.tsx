@@ -83,14 +83,13 @@ function AppContent() {
   // Same time-of-day as right now, projected onto the selected day — so
   // "Tomorrow" shows tomorrow's predicted reading at this same hour, and
   // the chart centers on a comparable moment within that day's window.
-  const referenceDate =
-    activeDateKey === todayKey ? now : TideClock.withTimeOfDay(TideClock.dateFromKey(activeDateKey), now);
-  const selectedDayLabel =
-    activeDateKey === todayKey
-      ? null
-      : ((yesterday?.dateKey === activeDateKey
-          ? yesterday.label
-          : days.find((d) => d.dateKey === activeDateKey)?.label) ?? null);
+  const isToday = activeDateKey === todayKey;
+  const referenceDate = isToday ? now : TideClock.withTimeOfDay(TideClock.dateFromKey(activeDateKey), now);
+  const selectedDayLabel = isToday
+    ? null
+    : ((yesterday?.dateKey === activeDateKey
+        ? yesterday.label
+        : days.find((d) => d.dateKey === activeDateKey)?.label) ?? null);
 
   const current = series?.currentLevel(referenceDate) ?? null;
   const waveHeight = waveSeries?.heightAt(referenceDate) ?? null;
@@ -124,7 +123,7 @@ function AppContent() {
 
           {precipitationSeries && (
             <View style={styles.section}>
-              <PrecipitationChart series={precipitationSeries} now={referenceDate} />
+              <PrecipitationChart series={precipitationSeries} now={referenceDate} isToday={isToday} />
             </View>
           )}
 
