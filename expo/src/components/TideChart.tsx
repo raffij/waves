@@ -68,7 +68,7 @@ const TOOLTIP_WIDTH = 170;
 // Veils the elapsed portion of the chart under the screen background color,
 // so what's still ahead in the day reads at full strength and what's
 // already passed visibly recedes.
-const PAST_FADE_OPACITY = 0.4;
+const PAST_FADE_OPACITY = 0.55;
 
 export function TideChart({ series, waveSeries, windSeries, now, startHour = 6, endHour = 22 }: Props) {
   const { colors } = useTheme();
