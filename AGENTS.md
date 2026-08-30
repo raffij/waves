@@ -27,3 +27,33 @@ If the PR has merged:
    reused or reopened for this.
 
 Keep the same branch name throughout unless asked otherwise.
+
+## Architecture diagrams use Archify
+
+Generate architecture diagrams with the [Archify](https://github.com/tt-a1i/archify)
+skill (`npx skills add tt-a1i/archify -g` if it isn't already installed), not
+hand-rolled Mermaid or SVG. It renders a typed JSON spec into a self-contained,
+explorable HTML diagram — dark/light themes, pan/zoom, guided views — matching
+the reference look in
+[chrisgreg/boop's `docs/architecture.png`](https://github.com/chrisgreg/boop/blob/main/docs/architecture.png):
+JetBrains Mono, a dotted-grid dark canvas, typed/colored component boxes
+(frontend/backend/database/cloud/security/messagebus/external), straight
+orthogonal routing with labeled edges, dashed boundary regions around related
+components, and a legend with per-type counts.
+
+Convention for this repo, mirroring that example:
+
+- Author the typed source at `docs/architecture/<name>.architecture.json`
+  (schema in Archify's `schemas/architecture.schema.json`).
+- Validate, then deliver, with the Archify CLI:
+  `node bin/archify.mjs validate architecture <spec.json> --quality showcase --json`
+  followed by
+  `node bin/archify.mjs deliver architecture <spec.json> docs/architecture/<name>.architecture.html --quality showcase --json`.
+  Don't hand-edit the delivered HTML.
+- Commit the delivered HTML alongside its source JSON.
+- Export a static dark-theme crop of the diagram (no toolbar/chrome) to
+  `docs/<name>.png` for embedding in Markdown docs and READMEs, and link the
+  interactive HTML next to it as "an interactive version lives in ...".
+- Omit `meta.visual_preset` (stay on the default `classic` preset) unless a
+  different Archify preset is explicitly requested, so all diagrams in this
+  repo share one visual identity.

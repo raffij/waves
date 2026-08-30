@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "How Waves works",
+    "output": "waves.architecture.html",
+    "quality_profile": "showcase",
+    "views": [
+      { "id": "tide", "label": "Tide request path", "focus": ["expoClient", "widgetClient", "tideAPI"], "note": "Both clients call TideCheck independently, each with its own key and cache." },
+      { "id": "wave", "label": "Wave, wind & rain", "focus": ["expoClient", "widgetClient", "marineAPI", "forecastAPI"], "note": "Open-Meteo needs no key; wave and wind/precipitation are fetched as two separate calls." },
+      { "id": "keys", "label": "Where the API key lives", "focus": ["expoKey", "widgetKey"], "note": "Same TideCheck key, stored in two different platform key stores." }
+    ]
+  },
+  "components": [
+    { "id": "expoUI", "type": "frontend", "label": "Expo App", "sublabel": "React Native · iOS/Android/Web", "tag": "TanStack Query", "pos": [40, 40], "size": [200, 66] },
+    { "id": "expoKey", "type": "security", "label": "SecureKeyStore", "sublabel": "iOS Keychain · localStorage on web", "pos": [40, 166], "size": [200, 60] },
+    { "id": "expoClient", "type": "backend", "label": "Tide/Wave Clients", "sublabel": "AsyncStorage cache · 6h TTL", "tag": "stale-on-failure", "pos": [40, 286], "size": [200, 76] },
+    { "id": "widgetUI", "type": "frontend", "label": "macOS Widget", "sublabel": "SwiftBar / xbar · Swift script", "tag": "every 15 min", "pos": [900, 40], "size": [200, 66] },
+    { "id": "widgetKey", "type": "security", "label": "macOS Keychain", "sublabel": "via `security` CLI", "pos": [900, 166], "size": [200, 60] },
+    { "id": "widgetClient", "type": "backend", "label": "Tide/Wave Clients", "sublabel": "disk JSON cache · 6h TTL", "tag": "stale-on-failure", "pos": [900, 286], "size": [200, 76] },
+    { "id": "tideAPI", "type": "external", "label": "TideCheck API", "sublabel": "tide extremes + series", "pos": [470, 30], "size": [210, 76] },
+    { "id": "marineAPI", "type": "external", "label": "Open-Meteo Marine", "sublabel": "wave height", "pos": [470, 180], "size": [210, 76] },
+    { "id": "forecastAPI", "type": "external", "label": "Open-Meteo Forecast", "sublabel": "wind + precipitation", "pos": [470, 330], "size": [210, 76] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "expo/ · long-lived process", "wraps": ["expoUI", "expoKey", "expoClient"] },
+    { "kind": "region", "label": "mac-widget/ · every 15 min", "wraps": ["widgetUI", "widgetKey", "widgetClient"] }
+  ],
+  "connections": [
+    { "id": "expo-ui-key", "from": "expoUI", "to": "expoKey", "label": "read key", "labelAt": [140, 120] },
+    { "id": "expo-key-client", "from": "expoKey", "to": "expoClient", "label": "apiKey", "labelAt": [140, 240] },
+    { "id": "widget-ui-key", "from": "widgetUI", "to": "widgetKey", "label": "read key", "labelAt": [1000, 120] },
+    { "id": "widget-key-client", "from": "widgetKey", "to": "widgetClient", "label": "apiKey", "labelAt": [1000, 240] },
+    { "id": "expo-tide", "from": "expoClient", "to": "tideAPI", "label": "X-API-Key · 8s timeout", "variant": "emphasis", "fromSide": "right", "toSide": "left" },
+    { "id": "expo-marine", "from": "expoClient", "to": "marineAPI", "label": "hourly=wave_height", "fromSide": "right", "toSide": "left", "labelSegment": 0, "labelDy": -14 },
+    { "id": "expo-forecast", "from": "expoClient", "to": "forecastAPI", "label": "wind_speed_10m,precipitation", "fromSide": "right", "toSide": "left" },
+    { "id": "widget-tide", "from": "widgetClient", "to": "tideAPI", "label": "X-API-Key · 8s timeout", "variant": "emphasis", "fromSide": "left", "toSide": "right" },
+    { "id": "widget-marine", "from": "widgetClient", "to": "marineAPI", "label": "hourly=wave_height", "fromSide": "left", "toSide": "right", "labelSegment": 0, "labelDy": -14 },
+    { "id": "widget-forecast", "from": "widgetClient", "to": "forecastAPI", "label": "wind_speed_10m,precipitation", "fromSide": "left", "toSide": "right" }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "Fetch", "items": ["Both clients read an API key, then call TideCheck plus two Open-Meteo endpoints", "Cache-first with a 6h TTL, falling back to a stale cache on failure", "Retry disabled everywhere — the free TideCheck tier allows 50 requests/day"] },
+    { "dot": "violet", "title": "Diverge", "items": ["Expo persists multiple locations in AsyncStorage; the widget hardcodes one station", "Expo renders native SVG charts; the widget prints ASCII bar rows in Menlo", "Key storage differs: Keychain/localStorage vs. the macOS `security` CLI"] },
+    { "dot": "emerald", "title": "Own", "items": ["No shared package between expo/ and mac-widget/", "Every duplicated behavior is a separate, hand-written implementation", "A manual refresh clears each platform's own cache, then refetches"] }
+  ]
+}
