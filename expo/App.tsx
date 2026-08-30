@@ -115,17 +115,15 @@ function AppContent() {
   // early returns and this doesn't, so it can't be a hook. Cheap anyway
   // (a handful of hourly lookups), and it matches how the derived values
   // above are computed each render.
-  const insights =
-    series && forecast
-      ? buildDayInsights({
-          forecast,
-          windSeries,
-          precipitationSeries,
-          daylightSeries,
-          reference: referenceDate,
-          isToday,
-        })
-      : null;
+  const insights = series
+    ? buildDayInsights({
+        windSeries,
+        precipitationSeries,
+        daylightSeries,
+        reference: referenceDate,
+        isToday,
+      })
+    : null;
 
   return (
     <View style={styles.screen}>
@@ -144,6 +142,12 @@ function AppContent() {
             fetchedAt={fetchedAt}
             dayLabel={selectedDayLabel}
           />
+
+          {insights && (
+            <View style={styles.section}>
+              <DayInsights insights={insights} />
+            </View>
+          )}
 
           {series && (
             <View style={styles.section}>
@@ -164,12 +168,6 @@ function AppContent() {
           )}
 
           {error && <Text style={styles.error}>{error.message}</Text>}
-
-          {insights && (
-            <View style={styles.section}>
-              <DayInsights insights={insights} />
-            </View>
-          )}
 
           <View style={styles.section}>
             <ForecastList
