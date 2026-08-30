@@ -10,7 +10,11 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.anonymous.hastings-tide",
       "backgroundColor": "#03122b",
-      "statusBarStyle": "light"
+      "statusBarStyle": "light",
+      "appleTeamId": "YOUR_APPLE_TEAM_ID",
+      "entitlements": {
+        "com.apple.security.application-groups": ["group.com.anonymous.hastings-tide"]
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -34,6 +38,6 @@
     "experiments": {
       "baseUrl": "/waves"
     },
-    "plugins": ["expo-secure-store"]
+    "plugins": ["expo-secure-store", "@bacons/apple-targets"]
   }
 }

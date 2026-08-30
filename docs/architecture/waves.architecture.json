@@ -6,41 +6,63 @@
     "output": "waves.architecture.html",
     "quality_profile": "showcase",
     "views": [
-      { "id": "tide", "label": "Tide request path", "focus": ["expoClient", "widgetClient", "tideAPI"], "note": "Both clients call TideCheck independently, each with its own key and cache." },
-      { "id": "wave", "label": "Wave, wind & rain", "focus": ["expoClient", "widgetClient", "marineAPI", "forecastAPI"], "note": "Open-Meteo needs no key; wave and wind/precipitation are fetched as two separate calls." },
-      { "id": "keys", "label": "Where the API key lives", "focus": ["expoKey", "widgetKey"], "note": "Same TideCheck key, stored in two different platform key stores." }
+      { "id": "tide", "label": "Tide request path", "focus": ["expoClient", "iosWidgetClient", "widgetClient", "desktopClient", "tideAPI"], "note": "All four clients call TideCheck independently, each with its own key and cache (or no cache, for the widgets)." },
+      { "id": "wave", "label": "Wave, wind & rain", "focus": ["expoClient", "iosWidgetClient", "widgetClient", "desktopClient", "marineAPI", "forecastAPI"], "note": "Open-Meteo needs no key; wave and wind/precipitation are fetched as two separate calls." },
+      { "id": "keys", "label": "Where the API key lives", "focus": ["expoKey", "iosWidgetKey", "widgetKey", "desktopKey"], "note": "Four key stores. Widgets can't take direct input, so each borrows a key from a companion process." },
+      { "id": "bridges", "label": "App → widget hand-off", "focus": ["expoUI", "expoKey", "iosWidgetKey", "desktopKey"], "note": "The iOS widget's config comes from the Expo app; the desktop widget's comes from its own tiny settings app." }
     ]
   },
   "components": [
     { "id": "expoUI", "type": "frontend", "label": "Expo App", "sublabel": "React Native · iOS/Android/Web", "tag": "TanStack Query", "pos": [40, 40], "size": [200, 66] },
     { "id": "expoKey", "type": "security", "label": "SecureKeyStore", "sublabel": "iOS Keychain · localStorage on web", "pos": [40, 166], "size": [200, 60] },
     { "id": "expoClient", "type": "backend", "label": "Tide/Wave Clients", "sublabel": "AsyncStorage cache · 6h TTL", "tag": "stale-on-failure", "pos": [40, 286], "size": [200, 76] },
-    { "id": "widgetUI", "type": "frontend", "label": "macOS Widget", "sublabel": "SwiftBar / xbar · Swift script", "tag": "every 15 min", "pos": [900, 40], "size": [200, 66] },
-    { "id": "widgetKey", "type": "security", "label": "macOS Keychain", "sublabel": "via `security` CLI", "pos": [900, 166], "size": [200, 60] },
-    { "id": "widgetClient", "type": "backend", "label": "Tide/Wave Clients", "sublabel": "disk JSON cache · 6h TTL", "tag": "stale-on-failure", "pos": [900, 286], "size": [200, 76] },
+
+    { "id": "iosWidgetUI", "type": "frontend", "label": "iOS Widget", "sublabel": "WidgetKit · home screen", "tag": "hourly reload", "pos": [40, 460], "size": [200, 66] },
+    { "id": "iosWidgetKey", "type": "security", "label": "Shared App Group", "sublabel": "config synced from the app above", "pos": [40, 586], "size": [200, 60] },
+    { "id": "iosWidgetClient", "type": "backend", "label": "Tide/Wave Clients", "sublabel": "no cache · fetches every reload", "pos": [40, 706], "size": [200, 76] },
+
     { "id": "tideAPI", "type": "external", "label": "TideCheck API", "sublabel": "tide extremes + series", "pos": [470, 30], "size": [210, 76] },
     { "id": "marineAPI", "type": "external", "label": "Open-Meteo Marine", "sublabel": "wave height", "pos": [470, 180], "size": [210, 76] },
-    { "id": "forecastAPI", "type": "external", "label": "Open-Meteo Forecast", "sublabel": "wind + precipitation", "pos": [470, 330], "size": [210, 76] }
+    { "id": "forecastAPI", "type": "external", "label": "Open-Meteo Forecast", "sublabel": "wind + precipitation", "pos": [470, 330], "size": [210, 76] },
+
+    { "id": "widgetUI", "type": "frontend", "label": "macOS Menu Bar", "sublabel": "SwiftBar / xbar · Swift script", "tag": "every 15 min", "pos": [900, 40], "size": [200, 66] },
+    { "id": "widgetKey", "type": "security", "label": "macOS Keychain", "sublabel": "via `security` CLI", "pos": [900, 166], "size": [200, 60] },
+    { "id": "widgetClient", "type": "backend", "label": "Tide/Wave Clients", "sublabel": "disk JSON cache · 6h TTL", "tag": "stale-on-failure", "pos": [900, 286], "size": [200, 76] },
+
+    { "id": "desktopUI", "type": "frontend", "label": "macOS Desktop Widget", "sublabel": "WidgetKit · Sonoma+ desktop", "tag": "hourly reload", "pos": [900, 460], "size": [200, 66] },
+    { "id": "desktopKey", "type": "security", "label": "Shared App Group", "sublabel": "written by a companion settings app", "pos": [900, 586], "size": [200, 60] },
+    { "id": "desktopClient", "type": "backend", "label": "Tide/Wave Clients", "sublabel": "no cache · fetches every reload", "pos": [900, 706], "size": [200, 76] }
   ],
   "boundaries": [
     { "kind": "region", "label": "expo/ · long-lived process", "wraps": ["expoUI", "expoKey", "expoClient"] },
-    { "kind": "region", "label": "mac-widget/ · every 15 min", "wraps": ["widgetUI", "widgetKey", "widgetClient"] }
+    { "kind": "region", "label": "expo/targets/widget · iOS home screen", "wraps": ["iosWidgetUI", "iosWidgetKey", "iosWidgetClient"] },
+    { "kind": "region", "label": "mac-widget/ · every 15 min", "wraps": ["widgetUI", "widgetKey", "widgetClient"] },
+    { "kind": "region", "label": "mac-widget/DesktopWidget · macOS 14+", "wraps": ["desktopUI", "desktopKey", "desktopClient"] }
   ],
   "connections": [
     { "id": "expo-ui-key", "from": "expoUI", "to": "expoKey", "label": "read key", "labelAt": [140, 120] },
     { "id": "expo-key-client", "from": "expoKey", "to": "expoClient", "label": "apiKey", "labelAt": [140, 240] },
+
+    { "id": "ioswidget-ui-key", "from": "iosWidgetUI", "to": "iosWidgetKey", "label": "read config", "labelAt": [140, 540] },
+    { "id": "ioswidget-key-client", "from": "iosWidgetKey", "to": "iosWidgetClient", "label": "apiKey + location", "labelAt": [140, 660] },
+
     { "id": "widget-ui-key", "from": "widgetUI", "to": "widgetKey", "label": "read key", "labelAt": [1000, 120] },
     { "id": "widget-key-client", "from": "widgetKey", "to": "widgetClient", "label": "apiKey", "labelAt": [1000, 240] },
+
+    { "id": "desktop-ui-key", "from": "desktopUI", "to": "desktopKey", "label": "read config", "labelAt": [1000, 540] },
+    { "id": "desktop-key-client", "from": "desktopKey", "to": "desktopClient", "label": "apiKey + location", "labelAt": [1000, 660] },
+
     { "id": "expo-tide", "from": "expoClient", "to": "tideAPI", "label": "X-API-Key · 8s timeout", "variant": "emphasis", "fromSide": "right", "toSide": "left" },
     { "id": "expo-marine", "from": "expoClient", "to": "marineAPI", "label": "hourly=wave_height", "fromSide": "right", "toSide": "left", "labelSegment": 0, "labelDy": -14 },
     { "id": "expo-forecast", "from": "expoClient", "to": "forecastAPI", "label": "wind_speed_10m,precipitation", "fromSide": "right", "toSide": "left" },
+
     { "id": "widget-tide", "from": "widgetClient", "to": "tideAPI", "label": "X-API-Key · 8s timeout", "variant": "emphasis", "fromSide": "left", "toSide": "right" },
     { "id": "widget-marine", "from": "widgetClient", "to": "marineAPI", "label": "hourly=wave_height", "fromSide": "left", "toSide": "right", "labelSegment": 0, "labelDy": -14 },
-    { "id": "widget-forecast", "from": "widgetClient", "to": "forecastAPI", "label": "wind_speed_10m,precipitation", "fromSide": "left", "toSide": "right" }
+    { "id": "widget-forecast", "from": "widgetClient", "to": "forecastAPI", "label": "wind_speed_10m", "fromSide": "left", "toSide": "right" }
   ],
   "cards": [
-    { "dot": "cyan", "title": "Fetch", "items": ["Both clients read an API key, then call TideCheck plus two Open-Meteo endpoints", "Cache-first with a 6h TTL, falling back to a stale cache on failure", "Retry disabled everywhere — the free TideCheck tier allows 50 requests/day"] },
-    { "dot": "violet", "title": "Diverge", "items": ["Expo persists multiple locations in AsyncStorage; the widget hardcodes one station", "Expo renders native SVG charts; the widget prints ASCII bar rows in Menlo", "Key storage differs: Keychain/localStorage vs. the macOS `security` CLI"] },
-    { "dot": "emerald", "title": "Own", "items": ["No shared package between expo/ and mac-widget/", "Every duplicated behavior is a separate, hand-written implementation", "A manual refresh clears each platform's own cache, then refetches"] }
+    { "dot": "cyan", "title": "Fetch", "items": ["All four clients read a key, then call TideCheck plus two Open-Meteo endpoints", "Expo and the xbar script cache to disk with a 6h TTL and fall back to stale data on failure", "The two widgets skip caching entirely — WidgetKit already throttles reloads to roughly hourly"] },
+    { "dot": "violet", "title": "Diverge", "items": ["Expo persists multiple locations; the xbar script hardcodes one station; both widgets read whichever location their companion process last saved", "Expo renders native SVG charts; the xbar script prints ASCII bars; both widgets render native SwiftUI", "Key storage differs across all four: Keychain/localStorage, the macOS `security` CLI, and two App Group hand-offs"] },
+    { "dot": "emerald", "title": "Own", "items": ["No shared package across any of the four clients", "Every duplicated fetch/parse behavior is a separate, hand-written implementation", "The iOS widget borrows its config from the Expo app it's attached to; the desktop widget gets its from its own tiny settings app — neither reuses the xbar script's Keychain-based key"] }
   ]
 }

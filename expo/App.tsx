@@ -21,6 +21,7 @@ import { useApiKey } from './src/hooks/useApiKey';
 import { useForecastData } from './src/hooks/useForecastData';
 import { useLocation } from './src/hooks/useLocation';
 import { ThemeProvider, useTheme } from './src/hooks/useTheme';
+import { useWidgetSync } from './src/hooks/useWidgetSync';
 import { TideClock } from './src/services/TideClock';
 import type { Colors } from './src/theme';
 
@@ -46,6 +47,7 @@ export default function App() {
 function AppContent() {
   const { apiKey, saveKey, resetKey } = useApiKey();
   const { location, toggleLocation } = useLocation();
+  useWidgetSync(apiKey, location);
   const { series, forecast, waveSeries, windSeries, precipitationSeries, fetchedAt, isFetching, error, refresh } =
     useForecastData(apiKey, location);
   const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
