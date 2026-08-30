@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -28,11 +29,22 @@ import { WaveSeries } from './src/services/WaveSeries';
 import { WindSeries } from './src/services/WindSeries';
 import type { Colors } from './src/theme';
 
+// TideCheck's free tier allows 50 requests/day, and TideAPIClient/
+// WaveAPIClient already cache to AsyncStorage — so query retries are
+// disabled by default to avoid burning through that budget on transient
+// failures (loadTideData()/loadWaveData() already fall back to a stale
+// cache on network errors).
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { retry: false } },
+});
+
 export default function App() {
   return (
-    <ThemeProvider>
-      <AppContent />
-    </ThemeProvider>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        <AppContent />
+      </ThemeProvider>
+    </QueryClientProvider>
   );
 }
 
