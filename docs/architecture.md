@@ -6,6 +6,13 @@ clients** — a React Native app (`expo/`) and a macOS menu-bar widget
 between them. There's no shared package: every difference below is two
 separate, hand-written implementations of the same shape.
 
+**Contents**
+
+- [System map](#system-map)
+- [What's identical, what's duplicated](#whats-identical-whats-duplicated)
+- [Cold-start request lifecycle](#cold-start-request-lifecycle)
+- [Notes](#notes)
+
 ## System map
 
 Both clients run the identical shape — read an API key, fetch tide extremes
@@ -15,6 +22,7 @@ below that shape is shared: each platform has its own key store, its own
 cache format, and its own fetch client.
 
 ```mermaid
+%%{init: {"flowchart": {"curve": "linear"}}}%%
 flowchart TB
     subgraph expo["Expo App — iOS · Android · Web (React Native, long-lived process)"]
         expoUI["App.tsx + hooks<br/>useForecastData → two TanStack Query queries<br/>(stationId, apiKey) and (location.id)"]
@@ -47,8 +55,8 @@ network layer, a cache, or an in-flight-request lock with the other.
 
 ## What's identical, what's duplicated
 
-| | Expo App | macOS Widget |
-|---|---|---|
+| Aspect | Expo App | macOS Widget |
+| --- | --- | --- |
 | **Runtime** | React Native (Hermes), one long-lived process — state persists across renders via hooks | Swift script, re-invoked from scratch — xbar/SwiftBar re-runs it every 15 minutes |
 | **Locations** | Multiple, user-togglable, persisted in AsyncStorage | One, hardcoded (`hastings_pier-hgp-gbr-cco`) |
 | **Charts** | Native SVG line/area charts (react-native-svg) | ASCII bar rows in Menlo, 8 Unicode block levels |
