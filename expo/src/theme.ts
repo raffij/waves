@@ -19,6 +19,8 @@ export interface Colors {
   falling: string;
   wind: string;
   precipitation: string;
+  /** Overlay shading the hours before sunrise / after sunset on the charts. Always darkens, never lightens. */
+  night: string;
 }
 
 export const darkColors: Colors = {
@@ -39,6 +41,7 @@ export const darkColors: Colors = {
   falling: '#ff8a80',
   wind: '#ffb86c',
   precipitation: '#7aa2ff',
+  night: 'rgba(0,0,0,0.38)',
 };
 
 export const lightColors: Colors = {
@@ -59,6 +62,7 @@ export const lightColors: Colors = {
   falling: '#dc2626',
   wind: '#c2650a',
   precipitation: '#3457d5',
+  night: 'rgba(11,30,51,0.10)',
 };
 
 // Applies alpha to a 6-digit hex color, e.g. for tinted chip/pill backgrounds

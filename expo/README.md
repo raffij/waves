@@ -8,14 +8,21 @@ web build is live at **<https://raffij.github.io/waves/>**.
 
 - **Current conditions** — tide height, wave height and wind speed right now,
   each with a rising / falling / steady arrow.
-- **Tide chart** — the tide curve from 06:00–22:00 with wave and wind drawn
+- **Tide chart** — the tide curve from 06:00–20:00 with wave and wind drawn
   over it; drag to scrub a reading at any time.
 - **Precipitation chart** — hourly rain bars with the next rain time.
+- **Daylight on both charts** — the hours before sunrise and after sunset are
+  shaded, with a dashed mark at each and the times in the legend
+  (e.g. "Light 07:52–16:05"), so you can see at a glance which part of the
+  window is actually light.
 - **Day insights** — a plain-language read of the selected day: a one-line
-  summary (wind shape + rain spell, phrased by tense), and a one-word call
-  on what to bring — **Dry robe** (rain, too windy for an umbrella),
-  **Umbrella** (rain, calmer), **Wet** (rain's passed but the pier's still
-  wet) or **Dry**.
+  summary (wind shape + rain spell, named by how hard it falls, plus "dark
+  by …" when the light goes before the window ends), and a call on **what to
+  wear** with the reading behind it — e.g. "Dry robe · heavy rain, 26mph
+  wind", "Umbrella · light drizzle, light wind", "Warm layer · dry, light
+  wind, after dark". The garment comes from how hard the rain still to come
+  is falling, the wind it arrives on, and whether the hours you'd be out in
+  are dark.
 - **Forecast scroller** — yesterday through +5 days, each tile showing that
   day's tidal high/low. Selecting a day re-points the card, both charts and
   the insights at it.
@@ -64,6 +71,7 @@ src/
     CurrentLevelCard.tsx    the three current readings + trend arrows
     TideChart.tsx           SVG tide/wave/wind chart with drag-to-scrub
     PrecipitationChart.tsx  hourly rain bars
+    daylight.ts             night-band geometry shared by both charts
     DayInsights.tsx         the plain-language day summary block
     ForecastList.tsx        the horizontal day scroller
     ApiKeyPrompt.tsx        first-launch key entry
@@ -80,6 +88,8 @@ src/
                             raw points → "value now" + "trend" by interpolation
     TideForecast.ts         groups tidal extremes into labelled days
     DaylightSeries.ts       per-day sunrise/sunset
+    DayWindow.ts            the 06:00–20:00 window both charts and the
+                            insights judge the day over
     DayInsights.ts          pure buildDayInsights() + its tuning constants
     TideClock.ts            all Europe/London date parsing / formatting
   models/                   Location list, TideCheck response types

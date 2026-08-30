@@ -8,9 +8,10 @@ interface Props {
   insights: DayInsightsModel;
 }
 
-// The "so what" line above the charts: a one-sentence read on the day,
-// and a one-word call on what to bring ("Dry robe" / "Umbrella" / "Wet" /
-// "Dry"), skipped once the day is over.
+// The "so what" line above the charts: a one-sentence read on the day, and
+// the call on what to wear — a garment ("Waterproof shell", "Warm layer",
+// "Umbrella"…) with the rain / wind / light reading behind it, skipped once
+// the day is over.
 export function DayInsights({ insights }: Props) {
   const { colors } = useTheme();
   const styles = useMemo(() => getStyles(colors), [colors]);
@@ -19,10 +20,13 @@ export function DayInsights({ insights }: Props) {
     <View>
       <Text style={styles.sentence}>{insights.summarySentence}</Text>
 
-      {insights.gearAdvice && (
+      {insights.clothing && (
         <View style={styles.gearRow}>
           <View style={styles.dot} />
-          <Text style={styles.gear}>{insights.gearAdvice}</Text>
+          <Text style={styles.gear}>
+            {insights.clothing.garment}
+            {insights.clothing.reason ? <Text style={styles.gearReason}> · {insights.clothing.reason}</Text> : null}
+          </Text>
         </View>
       )}
     </View>
@@ -34,6 +38,9 @@ function getStyles(colors: Colors) {
     sentence: { color: colors.textPrimary, fontSize: 14, lineHeight: 19 },
     gearRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 },
     dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.primary },
-    gear: { color: colors.textPrimary, fontSize: 13, fontWeight: '600' },
+    // flexShrink lets the reason wrap under a narrow column instead of
+    // pushing the garment off the row.
+    gear: { color: colors.textPrimary, fontSize: 13, fontWeight: '600', flexShrink: 1 },
+    gearReason: { color: colors.textSecondary, fontWeight: '400' },
   });
 }

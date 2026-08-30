@@ -154,6 +154,7 @@ function AppContent() {
                 series={series}
                 waveSeries={waveSeries}
                 windSeries={windSeries}
+                daylightSeries={daylightSeries}
                 now={referenceDate}
                 isToday={isToday}
               />
@@ -162,7 +163,12 @@ function AppContent() {
 
           {precipitationSeries && (
             <View style={styles.section}>
-              <PrecipitationChart series={precipitationSeries} now={referenceDate} isToday={isToday} />
+              <PrecipitationChart
+                series={precipitationSeries}
+                daylightSeries={daylightSeries}
+                now={referenceDate}
+                isToday={isToday}
+              />
             </View>
           )}
 
