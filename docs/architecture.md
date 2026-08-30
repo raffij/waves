@@ -6,6 +6,13 @@ clients** — a React Native app (`expo/`) and a macOS menu-bar widget
 between them. There's no shared package: every difference below is two
 separate, hand-written implementations of the same shape.
 
+**Contents**
+
+- [System map](#system-map)
+- [What's identical, what's duplicated](#whats-identical-whats-duplicated)
+- [Cold-start request lifecycle](#cold-start-request-lifecycle)
+- [Notes](#notes)
+
 ## System map
 
 Both clients run the identical shape — read an API key, fetch tide extremes
@@ -14,41 +21,21 @@ on failure — against the same TideCheck and Open-Meteo endpoints. Nothing
 below that shape is shared: each platform has its own key store, its own
 cache format, and its own fetch client.
 
-```mermaid
-flowchart TB
-    subgraph expo["Expo App — iOS · Android · Web (React Native, long-lived process)"]
-        expoUI["App.tsx + hooks<br/>useForecastData → two TanStack Query queries<br/>(stationId, apiKey) and (location.id)"]
-        expoKey["SecureKeyStore<br/>iOS Keychain (expo-secure-store) · localStorage on web"]
-        expoClient["TideAPIClient · WaveAPIClient<br/>cache: AsyncStorage, JSON + ISO timestamp keys<br/>6h TTL · stale cache served on fetch failure<br/>retry disabled — 50 req/day free tier"]
-        expoUI --> expoKey --> expoClient
-    end
+<img src="architecture.png" width="900" alt="How Waves works: the Expo app and the macOS widget each read an API key from their own platform key store, then independently call TideCheck's tides API, Open-Meteo's Marine API, and Open-Meteo's Forecast API — no code or network layer is shared between them." />
 
-    subgraph widget["macOS Widget — SwiftBar / xbar plugin (re-run every 15 min)"]
-        widgetUI["TideWidgetPlugin.run()<br/>single synchronous script, semaphore-blocked<br/>no retry, 8–10s timeout"]
-        widgetKey["macOS Keychain<br/>via `security find-generic-password`"]
-        widgetClient["TideAPIClient · WaveAPIClient<br/>cache: ~/Library/Caches/wave-hastings/*.json<br/>6h TTL, keyed on file mtime · stale on failure<br/>forced refresh deletes the cache files"]
-        widgetUI --> widgetKey --> widgetClient
-    end
-
-    tideAPI["TideCheck API<br/>GET /api/station/{id}/tides<br/>X-API-Key header · 50 req/day free tier"]
-    marineAPI["Open-Meteo Marine<br/>hourly=wave_height, no key<br/>yesterday → +5 days, Europe/London"]
-    forecastAPI["Open-Meteo Forecast<br/>hourly=wind_speed_10m,precipitation<br/>fetched together, no key"]
-
-    expoClient -->|tide extremes + series| tideAPI
-    expoClient -->|wave height| marineAPI
-    expoClient -->|wind + precipitation| forecastAPI
-    widgetClient -->|tide extremes + series| tideAPI
-    widgetClient -->|wave height| marineAPI
-    widgetClient -->|wind + precipitation| forecastAPI
-```
+An interactive version — pan/zoom, theme toggle, guided views for the tide
+path, the wave/wind/rain calls, and where the key lives — is in
+[`docs/architecture/waves.architecture.html`](architecture/waves.architecture.html)
+(open it locally; the typed source is
+[`waves.architecture.json`](architecture/waves.architecture.json)).
 
 Both clients issue all three requests independently — neither shares a
 network layer, a cache, or an in-flight-request lock with the other.
 
 ## What's identical, what's duplicated
 
-| | Expo App | macOS Widget |
-|---|---|---|
+| Aspect | Expo App | macOS Widget |
+| --- | --- | --- |
 | **Runtime** | React Native (Hermes), one long-lived process — state persists across renders via hooks | Swift script, re-invoked from scratch — xbar/SwiftBar re-runs it every 15 minutes |
 | **Locations** | Multiple, user-togglable, persisted in AsyncStorage | One, hardcoded (`hastings_pier-hgp-gbr-cco`) |
 | **Charts** | Native SVG line/area charts (react-native-svg) | ASCII bar rows in Menlo, 8 Unicode block levels |
