@@ -28,6 +28,25 @@ export class TideClock {
     return Number.isNaN(date.getTime()) ? null : date;
   }
 
+  // Parses "yyyy-MM-ddTHH:mm[:ss]" that carries NO timezone offset as
+  // Europe/London wall-clock time, regardless of the host timezone — so
+  // Open-Meteo's timezone=Europe/London strings land on the right instant
+  // even for a viewer whose browser is on another zone. A string that
+  // already has an offset or trailing "Z" is passed straight to
+  // parseISODate.
+  static parseLondonWallTime(value: string): Date | null {
+    if (/[zZ]|[+-]\d{2}:?\d{2}$/.test(value)) return TideClock.parseISODate(value);
+    const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(value);
+    if (!m) return TideClock.parseISODate(value);
+    const [, y, mo, d, h, mi, s] = m;
+    const asUTC = Date.UTC(+y, +mo - 1, +d, +h, +mi, s ? +s : 0);
+    // Two-pass: offsetMillis needs an instant near the target day. The
+    // first guess is off by at most the London offset; re-evaluating the
+    // offset at that guess is exact except inside the ~1h DST transition.
+    const offset = TideClock.offsetMillis(new Date(asUTC));
+    return new Date(asUTC - offset);
+  }
+
   static format(date: Date, options: Intl.DateTimeFormatOptions): string {
     return new Intl.DateTimeFormat('en-GB', { timeZone: LONDON_TZ, ...options }).format(date);
   }

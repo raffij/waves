@@ -11,7 +11,7 @@ export class WindSeries {
 
   constructor(data: WindData) {
     this.points = data.time.map((t, i) => ({
-      time: new Date(t),
+      time: TideClock.parseLondonWallTime(t) ?? new Date(Number.NaN),
       speed: data.wind_speed[i] ?? null,
     }));
   }

@@ -43,6 +43,20 @@ export class TideForecast {
     }));
   }
 
+  // The first high/low strictly after `from`. Extremes are already in
+  // chronological order from the API, but sort defensively on the ISO
+  // localTime rather than trust that.
+  nextExtreme(from: Date): Extreme | null {
+    return (
+      this.extremes
+        .filter((e) => {
+          const t = TideClock.parseLondonWallTime(e.localTime);
+          return t !== null && t.getTime() > from.getTime();
+        })
+        .sort((a, b) => a.localTime.localeCompare(b.localTime))[0] ?? null
+    );
+  }
+
   private labelFor(dateKey: string, todayKey: string, tomorrowKey: string): string {
     if (dateKey === todayKey) return 'Today';
     if (dateKey === tomorrowKey) return 'Tomorrow';

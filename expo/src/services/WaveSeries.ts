@@ -11,7 +11,7 @@ export class WaveSeries {
 
   constructor(data: WaveData) {
     this.points = data.time.map((timeStr, i) => ({
-      time: new Date(timeStr),
+      time: TideClock.parseLondonWallTime(timeStr) ?? new Date(Number.NaN),
       height: data.wave_height[i] ?? null,
     }));
   }
