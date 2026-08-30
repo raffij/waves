@@ -12,8 +12,9 @@ web build is live at **<https://raffij.github.io/waves/>**.
   over it; drag to scrub a reading at any time.
 - **Precipitation chart** — hourly rain bars with the next rain time.
 - **Day insights** — a plain-language read of the selected day: a one-line
-  summary (wind shape + rain spell, phrased by tense), the best daylight
-  window to be outside, and a row of values (next tide, wind, rain, sun).
+  summary (wind shape + rain spell, phrased by tense), and on a wet day a
+  gear note — big coat, plus a dry robe rather than an umbrella when it's
+  windy.
 - **Forecast scroller** — yesterday through +5 days, each tile showing that
   day's tidal high/low. Selecting a day re-points the card, both charts and
   the insights at it.
