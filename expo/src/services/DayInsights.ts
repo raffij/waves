@@ -34,10 +34,11 @@ export const WIND_BAND_WINDY_MPH = 24;
 // overcast.
 export const SUN_BAND_HAZY_WM2 = 120;
 export const SUN_BAND_SUNNY_WM2 = 350;
-// A high-summer clear-sky midday UK reading peaks around 700-800 W/m²; this
-// flags the top of that range as genuinely intense rather than lumping it
-// in with an ordinary sunny spell.
-export const SUN_BAND_STRONG_WM2 = 600;
+// Only actually reachable under a clear sky — see the CLOUD_BAND_CLEAR_PCT
+// gate in sunBandFor below, which demotes a bright-but-cloudy reading before
+// it ever gets here. Tuned down from an initial 600: a clear 500 W/m² sky
+// already reads as genuinely intense in practice, not merely "sunny".
+export const SUN_BAND_STRONG_WM2 = 450;
 // Cloud cover (%) at the clearest hour in the window/segment. Whichever of
 // cloud cover and brightness reads cloudier wins the final band — see
 // sunBandFor.

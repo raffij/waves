@@ -240,6 +240,7 @@ function AppContent() {
               <TemperatureChart
                 series={temperatureSeries}
                 sunBrightnessSeries={sunBrightnessSeries}
+                cloudCoverSeries={cloudCoverSeries}
                 daylightSeries={daylightSeries}
                 now={referenceDate}
                 isToday={isToday}
