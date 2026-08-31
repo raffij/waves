@@ -185,7 +185,6 @@ export function TemperatureChart({
   const activeTime = scrubTime ?? new Date(Math.min(Math.max(now.getTime(), start.getTime()), end.getTime()));
   const activeFeelsLike = series.feelsLikeAt(activeTime);
   const activeTemp = series.tempAt(activeTime);
-  const activeSun = sunBrightnessSeries?.brightnessAt(activeTime) ?? null;
   const activePoint = activeFeelsLike !== null ? { x: toX(activeTime), y: toTempY(activeFeelsLike) } : null;
 
   const hourTicks = [startHour, Math.round((startHour + endHour) / 2), endHour];
@@ -322,8 +321,7 @@ export function TemperatureChart({
           >
             <Text style={styles.tooltipText} numberOfLines={1}>
               {TideClock.format(activeTime, { hour: '2-digit', minute: '2-digit', hour12: false })} ·{' '}
-              {Math.round(activeFeelsLike)}°{activeTemp !== null && ` / ${Math.round(activeTemp)}°r`}
-              {activeSun !== null && ` / ${Math.round(activeSun)}W/m²`}
+              {Math.round(activeFeelsLike)}°{activeTemp !== null && ` / ${Math.round(activeTemp)}° real`}
             </Text>
           </View>
         )}
