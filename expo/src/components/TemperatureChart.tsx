@@ -314,7 +314,7 @@ export function TemperatureChart({
               {TideClock.format(activeTime, { hour: '2-digit', minute: '2-digit', hour12: false })} ·{' '}
               {Math.round(activeFeelsLike)}° feels
               {activeTemp !== null && ` / ${Math.round(activeTemp)}° real`}
-              {activeSun !== null && ` / ${Math.round(activeSun)}W/m² sun`}
+              {activeSun !== null && ` / ${Math.round(activeSun)}W/m²`}
             </Text>
           </View>
         )}
@@ -379,12 +379,14 @@ function getStyles(colors: Colors, fonts: Fonts) {
       top: 0,
       width: TOOLTIP_WIDTH,
       alignItems: 'center',
-      backgroundColor: 'rgba(0,0,0,0.7)',
+      // Translucent and light-weight rather than a solid, bold pill — see
+      // TideChart's identical tooltip for why.
+      backgroundColor: 'rgba(0,0,0,0.55)',
       borderRadius: 8,
       paddingVertical: 3,
       paddingHorizontal: 6,
     },
-    tooltipText: { color: '#f5faff', fontSize: 12, fontWeight: '600' },
+    tooltipText: { color: '#f5faff', fontSize: 12, fontWeight: '500' },
     legendRow: {
       flexDirection: 'row',
       flexWrap: 'wrap',

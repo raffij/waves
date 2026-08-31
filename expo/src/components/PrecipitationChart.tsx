@@ -265,13 +265,14 @@ function getStyles(colors: Colors, fonts: Fonts) {
       top: 0,
       width: TOOLTIP_WIDTH,
       alignItems: 'center',
-      // Always a dark bubble regardless of theme, matching TideChart/TemperatureChart.
-      backgroundColor: 'rgba(0,0,0,0.7)',
+      // Always a dark bubble regardless of theme, matching TideChart/TemperatureChart —
+      // translucent and light-weight rather than a solid, bold pill.
+      backgroundColor: 'rgba(0,0,0,0.55)',
       borderRadius: 8,
       paddingVertical: 3,
       paddingHorizontal: 6,
     },
-    tooltipText: { color: '#f5faff', fontSize: 12, fontWeight: '600' },
+    tooltipText: { color: '#f5faff', fontSize: 12, fontWeight: '500' },
     legendRow: {
       flexDirection: 'row',
       flexWrap: 'wrap',
