@@ -52,6 +52,18 @@ npm run android   # expo run:android
 
 On first launch, paste your TideCheck API key. Wave/wind/rain need no key.
 
+### Preview harness
+
+```bash
+npm run preview   # http://localhost:8081, no key or network needed
+```
+
+Boots `App.preview.tsx` instead of the real app: every component (current
+conditions, day insights, all three charts) rendered against synthetic
+data built from simple formulas rather than a live fetch. Useful for
+eyeballing a UI change across all three themes without a TideCheck key or
+network access to TideCheck/Open-Meteo.
+
 ### Lint & typecheck
 
 ```bash
