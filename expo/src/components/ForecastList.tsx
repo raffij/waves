@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Fonts } from '../fonts';
 import { useTheme } from '../hooks/useTheme';
+import type { CloudCoverSeries } from '../services/CloudCoverSeries';
 import { type DayCondition, dayCondition } from '../services/DayCondition';
 import { buildDayInsights } from '../services/DayInsights';
 import type { DaylightSeries } from '../services/DaylightSeries';
@@ -33,12 +34,18 @@ interface Props {
   precipitationSeries?: PrecipitationSeries | null;
   temperatureSeries?: TemperatureSeries | null;
   sunBrightnessSeries?: SunBrightnessSeries | null;
+  cloudCoverSeries?: CloudCoverSeries | null;
   daylightSeries?: DaylightSeries | null;
 }
 
 type Series = Pick<
   Props,
-  'windSeries' | 'precipitationSeries' | 'temperatureSeries' | 'sunBrightnessSeries' | 'daylightSeries'
+  | 'windSeries'
+  | 'precipitationSeries'
+  | 'temperatureSeries'
+  | 'sunBrightnessSeries'
+  | 'cloudCoverSeries'
+  | 'daylightSeries'
 >;
 // Resolved start/end hours for the chosen ForecastWindow. Named `hours`
 // rather than `window` throughout below (unlike the public prop, which
@@ -140,6 +147,7 @@ function summaryLine(day: ForecastDay, series: Series, now: Date): string | null
     daylightSeries: series.daylightSeries ?? null,
     temperatureSeries: series.temperatureSeries ?? null,
     sunBrightnessSeries: series.sunBrightnessSeries ?? null,
+    cloudCoverSeries: series.cloudCoverSeries ?? null,
     reference,
   });
   return insights.summary;
@@ -171,6 +179,7 @@ function DayRow({
     day.dateKey,
     series.precipitationSeries ?? null,
     series.sunBrightnessSeries ?? null,
+    series.cloudCoverSeries ?? null,
     hours,
   );
   const { high: tempHigh, low: tempLow } = hourlyRange((d) => series.temperatureSeries?.tempAt(d) ?? null, date, hours);
@@ -224,11 +233,19 @@ export function ForecastList({
   precipitationSeries,
   temperatureSeries,
   sunBrightnessSeries,
+  cloudCoverSeries,
   daylightSeries,
 }: Props) {
   const { colors, fonts } = useTheme();
   const styles = useMemo(() => getStyles(colors, fonts), [colors, fonts]);
-  const series: Series = { windSeries, precipitationSeries, temperatureSeries, sunBrightnessSeries, daylightSeries };
+  const series: Series = {
+    windSeries,
+    precipitationSeries,
+    temperatureSeries,
+    sunBrightnessSeries,
+    cloudCoverSeries,
+    daylightSeries,
+  };
   const hours = hoursFor(forecastWindow);
 
   const allDays = yesterday ? [yesterday, ...days] : days;

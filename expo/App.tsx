@@ -85,6 +85,7 @@ function AppContent() {
     daylightSeries,
     temperatureSeries,
     sunBrightnessSeries,
+    cloudCoverSeries,
     fetchedAt,
     isFetching,
     error,
@@ -174,6 +175,7 @@ function AppContent() {
         daylightSeries,
         temperatureSeries,
         sunBrightnessSeries,
+        cloudCoverSeries,
         reference: referenceDate,
       })
     : null;
@@ -194,7 +196,9 @@ function AppContent() {
             windTrend={windTrend}
             fetchedAt={fetchedAt}
             dayLabel={selectedDayLabel}
-            onPress={() => selectDay(null)}
+            onPressUpdated={() => selectDay(null)}
+            location={location}
+            onPressLocation={toggleLocation}
           />
 
           {insights && (
@@ -260,20 +264,10 @@ function AppContent() {
               precipitationSeries={precipitationSeries}
               temperatureSeries={temperatureSeries}
               sunBrightnessSeries={sunBrightnessSeries}
+              cloudCoverSeries={cloudCoverSeries}
               daylightSeries={daylightSeries}
             />
           </View>
-
-          <Pressable
-            onPress={toggleLocation}
-            style={({ pressed }) => [styles.locationRow, pressed && styles.locationRowPressed]}
-          >
-            <Ionicons name="location-outline" size={12} color={colors.textSecondary} />
-            <Text style={styles.locationText}>
-              {location.name} · {location.region}
-            </Text>
-            <Ionicons name="swap-horizontal-outline" size={12} color={colors.textSecondary} />
-          </Pressable>
 
           <View style={styles.footer}>
             <FooterButton
@@ -356,16 +350,6 @@ function getStyles(colors: Colors, fonts: Fonts) {
       paddingBottom: 16,
     },
     section: { marginTop: 20 },
-    locationRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 4,
-      marginTop: 18,
-      minHeight: 44,
-    },
-    locationRowPressed: { opacity: 0.5 },
-    locationText: { color: colors.textSecondary, fontSize: 11, fontFamily: fonts.mono },
     error: { color: colors.falling, marginTop: 12, textAlign: 'center' },
     footer: { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: 4, marginTop: 4 },
     footerButton: {

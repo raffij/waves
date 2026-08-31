@@ -1,3 +1,4 @@
+import type { CloudCoverSeries } from './CloudCoverSeries';
 import type { DaylightSeries } from './DaylightSeries';
 import { DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR } from './DayWindow';
 import type { PrecipitationSeries } from './PrecipitationSeries';
@@ -26,9 +27,26 @@ export const WIND_BAND_BREEZY_MPH = 12; // sentence bands: <12 calm, 12–24 bre
 export const WIND_BAND_WINDY_MPH = 24;
 // Sun bands read off the brightest hour in the window/segment, W/m² (already
 // discounted for cloud cover) — below HAZY it's overcast, below SUNNY it's
-// hazy/broken cloud, at/above SUNNY it's genuinely bright.
+// hazy/broken cloud, at/above SUNNY it's genuinely bright. Read alongside
+// cloud cover (below), since brightness alone conflates "cloudy" with
+// "winter sun sits low in the sky" — a thin, bright overcast can still cross
+// SUNNY, and a clear pre-dawn/post-dusk hour reads as dark rather than
+// overcast.
 export const SUN_BAND_HAZY_WM2 = 120;
 export const SUN_BAND_SUNNY_WM2 = 350;
+// Cloud cover (%) at the clearest hour in the window/segment. Whichever of
+// cloud cover and brightness reads cloudier wins the final band — see
+// sunBandFor.
+export const CLOUD_BAND_CLEAR_PCT = 25; // below this it's clear/sunny
+export const CLOUD_BAND_OVERCAST_PCT = 75; // at/above this it's overcast regardless of brightness
+// "Feels like" comfort bands, °C, read off the mean over the window/segment
+// — the word the sentence reaches for ("mild", "warm") alongside the actual
+// figures, so the numbers land against a sense of what they mean rather than
+// standing alone.
+export const TEMP_BAND_COOL_C = 10;
+export const TEMP_BAND_MILD_C = 14;
+export const TEMP_BAND_WARM_C = 19;
+export const TEMP_BAND_HOT_C = 24;
 // A morning-to-afternoon swing in mean "feels like" temperature below this
 // reads as noise — the outlook says the day stays much the same rather than
 // manufacturing a warming/cooling trend out of half a degree.
@@ -55,6 +73,7 @@ export interface DayInsightsInput {
   daylightSeries: DaylightSeries | null;
   temperatureSeries: TemperatureSeries | null;
   sunBrightnessSeries: SunBrightnessSeries | null;
+  cloudCoverSeries: CloudCoverSeries | null;
   reference: Date;
 }
 
@@ -379,7 +398,7 @@ function rainTrendClause(slots: Slot[], precip: PrecipitationSeries | null, tens
 
 // --- sun ---------------------------------------------------------------------
 
-type SunBand = 'overcast' | 'hazy' | 'sunny';
+export type SunBand = 'overcast' | 'hazy' | 'sunny';
 const SUN_BAND_RANK: Record<SunBand, number> = { overcast: 0, hazy: 1, sunny: 2 };
 // Same band word, tensed for the summary's main clause list — "was" for a
 // day that's over, "likely" for one that hasn't happened yet, and today's
@@ -395,32 +414,61 @@ const SUN_ALL_DAY_PHRASE: Record<SunBand, string> = {
   sunny: 'sunny spells through the day',
 };
 
-function sunBandFor(peakWm2: number): SunBand {
-  if (peakWm2 < SUN_BAND_HAZY_WM2) return 'overcast';
-  if (peakWm2 < SUN_BAND_SUNNY_WM2) return 'hazy';
-  return 'sunny';
+// Brightness and cloud cover each vote for a band; whichever reads cloudier
+// wins. That resolves both ways a single signal misleads on its own: a
+// bright reading under a fully overcast sky is diffuse light through cloud,
+// not real sun (brightness alone says sunny, cloud cover corrects it to
+// overcast) — and a low cloud-cover reading before sunrise/after sunset is
+// just dark, not sunny (cloud cover alone says sunny, brightness corrects it
+// to overcast). Either signal missing, the other decides alone.
+export function sunBandFor(peakWm2: number | null, minCloudPct: number | null): SunBand {
+  const brightBand: SunBand | null =
+    peakWm2 === null
+      ? null
+      : peakWm2 < SUN_BAND_HAZY_WM2
+        ? 'overcast'
+        : peakWm2 < SUN_BAND_SUNNY_WM2
+          ? 'hazy'
+          : 'sunny';
+  const cloudBand: SunBand | null =
+    minCloudPct === null
+      ? null
+      : minCloudPct >= CLOUD_BAND_OVERCAST_PCT
+        ? 'overcast'
+        : minCloudPct < CLOUD_BAND_CLEAR_PCT
+          ? 'sunny'
+          : 'hazy';
+  if (brightBand === null) return cloudBand ?? 'overcast';
+  if (cloudBand === null) return brightBand;
+  return SUN_BAND_RANK[cloudBand] < SUN_BAND_RANK[brightBand] ? cloudBand : brightBand;
 }
 
 interface SunReading {
   peak: number;
+  minCloudPct: number | null;
 }
 
-function sunOver(slots: Slot[], sun: SunBrightnessSeries | null): SunReading | null {
+function sunOver(slots: Slot[], sun: SunBrightnessSeries | null, cloud: CloudCoverSeries | null): SunReading | null {
   if (!sun) return null;
   const values = slots.map((s) => sun.brightnessAt(s.at)).filter((wm2): wm2 is number => wm2 !== null);
   if (values.length === 0) return null;
-  return { peak: Math.max(...values) };
+  const cloudValues = cloud
+    ? slots.map((s) => cloud.coverageAt(s.at)).filter((pct): pct is number => pct !== null)
+    : [];
+  return { peak: Math.max(...values), minCloudPct: cloudValues.length > 0 ? Math.min(...cloudValues) : null };
 }
 
 // How strong the sun gets, morning vs. afternoon — brightening, clouding
 // over, or one band held all day.
-function sunTrendClause(slots: Slot[], sun: SunBrightnessSeries | null): string | null {
-  const morning = sunOver(morningSlots(slots), sun);
-  const afternoon = sunOver(afternoonSlots(slots), sun);
+function sunTrendClause(slots: Slot[], sun: SunBrightnessSeries | null, cloud: CloudCoverSeries | null): string | null {
+  const morning = sunOver(morningSlots(slots), sun, cloud);
+  const afternoon = sunOver(afternoonSlots(slots), sun, cloud);
   if (!morning && !afternoon) return null;
 
-  const morningBand = sunBandFor((morning ?? afternoon ?? { peak: 0 }).peak);
-  const afternoonBand = sunBandFor((afternoon ?? morning ?? { peak: 0 }).peak);
+  const morningReading = morning ?? afternoon ?? { peak: 0, minCloudPct: null };
+  const afternoonReading = afternoon ?? morning ?? { peak: 0, minCloudPct: null };
+  const morningBand = sunBandFor(morningReading.peak, morningReading.minCloudPct);
+  const afternoonBand = sunBandFor(afternoonReading.peak, afternoonReading.minCloudPct);
   if (morningBand === afternoonBand) return SUN_ALL_DAY_PHRASE[morningBand];
   return SUN_BAND_RANK[afternoonBand] > SUN_BAND_RANK[morningBand]
     ? 'sunshine breaking through by afternoon'
@@ -442,11 +490,26 @@ function feelsOver(slots: Slot[], temp: TemperatureSeries | null): FeelsReading 
   return { mean: average(values), min: Math.min(...values), max: Math.max(...values) };
 }
 
+type TempBand = 'cold' | 'cool' | 'mild' | 'warm' | 'hot';
+
+function tempBandFor(meanC: number): TempBand {
+  if (meanC < TEMP_BAND_COOL_C) return 'cold';
+  if (meanC < TEMP_BAND_MILD_C) return 'cool';
+  if (meanC < TEMP_BAND_WARM_C) return 'mild';
+  if (meanC < TEMP_BAND_HOT_C) return 'warm';
+  return 'hot';
+}
+
+// Named alongside the figures ("feels mild, 14–17°") rather than left as
+// bare numbers — the band is what answers "is that comfortable?", the range
+// is the detail underneath it.
 function feelsPhrase(feels: FeelsReading, tense: DayTense): string {
   const lo = Math.round(feels.min);
   const hi = Math.round(feels.max);
   const verb = tense === 'past' ? 'felt' : tense === 'future' ? 'will feel' : 'feels';
-  return lo === hi ? `${verb} ${lo}°` : `${verb} ${lo}–${hi}°`;
+  const band = tempBandFor(feels.mean);
+  const range = lo === hi ? `${lo}°` : `${lo}–${hi}°`;
+  return `${verb} ${band}, ${range}`;
 }
 
 // How "feels like" temperature shifts across the day — warming, cooling, or
@@ -559,7 +622,7 @@ function buildOutlook(input: DayInsightsInput, slots: Slot[], tense: DayTense): 
 
   const clauses = [
     rainTrendClause(slots, input.precipitationSeries, tense),
-    sunTrendClause(slots, input.sunBrightnessSeries),
+    sunTrendClause(slots, input.sunBrightnessSeries, input.cloudCoverSeries),
     feelsTrendClause(slots, input.temperatureSeries),
   ].filter((c): c is string => c !== null);
 
@@ -581,7 +644,7 @@ export function buildDayInsights(input: DayInsightsInput): DayInsights {
   const summarySlots = tense === 'today' ? remainingSlots(input, slots) : slots;
   const shape = windShape(summarySlots, input.windSeries);
   const rain = rainClause(input, input.precipitationSeries);
-  const sun = sunOver(summarySlots, input.sunBrightnessSeries);
+  const sun = sunOver(summarySlots, input.sunBrightnessSeries, input.cloudCoverSeries);
   const feels = feelsOver(summarySlots, input.temperatureSeries);
   const light = lightClause(input);
   const aheadWind = windOver(summarySlots, input.windSeries);
@@ -589,7 +652,7 @@ export function buildDayInsights(input: DayInsightsInput): DayInsights {
   const clauses: string[] = [];
   if (shape) clauses.push(windClause(shape, tense));
   if (rain) clauses.push(shape ? rain.text : capitalize(rain.text));
-  if (sun) clauses.push(SUN_WORD[tense][sunBandFor(sun.peak)]);
+  if (sun) clauses.push(SUN_WORD[tense][sunBandFor(sun.peak, sun.minCloudPct)]);
   if (feels) clauses.push(feelsPhrase(feels, tense));
   if (light && clauses.length > 0) clauses.push(light);
 
