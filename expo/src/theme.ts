@@ -56,33 +56,34 @@ export const darkColors: Colors = {
   night: 'rgba(0,0,0,0.38)',
 };
 
-// Bright, translucent panels over a pale sky-blue gradient — the "frosted
-// glass" look, standing apart from dark (deep, opaque) and poster (warm,
-// paper-flat) by how much the background shows through the cards rather
-// than by a different palette family.
+// Named for (and colour-matched to) the "Glass UI" VS Code theme: a crisp,
+// near-white surface, not a translucent one — the "glass" in its name is
+// Mirror's Edge-style stark minimalism, not blur/opacity, so unlike dark and
+// poster this theme's cards are solid. What sets it apart is the signature
+// hot-pink/red accent standing alone against all that white.
 export const glassColors: Colors = {
-  background: '#eaf2fa',
-  backgroundGradientEnd: '#cfe3f5',
-  card: 'rgba(255,255,255,0.55)',
-  cardBorder: 'rgba(255,255,255,0.65)',
-  cardElevated: 'rgba(255,255,255,0.75)',
-  shadow: 'rgba(31,58,84,0.14)',
-  primary: '#2f8fe0',
-  secondary: '#5fc8f2',
+  background: '#fdfdfd',
+  backgroundGradientEnd: '#fff0f3',
+  card: '#ffffff',
+  cardBorder: '#ffd9df',
+  cardElevated: '#ffffff',
+  shadow: 'rgba(255,0,64,0.1)',
+  primary: '#ff0040',
+  secondary: '#ff5c85',
   onPrimary: '#ffffff',
-  textPrimary: '#16202c',
-  textSecondary: 'rgba(22,32,44,0.6)',
-  high: '#2f9e44',
-  low: '#2f8fe0',
-  rising: '#2f9e44',
-  falling: '#e0574a',
+  textPrimary: '#222222',
+  textSecondary: 'rgba(34,34,34,0.6)',
+  high: '#1f9254',
+  low: '#ff0040',
+  rising: '#1f9254',
+  falling: '#e0672f',
   wind: '#e0a030',
-  precipitation: '#5b8def',
-  feelsLike: '#e0653f',
-  temperature: '#8f6fd1',
+  precipitation: '#3d7fd9',
+  feelsLike: '#e0592f',
+  temperature: '#8a4fd1',
   sun: '#f0b429',
-  cloud: '#8fa3b8',
-  night: 'rgba(22,32,44,0.16)',
+  cloud: '#9a8f95',
+  night: 'rgba(34,34,34,0.14)',
 };
 
 export const posterColors: Colors = {
