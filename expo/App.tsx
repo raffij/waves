@@ -225,7 +225,17 @@ function AppContent() {
           {error && <Text style={styles.error}>{error.message}</Text>}
 
           <View style={styles.section}>
-            <ForecastList yesterday={yesterday} days={days} selectedDateKey={activeDateKey} onSelectDay={selectDay} />
+            <ForecastList
+              yesterday={yesterday}
+              days={days}
+              selectedDateKey={activeDateKey}
+              onSelectDay={selectDay}
+              windSeries={windSeries}
+              precipitationSeries={precipitationSeries}
+              temperatureSeries={temperatureSeries}
+              sunBrightnessSeries={sunBrightnessSeries}
+              daylightSeries={daylightSeries}
+            />
           </View>
 
           <Pressable
