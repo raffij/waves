@@ -76,37 +76,83 @@ export function PrecipitationChart({
 
   const start = TideClock.londonDateAtHour(now, startHour);
   const end = TideClock.londonDateAtHour(now, endHour);
-  const bars = series.hourlyBars(start, end);
+  const startMs = start.getTime();
+  const endMs = end.getTime();
+  const nowMs = now.getTime();
 
-  const plotWidth = width - PADDING_X * 2;
-  const plotHeight = HEIGHT - PADDING_TOP - PADDING_BOTTOM;
-  const floorY = PADDING_TOP + plotHeight;
-  const barWidth = bars.length > 0 ? plotWidth / bars.length - BAR_GAP : 0;
+  // Everything here is pure geometry — bars, scaling, the next-rain search —
+  // derived from the series and the day window, not from the scrub reading.
+  // Memoized (see TideChart's identical comment) so a scrub drag, which
+  // fires onScrub/a re-render on every pointer-move event, doesn't re-walk
+  // the series each time — only the cheap "active bar" bit below needs to
+  // recompute on a scrub.
+  const geometry = useMemo(() => {
+    const start = new Date(startMs);
+    const end = new Date(endMs);
+    const now = new Date(nowMs);
+    const bars = series.hourlyBars(start, end);
 
-  const maxMm = Math.max(MIN_SCALE_MM, ...bars.map((b) => b.mm ?? 0));
-  const total = bars.reduce((sum, b) => sum + (b.mm ?? 0), 0);
+    const plotWidth = width - PADDING_X * 2;
+    const plotHeight = HEIGHT - PADDING_TOP - PADDING_BOTTOM;
+    const floorY = PADDING_TOP + plotHeight;
+    const barWidth = bars.length > 0 ? plotWidth / bars.length - BAR_GAP : 0;
 
-  // Searches the full series, not just this window, so it can point past
-  // a dry evening at tomorrow morning's first shower. Anchored on the real
-  // "now" only when viewing today — `now` for another day is a same-hour
-  // projection (see App.tsx), not a real cutoff within that day, so a
-  // future/past day is searched from its own 6am window start instead,
-  // finding that day's first rain rather than skipping its early hours.
-  const nextRainTime = series.nextRainAfter(isToday ? now : start);
-  const nextRainLabel = nextRainTime
-    ? ` · Next rain ${TideClock.format(
-        nextRainTime,
-        TideClock.dateKey(nextRainTime) === TideClock.dateKey(now)
-          ? { hour: '2-digit', minute: '2-digit', hour12: false }
-          : { weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false },
-      )}`
-    : '';
+    const maxMm = Math.max(MIN_SCALE_MM, ...bars.map((b) => b.mm ?? 0));
+    const total = bars.reduce((sum, b) => sum + (b.mm ?? 0), 0);
 
-  const totalMs = end.getTime() - start.getTime();
-  const currentX = PADDING_X + ((now.getTime() - start.getTime()) / totalMs) * plotWidth;
-  // Clamped: a `now` before the window means nothing's elapsed yet (no
-  // fade), a `now` past it means the whole window is behind us (fade it all).
-  const pastFadeEndX = Math.min(Math.max(currentX, PADDING_X), width - PADDING_X);
+    // Searches the full series, not just this window, so it can point past
+    // a dry evening at tomorrow morning's first shower. Anchored on the real
+    // "now" only when viewing today — `now` for another day is a same-hour
+    // projection (see App.tsx), not a real cutoff within that day, so a
+    // future/past day is searched from its own 6am window start instead,
+    // finding that day's first rain rather than skipping its early hours.
+    const nextRainTime = series.nextRainAfter(isToday ? now : start);
+    const nextRainLabel = nextRainTime
+      ? ` · Next rain ${TideClock.format(
+          nextRainTime,
+          TideClock.dateKey(nextRainTime) === TideClock.dateKey(now)
+            ? { hour: '2-digit', minute: '2-digit', hour12: false }
+            : { weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false },
+        )}`
+      : '';
+
+    const totalMs = endMs - startMs;
+    const currentX = PADDING_X + ((nowMs - startMs) / totalMs) * plotWidth;
+    // Clamped: a `now` before the window means nothing's elapsed yet (no
+    // fade), a `now` past it means the whole window is behind us (fade it all).
+    const pastFadeEndX = Math.min(Math.max(currentX, PADDING_X), width - PADDING_X);
+
+    // Same night shading as the tide chart, so a shower at dusk reads as one.
+    const daylight = daylightBands({ series: daylightSeries, start, end, plotLeft: PADDING_X, plotWidth });
+
+    return {
+      bars,
+      plotWidth,
+      plotHeight,
+      floorY,
+      barWidth,
+      maxMm,
+      total,
+      nextRainLabel,
+      totalMs,
+      pastFadeEndX,
+      daylight,
+    };
+  }, [series, daylightSeries, startMs, endMs, nowMs, isToday, width]);
+
+  const {
+    bars,
+    plotWidth,
+    plotHeight,
+    floorY,
+    barWidth,
+    maxMm,
+    total,
+    nextRainLabel,
+    totalMs,
+    pastFadeEndX,
+    daylight,
+  } = geometry;
 
   // See TideChart's identical comment: PanResponder.create(...) only runs
   // once, so its callbacks need refs to read the current width/start/end
@@ -156,9 +202,6 @@ export function PrecipitationChart({
   const activeX = PADDING_X + ((activeTime.getTime() - start.getTime()) / totalMs) * plotWidth;
 
   const hourTicks = [startHour, Math.round((startHour + endHour) / 2), endHour];
-
-  // Same night shading as the tide chart, so a shower at dusk reads as one.
-  const daylight = daylightBands({ series: daylightSeries, start, end, plotLeft: PADDING_X, plotWidth });
 
   return (
     <View onLayout={onLayout}>
@@ -287,7 +330,7 @@ function getStyles(colors: Colors, fonts: Fonts) {
       flexWrap: 'wrap',
       justifyContent: 'center',
       gap: 12,
-      marginTop: 6,
+      marginTop: 3,
       paddingLeft: PADDING_X,
       paddingRight: PADDING_X,
     },

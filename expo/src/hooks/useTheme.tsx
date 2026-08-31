@@ -25,7 +25,7 @@ interface ThemeContextValue {
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [themeName, setThemeName] = useState<ThemeName>('dark');
+  const [themeName, setThemeName] = useState<ThemeName>('glass');
 
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_KEY).then((saved) => {

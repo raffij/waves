@@ -76,30 +76,132 @@ export function TemperatureChart({
 
   const start = TideClock.londonDateAtHour(now, startHour);
   const end = TideClock.londonDateAtHour(now, endHour);
+  const startMs = start.getTime();
+  const endMs = end.getTime();
 
-  const tempSamples = series.samplesEvery(15, start, end);
-  const feelsLikeSamples = tempSamples.filter(
-    (s): s is { time: Date; temp: number | null; feelsLike: number } => s.feelsLike !== null,
-  );
-  const realTempSamples = tempSamples.filter(
-    (s): s is { time: Date; temp: number; feelsLike: number | null } => s.temp !== null,
-  );
+  // Everything here is pure geometry — samples, scaling, SVG path strings —
+  // derived from the series and the day window, not from the scrub reading.
+  // Memoized (see TideChart's identical comment) so a scrub drag, which
+  // fires onScrub/a re-render on every pointer-move event, doesn't re-walk
+  // every sample into fresh path strings each time — only the cheap "active
+  // point" bit below needs to recompute on a scrub.
+  const geometry = useMemo(() => {
+    const start = new Date(startMs);
+    const end = new Date(endMs);
 
-  const sunSamples = sunBrightnessSeries
-    ? sunBrightnessSeries
-        .samplesEvery(15, start, end)
-        .filter((s): s is { time: Date; wattsPerM2: number } => s.wattsPerM2 !== null)
-    : [];
+    const tempSamples = series.samplesEvery(15, start, end);
+    const feelsLikeSamples = tempSamples.filter(
+      (s): s is { time: Date; temp: number | null; feelsLike: number } => s.feelsLike !== null,
+    );
+    const realTempSamples = tempSamples.filter(
+      (s): s is { time: Date; temp: number; feelsLike: number | null } => s.temp !== null,
+    );
 
-  const cloudSamples = cloudCoverSeries
-    ? cloudCoverSeries
-        .samplesEvery(15, start, end)
-        .filter((s): s is { time: Date; percent: number } => s.percent !== null)
-    : [];
+    const sunSamples = sunBrightnessSeries
+      ? sunBrightnessSeries
+          .samplesEvery(15, start, end)
+          .filter((s): s is { time: Date; wattsPerM2: number } => s.wattsPerM2 !== null)
+      : [];
 
-  const plotWidth = width - PADDING_LEFT - PADDING_X;
-  const plotHeight = HEIGHT - PADDING_TOP - PADDING_BOTTOM;
-  const totalMs = end.getTime() - start.getTime();
+    const cloudSamples = cloudCoverSeries
+      ? cloudCoverSeries
+          .samplesEvery(15, start, end)
+          .filter((s): s is { time: Date; percent: number } => s.percent !== null)
+      : [];
+
+    const plotWidth = width - PADDING_LEFT - PADDING_X;
+    const plotHeight = HEIGHT - PADDING_TOP - PADDING_BOTTOM;
+    const totalMs = endMs - startMs;
+
+    if (feelsLikeSamples.length < 2 && realTempSamples.length < 2) {
+      return { empty: true as const, plotWidth, plotHeight, totalMs };
+    }
+
+    const allTemps = [...feelsLikeSamples.map((s) => s.feelsLike), ...realTempSamples.map((s) => s.temp)];
+    const rawMin = Math.min(...allTemps);
+    const rawMax = Math.max(...allTemps);
+    let tempMin = rawMin - TEMP_AXIS_PADDING_C;
+    let tempMax = rawMax + TEMP_AXIS_PADDING_C;
+    if (tempMax - tempMin < MIN_TEMP_SPAN_C) {
+      const mid = (tempMax + tempMin) / 2;
+      tempMin = mid - MIN_TEMP_SPAN_C / 2;
+      tempMax = mid + MIN_TEMP_SPAN_C / 2;
+    }
+    const tempSpan = tempMax - tempMin;
+
+    const sunValues = sunSamples.map((s) => s.wattsPerM2);
+    const sunMax = sunValues.length > 0 ? Math.max(...sunValues) : 1;
+    const sunSpread = sunMax || 1;
+
+    const toX = (time: Date) => PADDING_LEFT + ((time.getTime() - startMs) / totalMs) * plotWidth;
+    const toTempY = (value: number) => PADDING_TOP + (1 - (value - tempMin) / tempSpan) * plotHeight;
+    const toSunY = (value: number) => PADDING_TOP + (1 - value / sunSpread) * plotHeight;
+    // Cloud cover is already a 0–100 percentage, so it plots on a fixed scale
+    // rather than sun's own peak-scaled one — 100% cloud always sits at the
+    // floor, not wherever the day's cloudiest hour happened to land.
+    const toCloudY = (value: number) => PADDING_TOP + (1 - value / 100) * plotHeight;
+
+    const floorY = PADDING_TOP + plotHeight;
+    const tempGridLines = [tempMax, (tempMax + tempMin) / 2, tempMin].map((value) => ({ value, y: toTempY(value) }));
+
+    const feelsLikePoints = feelsLikeSamples.map((s) => ({ x: toX(s.time), y: toTempY(s.feelsLike) }));
+    const feelsLikePath = feelsLikePoints
+      .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
+      .join(' ');
+    const feelsLikeAreaPath =
+      feelsLikePoints.length > 0
+        ? `${feelsLikePath} L ${feelsLikePoints[feelsLikePoints.length - 1].x.toFixed(1)} ${floorY} L ${feelsLikePoints[0].x.toFixed(1)} ${floorY} Z`
+        : '';
+
+    const realTempPoints = realTempSamples.map((s) => ({ x: toX(s.time), y: toTempY(s.temp) }));
+    const realTempPath = realTempPoints
+      .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
+      .join(' ');
+
+    // Filled from the curve down to the floor, like the tide chart's own area
+    // — a bright hour (curve near the top) fills most of the column with a
+    // sun-colored glow, a dim/night hour leaves only a thin sliver.
+    const sunPoints = sunSamples.map((s) => ({ x: toX(s.time), y: toSunY(s.wattsPerM2) }));
+    const sunPath = sunPoints.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
+    const sunAreaPath =
+      sunPoints.length > 0
+        ? `${sunPath} L ${sunPoints[sunPoints.length - 1].x.toFixed(1)} ${floorY} L ${sunPoints[0].x.toFixed(1)} ${floorY} Z`
+        : '';
+
+    // A plain line, not an area like sun's — it's there to explain the sun
+    // reading (why a bright hour reads bright, or doesn't), not to compete
+    // with it for the eye.
+    const cloudPoints = cloudSamples.map((s) => ({ x: toX(s.time), y: toCloudY(s.percent) }));
+    const cloudPath = cloudPoints.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
+
+    const daylight = daylightBands({ series: daylightSeries, start, end, plotLeft: PADDING_LEFT, plotWidth });
+
+    const feelsLikeValues = feelsLikeSamples.map((s) => s.feelsLike);
+    const realTempValues = realTempSamples.map((s) => s.temp);
+    const cloudValues = cloudSamples.map((s) => s.percent);
+
+    return {
+      empty: false as const,
+      plotWidth,
+      plotHeight,
+      totalMs,
+      toX,
+      toTempY,
+      floorY,
+      tempGridLines,
+      feelsLikePath,
+      feelsLikeAreaPath,
+      realTempPath,
+      sunPath,
+      sunAreaPath,
+      cloudPath,
+      daylight,
+      sunValues,
+      feelsLikeValues,
+      realTempValues,
+      cloudValues,
+    };
+  }, [series, sunBrightnessSeries, cloudCoverSeries, daylightSeries, startMs, endMs, width]);
 
   // See TideChart's identical comment: PanResponder.create(...) only runs
   // once, so its callbacks need refs to read the current width/start/end
@@ -108,8 +210,8 @@ export function TemperatureChart({
   // crosshair on the other charts too.
   const widthRef = useRef(width);
   widthRef.current = width;
-  const geometryRef = useRef({ start, end, plotWidth });
-  geometryRef.current = { start, end, plotWidth };
+  const geometryRef = useRef({ start, end, plotWidth: geometry.plotWidth });
+  geometryRef.current = { start, end, plotWidth: geometry.plotWidth };
 
   // See TideChart's identical comment: a touch on the chart could just as
   // easily be the start of a vertical scroll, so the gesture is only
@@ -139,7 +241,7 @@ export function TemperatureChart({
     }),
   ).current;
 
-  if (feelsLikeSamples.length < 2 && realTempSamples.length < 2) {
+  if (geometry.empty) {
     return (
       <View style={styles.emptyState}>
         <Text style={styles.emptyText}>No chart data available</Text>
@@ -147,79 +249,35 @@ export function TemperatureChart({
     );
   }
 
-  const allTemps = [...feelsLikeSamples.map((s) => s.feelsLike), ...realTempSamples.map((s) => s.temp)];
-  const rawMin = Math.min(...allTemps);
-  const rawMax = Math.max(...allTemps);
-  let tempMin = rawMin - TEMP_AXIS_PADDING_C;
-  let tempMax = rawMax + TEMP_AXIS_PADDING_C;
-  if (tempMax - tempMin < MIN_TEMP_SPAN_C) {
-    const mid = (tempMax + tempMin) / 2;
-    tempMin = mid - MIN_TEMP_SPAN_C / 2;
-    tempMax = mid + MIN_TEMP_SPAN_C / 2;
-  }
-  const tempSpan = tempMax - tempMin;
-
-  const sunValues = sunSamples.map((s) => s.wattsPerM2);
-  const sunMax = sunValues.length > 0 ? Math.max(...sunValues) : 1;
-  const sunSpread = sunMax || 1;
-
-  const toX = (time: Date) => PADDING_LEFT + ((time.getTime() - start.getTime()) / totalMs) * plotWidth;
-  const toTempY = (value: number) => PADDING_TOP + (1 - (value - tempMin) / tempSpan) * plotHeight;
-  const toSunY = (value: number) => PADDING_TOP + (1 - value / sunSpread) * plotHeight;
-  // Cloud cover is already a 0–100 percentage, so it plots on a fixed scale
-  // rather than sun's own peak-scaled one — 100% cloud always sits at the
-  // floor, not wherever the day's cloudiest hour happened to land.
-  const toCloudY = (value: number) => PADDING_TOP + (1 - value / 100) * plotHeight;
-
-  const floorY = PADDING_TOP + plotHeight;
-  const tempGridLines = [tempMax, (tempMax + tempMin) / 2, tempMin].map((value) => ({ value, y: toTempY(value) }));
-
-  const feelsLikePoints = feelsLikeSamples.map((s) => ({ x: toX(s.time), y: toTempY(s.feelsLike) }));
-  const feelsLikePath = feelsLikePoints
-    .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
-    .join(' ');
-  const feelsLikeAreaPath =
-    feelsLikePoints.length > 0
-      ? `${feelsLikePath} L ${feelsLikePoints[feelsLikePoints.length - 1].x.toFixed(1)} ${floorY} L ${feelsLikePoints[0].x.toFixed(1)} ${floorY} Z`
-      : '';
-
-  const realTempPoints = realTempSamples.map((s) => ({ x: toX(s.time), y: toTempY(s.temp) }));
-  const realTempPath = realTempPoints
-    .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
-    .join(' ');
-
-  // Filled from the curve down to the floor, like the tide chart's own area
-  // — a bright hour (curve near the top) fills most of the column with a
-  // sun-colored glow, a dim/night hour leaves only a thin sliver.
-  const sunPoints = sunSamples.map((s) => ({ x: toX(s.time), y: toSunY(s.wattsPerM2) }));
-  const sunPath = sunPoints.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
-  const sunAreaPath =
-    sunPoints.length > 0
-      ? `${sunPath} L ${sunPoints[sunPoints.length - 1].x.toFixed(1)} ${floorY} L ${sunPoints[0].x.toFixed(1)} ${floorY} Z`
-      : '';
-
-  // A plain line, not an area like sun's — it's there to explain the sun
-  // reading (why a bright hour reads bright, or doesn't), not to compete
-  // with it for the eye.
-  const cloudPoints = cloudSamples.map((s) => ({ x: toX(s.time), y: toCloudY(s.percent) }));
-  const cloudPath = cloudPoints.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
+  const {
+    plotHeight,
+    toX,
+    toTempY,
+    floorY,
+    tempGridLines,
+    feelsLikePath,
+    feelsLikeAreaPath,
+    realTempPath,
+    sunPath,
+    sunAreaPath,
+    cloudPath,
+    daylight,
+    sunValues,
+    feelsLikeValues,
+    realTempValues,
+    cloudValues,
+  } = geometry;
 
   const currentX = toX(now);
   const pastFadeEndX = Math.min(Math.max(currentX, PADDING_LEFT), width - PADDING_X);
 
   const isScrubbing = scrubTime !== null;
-  const activeTime = scrubTime ?? new Date(Math.min(Math.max(now.getTime(), start.getTime()), end.getTime()));
+  const activeTime = scrubTime ?? new Date(Math.min(Math.max(now.getTime(), startMs), endMs));
   const activeFeelsLike = series.feelsLikeAt(activeTime);
   const activeTemp = series.tempAt(activeTime);
   const activePoint = activeFeelsLike !== null ? { x: toX(activeTime), y: toTempY(activeFeelsLike) } : null;
 
   const hourTicks = [startHour, Math.round((startHour + endHour) / 2), endHour];
-
-  const daylight = daylightBands({ series: daylightSeries, start, end, plotLeft: PADDING_LEFT, plotWidth });
-
-  const feelsLikeValues = feelsLikeSamples.map((s) => s.feelsLike);
-  const realTempValues = realTempSamples.map((s) => s.temp);
-  const cloudValues = cloudSamples.map((s) => s.percent);
 
   return (
     <View onLayout={onLayout}>
@@ -447,7 +505,7 @@ function getStyles(colors: Colors, fonts: Fonts) {
       flexWrap: 'wrap',
       justifyContent: 'center',
       gap: 12,
-      marginTop: 6,
+      marginTop: 3,
       paddingLeft: PADDING_LEFT,
       paddingRight: PADDING_X,
     },
