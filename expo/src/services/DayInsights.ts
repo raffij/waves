@@ -1,6 +1,8 @@
 import type { DaylightSeries } from './DaylightSeries';
 import { DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR } from './DayWindow';
 import type { PrecipitationSeries } from './PrecipitationSeries';
+import type { SunBrightnessSeries } from './SunBrightnessSeries';
+import type { TemperatureSeries } from './TemperatureSeries';
 import { TideClock } from './TideClock';
 import type { WindSeries } from './WindSeries';
 
@@ -18,33 +20,37 @@ export const DRIZZLE_PEAK_MM = 0.5;
 export const HEAVY_PEAK_MM = 2;
 export const WIND_BAND_BREEZY_MPH = 12; // sentence bands: <12 calm, 12–24 breezy, ≥24 windy
 export const WIND_BAND_WINDY_MPH = 24;
+// Sun bands read off the brightest hour in the window/segment, W/m² (already
+// discounted for cloud cover) — below HAZY it's overcast, below SUNNY it's
+// hazy/broken cloud, at/above SUNNY it's genuinely bright.
+export const SUN_BAND_HAZY_WM2 = 120;
+export const SUN_BAND_SUNNY_WM2 = 350;
+// A morning-to-afternoon swing in mean "feels like" temperature below this
+// reads as noise — the outlook says the day stays much the same rather than
+// manufacturing a warming/cooling trend out of half a degree.
+export const FEELS_TREND_THRESHOLD_C = 2;
 export const FALLBACK_SUNRISE_HOUR = 7; // light bounds used only when sunrise/sunset is unavailable
 export const FALLBACK_SUNSET_HOUR = 21;
 export const RAIN_DOMINATES_FRACTION = 0.55; // a single spell covering this share of the window reads as "most of the day"
 export const RAIN_LONG_SPELL_HOURS = 4; // at/above this, a spell gets a "through the morning/afternoon/middle" phrase
 export const DARK_MAJORITY_FRACTION = 0.5; // above this share of the hours left, the call shifts to keeping warm
 
-// What to wear, and the rain / wind / light reading behind it. The garment
-// comes from the intensity of the rain still to come, the wind it arrives
-// on, and whether the hours you'd be out in are dark — a 25mph downpour
-// wants a dry robe, the same rain in still air wants an umbrella, and a
-// dry, calm evening after sunset wants a warm layer more than either.
-export interface ClothingAdvice {
-  garment: string;
-  reason: string;
-}
-
 export interface DayInsights {
-  summarySentence: string;
-  // What to wear for the part of the day that's left. Null for a day
-  // that's already over.
-  clothing: ClothingAdvice | null;
+  // The day's conditions — wind, rain, sun, feel, light — and what to wear,
+  // as one flowing description rather than a separate readout per signal.
+  summary: string;
+  // How rain, sun and "feels like" temperature change over the course of
+  // the day. Null once there's nothing left to look forward to (a day
+  // that's already over) or too little data to say anything.
+  outlook: string | null;
 }
 
 export interface DayInsightsInput {
   windSeries: WindSeries | null;
   precipitationSeries: PrecipitationSeries | null;
   daylightSeries: DaylightSeries | null;
+  temperatureSeries: TemperatureSeries | null;
+  sunBrightnessSeries: SunBrightnessSeries | null;
   reference: Date;
 }
 
@@ -57,6 +63,10 @@ function hhmm(date: Date): string {
 
 function capitalize(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+function average(values: number[]): number {
+  return values.reduce((a, b) => a + b, 0) / values.length;
 }
 
 // --- the day window ----------------------------------------------------------
@@ -97,6 +107,16 @@ function windowSlots(input: DayInsightsInput): Slot[] {
     slots.push({ hour: h, at, isLight: at.getTime() >= sunrise.getTime() && at.getTime() <= sunset.getTime() });
   }
   return slots;
+}
+
+// The morning/afternoon split every trend reading (wind shape, rain/sun/feel
+// outlook) uses, so they can never disagree about where "afternoon" starts.
+function morningSlots(slots: Slot[]): Slot[] {
+  return slots.filter((s) => s.hour <= 12);
+}
+
+function afternoonSlots(slots: Slot[]): Slot[] {
+  return slots.filter((s) => s.hour >= 13);
 }
 
 type DayTense = 'past' | 'today' | 'future';
@@ -140,7 +160,7 @@ function windOver(slots: Slot[], windSeries: WindSeries | null): WindReading | n
   if (!windSeries) return null;
   const speeds = slots.map((s) => windSeries.speedAt(s.at)).filter((mph): mph is number => mph !== null);
   if (speeds.length === 0) return null;
-  return { mean: speeds.reduce((a, b) => a + b, 0) / speeds.length, peak: Math.max(...speeds) };
+  return { mean: average(speeds), peak: Math.max(...speeds) };
 }
 
 // The band to dress for. A day that peaks in the windy band is a windy day
@@ -159,14 +179,8 @@ interface WindShape {
 function windShape(slots: Slot[], windSeries: WindSeries | null): WindShape | null {
   const all = windOver(slots, windSeries);
   if (!all) return null;
-  const morning = windOver(
-    slots.filter((s) => s.hour <= 12),
-    windSeries,
-  );
-  const afternoon = windOver(
-    slots.filter((s) => s.hour >= 13),
-    windSeries,
-  );
+  const morning = windOver(morningSlots(slots), windSeries);
+  const afternoon = windOver(afternoonSlots(slots), windSeries);
   return {
     morningBand: bandFor((morning ?? all).mean),
     afternoonBand: bandFor((afternoon ?? all).mean),
@@ -243,6 +257,14 @@ const RAIN_NOUN: Record<RainBand, { single: string; repeated: string }> = {
   heavy: { single: 'heavy rain', repeated: 'heavy showers' },
 };
 
+// Intensity only, used both for the clothing call and the rain outlook.
+const RAIN_PHRASE: Record<RainBand, string> = {
+  dry: 'dry',
+  drizzle: 'light drizzle',
+  showery: 'rain',
+  heavy: 'heavy rain',
+};
+
 // Lower-case fragment for the summary sentence, plus what the clothing call
 // keys off (it never parses `text`):
 //   wet       — rain is still to come or under way in the rest of the day
@@ -306,6 +328,124 @@ function rainClause(input: DayInsightsInput, precip: PrecipitationSeries | null)
   };
 }
 
+// The wettest hour over a set of slots, in mm. 0 when the forecast has
+// nothing to say about those hours.
+function rainPeakOver(slots: Slot[], precip: PrecipitationSeries | null): number {
+  if (!precip) return 0;
+  const mms = slots.map((s) => precip.mmAt(s.at)).filter((mm): mm is number => mm !== null);
+  return mms.length > 0 ? Math.max(...mms) : 0;
+}
+
+// How the rain itself changes shape across the day — dry throughout, a
+// morning spell that clears, an afternoon spell moving in, or on-and-off all
+// day. Independent of `rainClause`: that one reports what's still ahead (or
+// already happened) for the sentence; this always reads the whole window,
+// since the outlook is about the day's shape, not just what's left of it.
+function rainTrendClause(slots: Slot[], precip: PrecipitationSeries | null, tense: DayTense): string | null {
+  if (!precip) return null;
+
+  const morningBand = rainBandFor(rainPeakOver(morningSlots(slots), precip));
+  const afternoonBand = rainBandFor(rainPeakOver(afternoonSlots(slots), precip));
+
+  if (morningBand === 'dry' && afternoonBand === 'dry') return tense === 'past' ? 'stayed dry all day' : 'dry all day';
+  if (morningBand !== 'dry' && afternoonBand === 'dry') {
+    return tense === 'past'
+      ? `${RAIN_PHRASE[morningBand]} cleared by afternoon`
+      : `${RAIN_PHRASE[morningBand]} clearing by afternoon`;
+  }
+  if (morningBand === 'dry' && afternoonBand !== 'dry') {
+    return tense === 'past'
+      ? `turned to ${RAIN_PHRASE[afternoonBand]} by afternoon`
+      : `${RAIN_PHRASE[afternoonBand]} moving in by afternoon`;
+  }
+  return `${RAIN_PHRASE[afternoonBand]} on and off through the day`;
+}
+
+// --- sun ---------------------------------------------------------------------
+
+type SunBand = 'overcast' | 'hazy' | 'sunny';
+const SUN_BAND_RANK: Record<SunBand, number> = { overcast: 0, hazy: 1, sunny: 2 };
+const SUN_WORD: Record<SunBand, string> = { overcast: 'overcast', hazy: 'hazy sun', sunny: 'sunny spells' };
+const SUN_ALL_DAY_PHRASE: Record<SunBand, string> = {
+  overcast: 'overcast all day',
+  hazy: 'hazy sun most of the day',
+  sunny: 'sunny spells through the day',
+};
+
+function sunBandFor(peakWm2: number): SunBand {
+  if (peakWm2 < SUN_BAND_HAZY_WM2) return 'overcast';
+  if (peakWm2 < SUN_BAND_SUNNY_WM2) return 'hazy';
+  return 'sunny';
+}
+
+interface SunReading {
+  peak: number;
+}
+
+function sunOver(slots: Slot[], sun: SunBrightnessSeries | null): SunReading | null {
+  if (!sun) return null;
+  const values = slots.map((s) => sun.brightnessAt(s.at)).filter((wm2): wm2 is number => wm2 !== null);
+  if (values.length === 0) return null;
+  return { peak: Math.max(...values) };
+}
+
+// How strong the sun gets, morning vs. afternoon — brightening, clouding
+// over, or one band held all day.
+function sunTrendClause(slots: Slot[], sun: SunBrightnessSeries | null): string | null {
+  const morning = sunOver(morningSlots(slots), sun);
+  const afternoon = sunOver(afternoonSlots(slots), sun);
+  if (!morning && !afternoon) return null;
+
+  const morningBand = sunBandFor((morning ?? afternoon ?? { peak: 0 }).peak);
+  const afternoonBand = sunBandFor((afternoon ?? morning ?? { peak: 0 }).peak);
+  if (morningBand === afternoonBand) return SUN_ALL_DAY_PHRASE[morningBand];
+  return SUN_BAND_RANK[afternoonBand] > SUN_BAND_RANK[morningBand]
+    ? 'sunshine breaking through by afternoon'
+    : 'clouding over by afternoon';
+}
+
+// --- feels-like temperature ----------------------------------------------
+
+interface FeelsReading {
+  mean: number;
+  min: number;
+  max: number;
+}
+
+function feelsOver(slots: Slot[], temp: TemperatureSeries | null): FeelsReading | null {
+  if (!temp) return null;
+  const values = slots.map((s) => temp.feelsLikeAt(s.at)).filter((c): c is number => c !== null);
+  if (values.length === 0) return null;
+  return { mean: average(values), min: Math.min(...values), max: Math.max(...values) };
+}
+
+function feelsPhrase(feels: FeelsReading): string {
+  const lo = Math.round(feels.min);
+  const hi = Math.round(feels.max);
+  return lo === hi ? `feels ${lo}°` : `feels ${lo}–${hi}°`;
+}
+
+// How "feels like" temperature shifts across the day — warming, cooling, or
+// much the same throughout, keyed off the morning/afternoon mean so a single
+// warm or cold hour can't swing the read.
+function feelsTrendClause(slots: Slot[], temp: TemperatureSeries | null): string | null {
+  if (!temp) return null;
+  const morning = morningSlots(slots)
+    .map((s) => temp.feelsLikeAt(s.at))
+    .filter((c): c is number => c !== null);
+  const afternoon = afternoonSlots(slots)
+    .map((s) => temp.feelsLikeAt(s.at))
+    .filter((c): c is number => c !== null);
+  if (morning.length === 0 || afternoon.length === 0) return null;
+
+  const morningMean = average(morning);
+  const afternoonMean = average(afternoon);
+  const diff = afternoonMean - morningMean;
+  if (diff >= FEELS_TREND_THRESHOLD_C) return `warming to ${Math.round(Math.max(...afternoon))}° by afternoon`;
+  if (diff <= -FEELS_TREND_THRESHOLD_C) return `cooling to ${Math.round(Math.min(...afternoon))}° into the evening`;
+  return `feeling much the same all day, around ${Math.round((morningMean + afternoonMean) / 2)}°`;
+}
+
 // --- light ------------------------------------------------------------------
 
 // "dark by 16:21", for a day whose sunset lands inside the window and is
@@ -322,48 +462,32 @@ function lightClause(input: DayInsightsInput): string | null {
 
 // --- clothing ---------------------------------------------------------------
 
-// Rain band × wind band. Rain decides how waterproof, wind decides whether
-// an umbrella is worth carrying at all.
+// Rain band × wind band, as the lower-case noun phrase (with article) folded
+// straight into "Wear ___." — a 25mph downpour wants a dry robe, the same
+// rain in still air wants an umbrella.
 const GARMENT: Record<RainBand, Record<WindBand, string>> = {
-  dry: { calm: 'Light layers', breezy: 'Windbreaker', windy: 'Windproof jacket' },
-  drizzle: { calm: 'Umbrella', breezy: 'Hooded jacket', windy: 'Waterproof shell' },
-  showery: { calm: 'Umbrella', breezy: 'Rain jacket', windy: 'Waterproof shell' },
-  heavy: { calm: 'Waterproofs', breezy: 'Waterproofs', windy: 'Dry robe' },
+  dry: { calm: 'light layers', breezy: 'a windbreaker', windy: 'a windproof jacket' },
+  drizzle: { calm: 'an umbrella', breezy: 'a hooded jacket', windy: 'a waterproof shell' },
+  showery: { calm: 'an umbrella', breezy: 'a rain jacket', windy: 'a waterproof shell' },
+  heavy: { calm: 'waterproofs', breezy: 'waterproofs', windy: 'a dry robe' },
 };
 
 // Dry hours after sunset (or before sunrise) are about warmth, not shelter,
 // so the dry row swaps for something that holds heat. A wet dark hour keeps
-// its rain gear — that's still the binding problem — and the reason line
-// says it's after dark.
+// its rain gear — that's still the binding problem.
 const DARK_DRY_GARMENT: Record<WindBand, string> = {
-  calm: 'Warm layer',
-  breezy: 'Warm coat',
-  windy: 'Windproof coat',
+  calm: 'a warm layer',
+  breezy: 'a warm coat',
+  windy: 'a windproof coat',
 };
 
-// Intensity only — whether it comes in bursts or sits there all afternoon
-// is the sentence's job, so this never says "showers" and contradicts it.
-const RAIN_PHRASE: Record<RainBand, string> = {
-  dry: 'dry',
-  drizzle: 'light drizzle',
-  showery: 'rain',
-  heavy: 'heavy rain',
-};
-
-function windPhrase(wind: WindReading): string {
-  const band = bandToDressFor(wind);
-  if (band === 'windy') return `${Math.round(wind.peak)}mph wind`;
-  if (band === 'breezy') return `${Math.round(wind.mean)}mph breeze`;
-  return 'light wind';
-}
-
-// The wettest hour still ahead, in mm. 0 when the forecast has nothing to
-// say about those hours — which matches the rain clause, since it reads the
-// same buckets.
-function rainPeakOver(slots: Slot[], precip: PrecipitationSeries | null): number {
-  if (!precip) return 0;
-  const mms = slots.map((s) => precip.mmAt(s.at)).filter((mm): mm is number => mm !== null);
-  return mms.length > 0 ? Math.max(...mms) : 0;
+interface ClothingAdvice {
+  garment: string;
+  // Context not already covered elsewhere in the summary — the rain/wind
+  // bands themselves are already in the main clauses, so this only carries
+  // what they don't: wet ground left over from earlier rain, or a garment
+  // that's really about it being dark rather than the stated conditions.
+  extra: string | null;
 }
 
 function clothingAdvice(
@@ -371,6 +495,7 @@ function clothingAdvice(
   slots: Slot[],
   wind: WindReading | null,
   rain: RainClause | null,
+  lightAlreadyStated: boolean,
 ): ClothingAdvice | null {
   if (dayTense(input.reference) === 'past') return null;
   if (!rain && !wind) return null;
@@ -393,36 +518,55 @@ function clothingAdvice(
 
   const garment = rainBand === 'dry' && mostlyDark ? DARK_DRY_GARMENT[windBand] : GARMENT[rainBand][windBand];
 
-  const reasonParts: string[] = [];
-  if (rain) reasonParts.push(RAIN_PHRASE[rainBand]);
-  if (rain?.groundWet) reasonParts.push('still wet underfoot');
-  if (wind) reasonParts.push(windPhrase(wind));
-  // Only the signal that actually moved the garment. A sunset still to come
-  // is in the sentence already; repeating it here would just pad the line.
-  if (mostlyDark) reasonParts.push('after dark');
+  const extraParts: string[] = [];
+  if (rain?.groundWet) extraParts.push('still wet underfoot');
+  if (mostlyDark && !lightAlreadyStated) extraParts.push('after dark');
 
-  return { garment, reason: reasonParts.join(', ') };
+  return { garment, extra: extraParts.length > 0 ? extraParts.join(', ') : null };
+}
+
+// --- outlook: how rain, sun and feel change through the day ------------------
+
+function buildOutlook(input: DayInsightsInput, slots: Slot[], tense: DayTense): string | null {
+  if (tense === 'past') return null;
+
+  const clauses = [
+    rainTrendClause(slots, input.precipitationSeries, tense),
+    sunTrendClause(slots, input.sunBrightnessSeries),
+    feelsTrendClause(slots, input.temperatureSeries),
+  ].filter((c): c is string => c !== null);
+
+  return clauses.length > 0 ? `${capitalize(clauses.join(', '))}.` : null;
 }
 
 // --- entry point --------------------------------------------------------------
 
 export function buildDayInsights(input: DayInsightsInput): DayInsights {
   const slots = windowSlots(input);
+  const tense = dayTense(input.reference);
   const shape = windShape(slots, input.windSeries);
   const rain = rainClause(input, input.precipitationSeries);
+  const sun = sunOver(slots, input.sunBrightnessSeries);
+  const feels = feelsOver(slots, input.temperatureSeries);
+  const light = lightClause(input);
   const aheadWind = windOver(remainingSlots(input, slots), input.windSeries);
 
   const clauses: string[] = [];
   if (shape) clauses.push(windClause(shape));
   if (rain) clauses.push(shape ? rain.text : capitalize(rain.text));
-  const light = lightClause(input);
+  if (sun) clauses.push(SUN_WORD[sunBandFor(sun.peak)]);
+  if (feels) clauses.push(feelsPhrase(feels));
   if (light && clauses.length > 0) clauses.push(light);
 
-  const summarySentence =
-    clauses.length > 0 ? `${clauses.join(', ')}.` : 'Tide data only — wind and rain forecast unavailable.';
+  let summary = clauses.length > 0 ? `${clauses.join(', ')}.` : 'Tide data only — wind and rain forecast unavailable.';
+
+  const clothing = clothingAdvice(input, slots, aheadWind, rain, light !== null);
+  if (clothing) {
+    summary += ` Wear ${clothing.garment}${clothing.extra ? ` — ${clothing.extra}` : ''}.`;
+  }
 
   return {
-    summarySentence,
-    clothing: clothingAdvice(input, slots, aheadWind, rain),
+    summary,
+    outlook: buildOutlook(input, slots, tense),
   };
 }

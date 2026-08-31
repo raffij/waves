@@ -139,6 +139,8 @@ function AppContent() {
         windSeries,
         precipitationSeries,
         daylightSeries,
+        temperatureSeries,
+        sunBrightnessSeries,
         reference: referenceDate,
       })
     : null;
@@ -159,6 +161,7 @@ function AppContent() {
             windTrend={windTrend}
             fetchedAt={fetchedAt}
             dayLabel={selectedDayLabel}
+            onPress={() => setSelectedDateKey(null)}
           />
 
           {insights && (
