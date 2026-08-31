@@ -112,21 +112,131 @@ export function TideChart({
 
   const start = TideClock.londonDateAtHour(now, startHour);
   const end = TideClock.londonDateAtHour(now, endHour);
-  const tideSamples = series
-    .samplesEvery(15, start, end)
-    .filter((s): s is { time: Date; height: number } => s.height !== null);
+  const startMs = start.getTime();
+  const endMs = end.getTime();
 
-  const waveSamples = waveSeries
-    ? waveSeries.samplesEvery(15, start, end).filter((s): s is { time: Date; height: number } => s.height !== null)
-    : [];
+  // Everything here is pure geometry — samples, scaling, SVG path strings —
+  // derived from the series and the day window, not from the scrub reading.
+  // A drag fires onScrub (and therefore a re-render) on every pointer-move
+  // event, and re-walking every sample into fresh path strings that many
+  // times a second is what actually made scrubbing feel slow; memoizing it
+  // means a scrub only recomputes the cheap "active point" bit below.
+  const geometry = useMemo(() => {
+    // Shadows the outer start/end with copies built straight from the
+    // memoized deps, so this closure only ever reads values the dependency
+    // list actually covers.
+    const start = new Date(startMs);
+    const end = new Date(endMs);
+    const tideSamples = series
+      .samplesEvery(15, start, end)
+      .filter((s): s is { time: Date; height: number } => s.height !== null);
+    const waveSamples = waveSeries
+      ? waveSeries.samplesEvery(15, start, end).filter((s): s is { time: Date; height: number } => s.height !== null)
+      : [];
+    const windSamples = windSeries
+      ? windSeries.samplesEvery(15, start, end).filter((s): s is { time: Date; speed: number } => s.speed !== null)
+      : [];
 
-  const windSamples = windSeries
-    ? windSeries.samplesEvery(15, start, end).filter((s): s is { time: Date; speed: number } => s.speed !== null)
-    : [];
+    const plotWidth = width - PADDING_LEFT - PADDING_X;
+    const plotHeight = HEIGHT - PADDING_TOP - PADDING_BOTTOM;
+    const totalMs = endMs - startMs;
 
-  const plotWidth = width - PADDING_LEFT - PADDING_X;
-  const plotHeight = HEIGHT - PADDING_TOP - PADDING_BOTTOM;
-  const totalMs = end.getTime() - start.getTime();
+    if (tideSamples.length < 2) {
+      return { empty: true as const, tideSamples, waveSamples, windSamples, plotWidth, plotHeight, totalMs };
+    }
+
+    const tideHeights = tideSamples.map((s) => s.height);
+    const tideMinHeight = Math.min(...tideHeights);
+    const tideMaxHeight = Math.max(...tideHeights);
+    // Axes always start at 0 so bar/line heights read as true magnitudes
+    // rather than an exaggerated view of the data's own min-max spread.
+    const tideSpread = tideMaxHeight || 1;
+
+    // Wave scaling: separate axis to show smaller wave heights clearly
+    const waveHeights = waveSamples.map((s) => s.height);
+    const waveMinHeight = waveHeights.length > 0 ? Math.min(...waveHeights) : 0;
+    const waveMaxHeight = waveHeights.length > 0 ? Math.max(...waveHeights) : 1;
+    const waveSpread = waveMaxHeight || 1;
+
+    // Wind scaling: different unit (mph) with typical range 0-40
+    const windSpeeds = windSamples.map((s) => s.speed);
+    const windMinSpeed = windSpeeds.length > 0 ? Math.min(...windSpeeds) : 0;
+    const windMaxSpeed = windSpeeds.length > 0 ? Math.max(...windSpeeds) : 1;
+    const windSpread = windMaxSpeed || 1;
+
+    const toTideXY = (time: Date, height: number) => {
+      const x = PADDING_LEFT + ((time.getTime() - startMs) / totalMs) * plotWidth;
+      const y = PADDING_TOP + (1 - height / tideSpread) * plotHeight;
+      return { x, y };
+    };
+
+    const toWaveXY = (time: Date, height: number) => {
+      const x = PADDING_LEFT + ((time.getTime() - startMs) / totalMs) * plotWidth;
+      const y = PADDING_TOP + (1 - height / waveSpread) * plotHeight;
+      return { x, y };
+    };
+
+    const toWindXY = (time: Date, speed: number) => {
+      const x = PADDING_LEFT + ((time.getTime() - startMs) / totalMs) * plotWidth;
+      const y = PADDING_TOP + (1 - speed / windSpread) * plotHeight;
+      return { x, y };
+    };
+
+    const tideMidHeight = tideMaxHeight / 2;
+    const tideGridLines = [tideMaxHeight, tideMidHeight, 0].map((value) => ({
+      value,
+      y: toTideXY(start, value).y,
+    }));
+
+    const tidePoints = tideSamples.map((s) => toTideXY(s.time, s.height));
+    const tidePath = tidePoints.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
+    const floorY = PADDING_TOP + plotHeight;
+    const tideAreaPath = `${tidePath} L ${tidePoints[tidePoints.length - 1].x.toFixed(1)} ${floorY} L ${tidePoints[0].x.toFixed(1)} ${floorY} Z`;
+
+    const wavePoints = waveSamples.length > 0 ? waveSamples.map((s) => toWaveXY(s.time, s.height)) : [];
+    const wavePath =
+      wavePoints.length > 0
+        ? wavePoints.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ')
+        : '';
+
+    const smoothedWindSpeeds = movingAverage(
+      windSamples.map((s) => s.speed),
+      3,
+    );
+    const windPoints = windSamples.map((s, i) => toWindXY(s.time, smoothedWindSpeeds[i]));
+    const windPath = smoothPath(windPoints);
+
+    // Shading for the hours outside sunrise–sunset, so the curve reads
+    // against when it's actually light on the pier.
+    const daylight = daylightBands({ series: daylightSeries, start, end, plotLeft: PADDING_LEFT, plotWidth });
+
+    return {
+      empty: false as const,
+      tideSamples,
+      waveSamples,
+      windSamples,
+      plotWidth,
+      plotHeight,
+      totalMs,
+      tideHeights,
+      tideMinHeight,
+      tideMaxHeight,
+      waveHeights,
+      waveMinHeight,
+      waveMaxHeight,
+      windSpeeds,
+      windMinSpeed,
+      windMaxSpeed,
+      toTideXY,
+      tideGridLines,
+      tidePath,
+      tideAreaPath,
+      wavePath,
+      windPath,
+      floorY,
+      daylight,
+    };
+  }, [series, waveSeries, windSeries, daylightSeries, startMs, endMs, width]);
 
   // PanResponder.create(...) only runs once (useRef's initializer is
   // evaluated on mount only), so its callbacks would otherwise permanently
@@ -136,8 +246,8 @@ export function TideChart({
   // convert against the current geometry rather than the one from mount.
   const widthRef = useRef(width);
   widthRef.current = width;
-  const geometryRef = useRef({ start, end, plotWidth });
-  geometryRef.current = { start, end, plotWidth };
+  const geometryRef = useRef({ start, end, plotWidth: geometry.plotWidth });
+  geometryRef.current = { start, end, plotWidth: geometry.plotWidth };
 
   // The reading is sticky: a tap or drag sets it, and it stays put after
   // release so there's time to actually read it, rather than reverting to
@@ -181,7 +291,7 @@ export function TideChart({
     }),
   ).current;
 
-  if (tideSamples.length < 2) {
+  if (geometry.empty) {
     return (
       <View style={styles.emptyState}>
         <Text style={styles.emptyText}>No chart data available</Text>
@@ -189,68 +299,29 @@ export function TideChart({
     );
   }
 
-  const tideHeights = tideSamples.map((s) => s.height);
-  const tideMinHeight = Math.min(...tideHeights);
-  const tideMaxHeight = Math.max(...tideHeights);
-  // Axes always start at 0 so bar/line heights read as true magnitudes
-  // rather than an exaggerated view of the data's own min-max spread.
-  const tideSpread = tideMaxHeight || 1;
+  const {
+    waveHeights,
+    windSpeeds,
+    tideMinHeight,
+    tideMaxHeight,
+    waveMinHeight,
+    waveMaxHeight,
+    windMinSpeed,
+    windMaxSpeed,
+    toTideXY,
+    tideGridLines,
+    tidePath,
+    tideAreaPath,
+    wavePath,
+    windPath,
+    plotWidth,
+    plotHeight,
+    totalMs,
+    floorY,
+    daylight,
+  } = geometry;
 
-  // Wave scaling: separate axis to show smaller wave heights clearly
-  const waveHeights = waveSamples.map((s) => s.height);
-  const waveMinHeight = waveHeights.length > 0 ? Math.min(...waveHeights) : 0;
-  const waveMaxHeight = waveHeights.length > 0 ? Math.max(...waveHeights) : 1;
-  const waveSpread = waveMaxHeight || 1;
-
-  // Wind scaling: different unit (mph) with typical range 0-40
-  const windSpeeds = windSamples.map((s) => s.speed);
-  const windMinSpeed = windSpeeds.length > 0 ? Math.min(...windSpeeds) : 0;
-  const windMaxSpeed = windSpeeds.length > 0 ? Math.max(...windSpeeds) : 1;
-  const windSpread = windMaxSpeed || 1;
-
-  const toTideXY = (time: Date, height: number) => {
-    const x = PADDING_LEFT + ((time.getTime() - start.getTime()) / totalMs) * plotWidth;
-    const y = PADDING_TOP + (1 - height / tideSpread) * plotHeight;
-    return { x, y };
-  };
-
-  const toWaveXY = (time: Date, height: number) => {
-    const x = PADDING_LEFT + ((time.getTime() - start.getTime()) / totalMs) * plotWidth;
-    const y = PADDING_TOP + (1 - height / waveSpread) * plotHeight;
-    return { x, y };
-  };
-
-  const toWindXY = (time: Date, speed: number) => {
-    const x = PADDING_LEFT + ((time.getTime() - start.getTime()) / totalMs) * plotWidth;
-    const y = PADDING_TOP + (1 - speed / windSpread) * plotHeight;
-    return { x, y };
-  };
-
-  const tideMidHeight = tideMaxHeight / 2;
-  const tideGridLines = [tideMaxHeight, tideMidHeight, 0].map((value) => ({
-    value,
-    y: toTideXY(start, value).y,
-  }));
-
-  const tidePoints = tideSamples.map((s) => toTideXY(s.time, s.height));
-  const tidePath = tidePoints.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
-  const floorY = PADDING_TOP + plotHeight;
-  const tideAreaPath = `${tidePath} L ${tidePoints[tidePoints.length - 1].x.toFixed(1)} ${floorY} L ${tidePoints[0].x.toFixed(1)} ${floorY} Z`;
-
-  const wavePoints = waveSamples.length > 0 ? waveSamples.map((s) => toWaveXY(s.time, s.height)) : [];
-  const wavePath =
-    wavePoints.length > 0
-      ? wavePoints.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ')
-      : '';
-
-  const smoothedWindSpeeds = movingAverage(
-    windSamples.map((s) => s.speed),
-    3,
-  );
-  const windPoints = windSamples.map((s, i) => toWindXY(s.time, smoothedWindSpeeds[i]));
-  const windPath = smoothPath(windPoints);
-
-  const currentX = PADDING_LEFT + ((now.getTime() - start.getTime()) / totalMs) * plotWidth;
+  const currentX = PADDING_LEFT + ((now.getTime() - startMs) / totalMs) * plotWidth;
   // Clamped separately from currentX (which stays unclamped so the "now"
   // line only ever draws when it's truly inside the window): a `now`
   // before the window means nothing's elapsed yet (no fade), and a `now`
@@ -258,17 +329,13 @@ export function TideChart({
   const pastFadeEndX = Math.min(Math.max(currentX, PADDING_LEFT), width - PADDING_X);
 
   const isScrubbing = scrubTime !== null;
-  const activeTime = scrubTime ?? new Date(Math.min(Math.max(now.getTime(), start.getTime()), end.getTime()));
+  const activeTime = scrubTime ?? new Date(Math.min(Math.max(now.getTime(), startMs), endMs));
   const activeTideHeight = series.heightAt(activeTime);
   const activeWaveHeight = waveSeries?.heightAt(activeTime) ?? null;
   const activeWindSpeed = windSeries?.speedAt(activeTime) ?? null;
   const activeTidePoint = activeTideHeight !== null ? toTideXY(activeTime, activeTideHeight) : null;
 
   const hourTicks = [startHour, Math.round((startHour + endHour) / 2), endHour];
-
-  // Shading for the hours outside sunrise–sunset, so the curve reads
-  // against when it's actually light on the pier.
-  const daylight = daylightBands({ series: daylightSeries, start, end, plotLeft: PADDING_LEFT, plotWidth });
 
   return (
     <View onLayout={onLayout}>
