@@ -27,6 +27,7 @@ import { TemperatureChart } from './src/components/TemperatureChart';
 import { TideChart } from './src/components/TideChart';
 import type { Fonts } from './src/fonts';
 import { useApiKey } from './src/hooks/useApiKey';
+import { useAppStateFocusManager } from './src/hooks/useAppStateFocusManager';
 import { useForecastData } from './src/hooks/useForecastData';
 import { useLocation } from './src/hooks/useLocation';
 import { type ThemeName, ThemeProvider, useTheme } from './src/hooks/useTheme';
@@ -71,6 +72,7 @@ const forecastWindowToggleTarget: Record<ForecastWindow, { icon: keyof typeof Io
 };
 
 function AppContent() {
+  useAppStateFocusManager();
   const { apiKey, saveKey, resetKey } = useApiKey();
   const { location, toggleLocation } = useLocation();
   useWidgetSync(apiKey, location);
