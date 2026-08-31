@@ -99,6 +99,16 @@ export function TideChart({
     const measured = evt.nativeEvent.layout.width;
     if (measured > 0 && Math.abs(measured - width) > 0.5) setWidth(measured);
   };
+  // The tooltip sizes itself to its own text (see its style) rather than a
+  // fixed box, so centering it needs its actual rendered width — measured
+  // via its own onLayout, since RN has no "give me my intrinsic size"
+  // outside of layout. Starts at TOOLTIP_WIDTH so the very first paint
+  // (before a layout pass has run) is still positioned sensibly.
+  const [tooltipWidth, setTooltipWidth] = useState(TOOLTIP_WIDTH);
+  const onTooltipLayout = (evt: LayoutChangeEvent) => {
+    const measured = evt.nativeEvent.layout.width;
+    if (measured > 0 && Math.abs(measured - tooltipWidth) > 0.5) setTooltipWidth(measured);
+  };
 
   const start = TideClock.londonDateAtHour(now, startHour);
   const end = TideClock.londonDateAtHour(now, endHour);
@@ -367,12 +377,13 @@ export function TideChart({
         {activeTideHeight !== null && activeTidePoint && (
           <View
             pointerEvents="none"
+            onLayout={onTooltipLayout}
             style={[
               styles.tooltip,
-              { left: Math.min(Math.max(activeTidePoint.x - TOOLTIP_WIDTH / 2, 0), width - TOOLTIP_WIDTH) },
+              { left: Math.min(Math.max(activeTidePoint.x - tooltipWidth / 2, 0), width - tooltipWidth) },
             ]}
           >
-            <Text style={styles.tooltipText} numberOfLines={2}>
+            <Text style={styles.tooltipText} numberOfLines={1}>
               {TideClock.format(activeTime, { hour: '2-digit', minute: '2-digit', hour12: false })} ·{' '}
               {activeTideHeight.toFixed(1)}m{activeWaveHeight !== null && ` / ${activeWaveHeight.toFixed(1)}w`}
               {activeWindSpeed !== null && ` / ${activeWindSpeed.toFixed(1)}s`}
@@ -441,8 +452,9 @@ function getStyles(colors: Colors, fonts: Fonts) {
     tooltip: {
       position: 'absolute',
       top: 0,
-      width: TOOLTIP_WIDTH,
-      alignItems: 'center',
+      // No fixed width — sized to its own (single-line) text, not a box
+      // wide enough for the longest possible reading.
+      alignSelf: 'flex-start',
       // Always a dark bubble regardless of theme, so its text (also always
       // light) has guaranteed contrast without needing its own theme variant.
       // Kept translucent and light-weight rather than a solid, bold pill —

@@ -61,6 +61,15 @@ export function TemperatureChart({
     const measured = evt.nativeEvent.layout.width;
     if (measured > 0 && Math.abs(measured - width) > 0.5) setWidth(measured);
   };
+  // See TideChart's identical comment: the tooltip sizes itself to its own
+  // text, so centering it needs its actual rendered width, measured via its
+  // own onLayout. Starts at TOOLTIP_WIDTH so the first paint (before a
+  // layout pass has run) is still positioned sensibly.
+  const [tooltipWidth, setTooltipWidth] = useState(TOOLTIP_WIDTH);
+  const onTooltipLayout = (evt: LayoutChangeEvent) => {
+    const measured = evt.nativeEvent.layout.width;
+    if (measured > 0 && Math.abs(measured - tooltipWidth) > 0.5) setTooltipWidth(measured);
+  };
 
   const start = TideClock.londonDateAtHour(now, startHour);
   const end = TideClock.londonDateAtHour(now, endHour);
@@ -305,12 +314,13 @@ export function TemperatureChart({
         {activeFeelsLike !== null && activePoint && (
           <View
             pointerEvents="none"
+            onLayout={onTooltipLayout}
             style={[
               styles.tooltip,
-              { left: Math.min(Math.max(activePoint.x - TOOLTIP_WIDTH / 2, 0), width - TOOLTIP_WIDTH) },
+              { left: Math.min(Math.max(activePoint.x - tooltipWidth / 2, 0), width - tooltipWidth) },
             ]}
           >
-            <Text style={styles.tooltipText} numberOfLines={2}>
+            <Text style={styles.tooltipText} numberOfLines={1}>
               {TideClock.format(activeTime, { hour: '2-digit', minute: '2-digit', hour12: false })} ·{' '}
               {Math.round(activeFeelsLike)}°{activeTemp !== null && ` / ${Math.round(activeTemp)}°r`}
               {activeSun !== null && ` / ${Math.round(activeSun)}W/m²`}
@@ -376,8 +386,9 @@ function getStyles(colors: Colors, fonts: Fonts) {
     tooltip: {
       position: 'absolute',
       top: 0,
-      width: TOOLTIP_WIDTH,
-      alignItems: 'center',
+      // No fixed width — sized to its own (single-line) text. See
+      // TideChart's identical tooltip for why.
+      alignSelf: 'flex-start',
       // Translucent and light-weight rather than a solid, bold pill — see
       // TideChart's identical tooltip for why.
       backgroundColor: 'rgba(0,0,0,0.55)',
