@@ -45,7 +45,8 @@ mac-widget/
   DesktopWidget/               macOS desktop widget (SwiftUI app + widget extension)
 docs/
   architecture.md              how the four clients fit together, what's duplicated
-  architecture/                typed Archify source + interactive HTML diagram
+  architecture/                typed Archify source + interactive HTML diagrams
+  decisions/                   architecture decision log (one file per decision)
 intent/                        AI-native SDLC artifacts (intent → spec → plan)
 ```
 
