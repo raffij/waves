@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { type LayoutChangeEvent, StyleSheet, Text, View } from 'react-native';
+import { useMemo, useRef, useState } from 'react';
+import { type LayoutChangeEvent, PanResponder, StyleSheet, Text, View } from 'react-native';
 import Svg, { Line, Rect } from 'react-native-svg';
 import type { Fonts } from '../fonts';
 import { useTheme } from '../hooks/useTheme';
@@ -16,15 +16,22 @@ interface Props {
   now: Date;
   /** Whether `now` is the real current moment vs. a same-hour projection onto another day (see App.tsx). */
   isToday?: boolean;
+  /** Shared scrub reading (dragged/tapped time), lifted to App.tsx so dragging any one chart moves the crosshair on all of them together. Null means "show the live/reference reading". */
+  scrubTime?: Date | null;
+  onScrub?: (time: Date | null) => void;
   startHour?: number;
   endHour?: number;
 }
 
 const DEFAULT_WIDTH = 320;
-const HEIGHT = 70;
+// 20px taller than the bars alone need, for the scrub tooltip — matches
+// TideChart/TemperatureChart's PADDING_TOP, just spread across a shorter chart.
+const HEIGHT = 90;
 const PADDING_X = 8;
-const PADDING_TOP = 6;
+const PADDING_TOP = 26;
 const PADDING_BOTTOM = 4;
+const TOOLTIP_WIDTH = 150;
+const HOUR_MS = 3_600_000;
 const BAR_GAP = 2;
 // Below this, the tallest bar in the window would be too short to see —
 // clamp the scale so a light drizzle hour still reads as a visible bar.
@@ -45,6 +52,8 @@ export function PrecipitationChart({
   daylightSeries,
   now,
   isToday = true,
+  scrubTime = null,
+  onScrub,
   startHour = DAY_WINDOW_START_HOUR,
   endHour = DAY_WINDOW_END_HOUR,
 }: Props) {
@@ -90,6 +99,46 @@ export function PrecipitationChart({
   // fade), a `now` past it means the whole window is behind us (fade it all).
   const pastFadeEndX = Math.min(Math.max(currentX, PADDING_X), width - PADDING_X);
 
+  // See TideChart's identical comment: PanResponder.create(...) only runs
+  // once, so its callbacks need refs to read the current width/start/end
+  // rather than closing over stale values from first mount. Reports through
+  // onScrub (state lifted to App.tsx) so dragging this chart moves the
+  // crosshair on the other charts too.
+  const widthRef = useRef(width);
+  widthRef.current = width;
+  const geometryRef = useRef({ start, end, plotWidth });
+  geometryRef.current = { start, end, plotWidth };
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: (evt) => {
+        const w = widthRef.current;
+        const { start, end, plotWidth } = geometryRef.current;
+        const x = Math.min(Math.max(evt.nativeEvent.locationX, PADDING_X), w - PADDING_X);
+        onScrub?.(new Date(start.getTime() + ((x - PADDING_X) / plotWidth) * (end.getTime() - start.getTime())));
+      },
+      onPanResponderMove: (evt) => {
+        const w = widthRef.current;
+        const { start, end, plotWidth } = geometryRef.current;
+        const x = Math.min(Math.max(evt.nativeEvent.locationX, PADDING_X), w - PADDING_X);
+        onScrub?.(new Date(start.getTime() + ((x - PADDING_X) / plotWidth) * (end.getTime() - start.getTime())));
+      },
+      onPanResponderTerminationRequest: () => false,
+      onShouldBlockNativeResponder: () => true,
+    }),
+  ).current;
+
+  const isScrubbing = scrubTime !== null;
+  const activeTime = scrubTime ?? new Date(Math.min(Math.max(now.getTime(), start.getTime()), end.getTime()));
+  const activeBarIndex =
+    bars.length > 0
+      ? Math.max(0, Math.min(bars.length - 1, Math.floor((activeTime.getTime() - start.getTime()) / HOUR_MS)))
+      : -1;
+  const activeMm = activeBarIndex >= 0 ? (bars[activeBarIndex].mm ?? 0) : null;
+  const activeX = PADDING_X + ((activeTime.getTime() - start.getTime()) / totalMs) * plotWidth;
+
   const hourTicks = [startHour, Math.round((startHour + endHour) / 2), endHour];
 
   // Same night shading as the tide chart, so a shower at dusk reads as one.
@@ -130,6 +179,7 @@ export function PrecipitationChart({
             const barCenterX = x + Math.max(barWidth, 1) / 2;
             const baseOpacity = mm > 0 ? 0.85 : 0.25;
             const opacity = isToday && barCenterX < pastFadeEndX ? baseOpacity * PAST_OPACITY_SCALE : baseOpacity;
+            const isActive = i === activeBarIndex;
             return (
               <Rect
                 key={bar.time.toISOString()}
@@ -139,11 +189,40 @@ export function PrecipitationChart({
                 height={barHeight}
                 rx={1.5}
                 fill={colors.precipitation}
-                opacity={opacity}
+                opacity={isActive ? Math.max(opacity, 0.85) : opacity}
+                stroke={isActive ? colors.textPrimary : 'none'}
+                strokeWidth={isActive ? 1.5 : 0}
               />
             );
           })}
+          {activeMm !== null && activeX >= PADDING_X && activeX <= width - PADDING_X && (
+            <Line
+              x1={activeX}
+              y1={PADDING_TOP}
+              x2={activeX}
+              y2={floorY}
+              stroke={colors.textSecondary}
+              strokeDasharray={isScrubbing ? undefined : '3,4'}
+              strokeWidth={isScrubbing ? 1.5 : 1}
+            />
+          )}
         </Svg>
+        {activeMm !== null && activeX >= PADDING_X && activeX <= width - PADDING_X && (
+          <View
+            pointerEvents="none"
+            style={[
+              styles.tooltip,
+              { left: Math.min(Math.max(activeX - TOOLTIP_WIDTH / 2, 0), width - TOOLTIP_WIDTH) },
+            ]}
+          >
+            <Text style={styles.tooltipText} numberOfLines={1}>
+              {TideClock.format(activeTime, { hour: '2-digit', minute: '2-digit', hour12: false })} ·{' '}
+              {activeMm > 0 ? `${activeMm.toFixed(1)}mm` : 'dry'}
+            </Text>
+          </View>
+        )}
+        {/* Plain overlay (not the SVG) receives touches, matching TideChart. */}
+        <View style={StyleSheet.absoluteFill} {...panResponder.panHandlers} />
       </View>
       <View style={styles.axisRow}>
         {hourTicks.map((h) => (
@@ -181,6 +260,18 @@ function getStyles(colors: Colors, fonts: Fonts) {
       marginTop: 4,
     },
     axisLabel: { color: colors.textSecondary, fontSize: 11, fontFamily: fonts.mono },
+    tooltip: {
+      position: 'absolute',
+      top: 0,
+      width: TOOLTIP_WIDTH,
+      alignItems: 'center',
+      // Always a dark bubble regardless of theme, matching TideChart/TemperatureChart.
+      backgroundColor: 'rgba(0,0,0,0.7)',
+      borderRadius: 8,
+      paddingVertical: 3,
+      paddingHorizontal: 6,
+    },
+    tooltipText: { color: '#f5faff', fontSize: 12, fontWeight: '600' },
     legendRow: {
       flexDirection: 'row',
       flexWrap: 'wrap',

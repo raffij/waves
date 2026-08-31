@@ -20,6 +20,9 @@ interface Props {
   now: Date;
   /** Whether `now` is the real current moment vs. a same-hour projection onto another day (see App.tsx). The past-hours fade only makes sense for today. */
   isToday?: boolean;
+  /** Shared scrub reading (dragged/tapped time), lifted to App.tsx so dragging any one chart moves the crosshair on all of them together. Null means "show the live/reference reading". */
+  scrubTime?: Date | null;
+  onScrub?: (time: Date | null) => void;
   startHour?: number;
   endHour?: number;
 }
@@ -84,6 +87,8 @@ export function TideChart({
   daylightSeries,
   now,
   isToday = true,
+  scrubTime = null,
+  onScrub,
   startHour = DAY_WINDOW_START_HOUR,
   endHour = DAY_WINDOW_END_HOUR,
 }: Props) {
@@ -109,35 +114,40 @@ export function TideChart({
     ? windSeries.samplesEvery(15, start, end).filter((s): s is { time: Date; speed: number } => s.speed !== null)
     : [];
 
-  const [scrubX, setScrubX] = useState<number | null>(null);
-
   const plotWidth = width - PADDING_LEFT - PADDING_X;
   const plotHeight = HEIGHT - PADDING_TOP - PADDING_BOTTOM;
   const totalMs = end.getTime() - start.getTime();
 
   // PanResponder.create(...) only runs once (useRef's initializer is
   // evaluated on mount only), so its callbacks would otherwise permanently
-  // close over that first render's `width` (still DEFAULT_WIDTH, before
-  // onLayout ever measured the real size). Route through a ref that's kept
-  // fresh every render instead, so the handlers always clamp against the
-  // current width rather than a stale one from mount.
+  // close over that first render's `width`/`start`/`end` (stale as soon as
+  // the layout is measured or a different day is selected). Route through
+  // refs that are kept fresh every render instead, so the handlers always
+  // convert against the current geometry rather than the one from mount.
   const widthRef = useRef(width);
   widthRef.current = width;
+  const geometryRef = useRef({ start, end, plotWidth });
+  geometryRef.current = { start, end, plotWidth };
 
   // The reading is sticky: a tap or drag sets it, and it stays put after
   // release so there's time to actually read it, rather than reverting to
-  // "now" the instant your finger lifts.
+  // "now" the instant your finger lifts. Lifted to App.tsx (via onScrub) so
+  // dragging this chart moves the crosshair on the other charts too.
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
       onPanResponderGrant: (evt) => {
         const w = widthRef.current;
-        setScrubX(Math.min(Math.max(evt.nativeEvent.locationX, PADDING_LEFT), w - PADDING_X));
+        const { start, end, plotWidth } = geometryRef.current;
+        const x = Math.min(Math.max(evt.nativeEvent.locationX, PADDING_LEFT), w - PADDING_X);
+        onScrub?.(new Date(start.getTime() + ((x - PADDING_LEFT) / plotWidth) * (end.getTime() - start.getTime())));
       },
       onPanResponderMove: (evt) => {
         const w = widthRef.current;
-        setScrubX(Math.min(Math.max(evt.nativeEvent.locationX, PADDING_LEFT), w - PADDING_X));
+        const { start, end, plotWidth } = geometryRef.current;
+        const x = Math.min(Math.max(evt.nativeEvent.locationX, PADDING_LEFT), w - PADDING_X);
+        onScrub?.(new Date(start.getTime() + ((x - PADDING_LEFT) / plotWidth) * (end.getTime() - start.getTime())));
       },
       // Without this, the parent ScrollView can (and does) steal the
       // gesture partway through a drag, freezing the reading wherever the
@@ -223,11 +233,8 @@ export function TideChart({
   // past it means the whole window is behind us (fade it all).
   const pastFadeEndX = Math.min(Math.max(currentX, PADDING_LEFT), width - PADDING_X);
 
-  const isScrubbing = scrubX !== null;
-  const activeTime =
-    scrubX !== null
-      ? new Date(start.getTime() + ((scrubX - PADDING_LEFT) / plotWidth) * totalMs)
-      : new Date(Math.min(Math.max(now.getTime(), start.getTime()), end.getTime()));
+  const isScrubbing = scrubTime !== null;
+  const activeTime = scrubTime ?? new Date(Math.min(Math.max(now.getTime(), start.getTime()), end.getTime()));
   const activeTideHeight = series.heightAt(activeTime);
   const activeWaveHeight = waveSeries?.heightAt(activeTime) ?? null;
   const activeWindSpeed = windSeries?.speedAt(activeTime) ?? null;

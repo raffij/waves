@@ -10,9 +10,13 @@ import type { WindSeries } from './WindSeries';
 // judgement — wind band, rain spell, what to wear — not a water-sports
 // one; tide is reported but never scored. Retune by editing these.
 //
-// The day is judged over the shared 06:00–20:00 window (see DayWindow),
-// the same span both charts plot, so the sentence, the clothing call and
-// the bars can never disagree about whether it rains.
+// The day is judged over the shared 06:00–20:00 window (see DayWindow), the
+// same span both charts plot, so the sentence, the clothing call and the
+// bars can never disagree about whether it rains — except that on today,
+// the sentence and clothing call both narrow that window to "now through
+// the end", so they describe what's still ahead rather than restating
+// hours that have already passed. A future or past day has no "now" to
+// narrow from, so both read the window whole.
 export const WET_HOUR_MM = 0.2; // hourly precip total above this counts as a "wet hour"
 // Rain intensity read off the wettest hour in the window: below DRIZZLE it's
 // drizzle, below HEAVY it's showery, at/above HEAVY it's heavy rain.
@@ -544,12 +548,20 @@ function buildOutlook(input: DayInsightsInput, slots: Slot[], tense: DayTense): 
 export function buildDayInsights(input: DayInsightsInput): DayInsights {
   const slots = windowSlots(input);
   const tense = dayTense(input.reference);
-  const shape = windShape(slots, input.windSeries);
+  // The headline sentence describes what's still ahead, not the whole day
+  // behind it too: on today it reads only the hours from now to the end of
+  // the window (the same cutoff the clothing call and rain clause already
+  // use). A future day has no "now" within it to cut off from, and a past
+  // day is already over, so both are read whole. `outlook` stays on the
+  // full window regardless (see its own comment) — it's about the day's
+  // shape, not just the remainder of it.
+  const summarySlots = tense === 'today' ? remainingSlots(input, slots) : slots;
+  const shape = windShape(summarySlots, input.windSeries);
   const rain = rainClause(input, input.precipitationSeries);
-  const sun = sunOver(slots, input.sunBrightnessSeries);
-  const feels = feelsOver(slots, input.temperatureSeries);
+  const sun = sunOver(summarySlots, input.sunBrightnessSeries);
+  const feels = feelsOver(summarySlots, input.temperatureSeries);
   const light = lightClause(input);
-  const aheadWind = windOver(remainingSlots(input, slots), input.windSeries);
+  const aheadWind = windOver(summarySlots, input.windSeries);
 
   const clauses: string[] = [];
   if (shape) clauses.push(windClause(shape));

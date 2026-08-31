@@ -71,6 +71,7 @@ function PreviewContent() {
   const styles = useMemo(() => getStyles(colors, fonts), [colors, fonts]);
   const data = useMemo(buildSyntheticDay, []);
   const [now, setNow] = useState(() => new Date());
+  const [scrubTime, setScrubTime] = useState<Date | null>(null);
 
   const insights = buildDayInsights({
     windSeries: data.windSeries,
@@ -102,7 +103,10 @@ function PreviewContent() {
             windTrend={data.windSeries.trend(now)}
             fetchedAt={now}
             dayLabel={null}
-            onPress={() => setNow(new Date())}
+            onPress={() => {
+              setNow(new Date());
+              setScrubTime(null);
+            }}
           />
 
           <View style={styles.section}>
@@ -117,6 +121,8 @@ function PreviewContent() {
               daylightSeries={data.daylightSeries}
               now={now}
               isToday
+              scrubTime={scrubTime}
+              onScrub={setScrubTime}
             />
           </View>
 
@@ -126,6 +132,8 @@ function PreviewContent() {
               daylightSeries={data.daylightSeries}
               now={now}
               isToday
+              scrubTime={scrubTime}
+              onScrub={setScrubTime}
             />
           </View>
 
@@ -136,6 +144,8 @@ function PreviewContent() {
               daylightSeries={data.daylightSeries}
               now={now}
               isToday
+              scrubTime={scrubTime}
+              onScrub={setScrubTime}
             />
           </View>
         </ScrollView>
