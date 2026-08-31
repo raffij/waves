@@ -57,7 +57,8 @@ export default function App() {
 
 const themeToggleTarget: Record<ThemeName, { icon: keyof typeof Ionicons.glyphMap; label: string }> = {
   dark: { icon: 'color-palette-outline', label: 'Poster mode' },
-  poster: { icon: 'moon-outline', label: 'Dark mode' },
+  poster: { icon: 'water-outline', label: 'Glass mode' },
+  glass: { icon: 'moon-outline', label: 'Dark mode' },
 };
 
 // Shows the target of the next tap, same as themeToggleTarget above.

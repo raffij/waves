@@ -56,6 +56,35 @@ export const darkColors: Colors = {
   night: 'rgba(0,0,0,0.38)',
 };
 
+// Bright, translucent panels over a pale sky-blue gradient — the "frosted
+// glass" look, standing apart from dark (deep, opaque) and poster (warm,
+// paper-flat) by how much the background shows through the cards rather
+// than by a different palette family.
+export const glassColors: Colors = {
+  background: '#eaf2fa',
+  backgroundGradientEnd: '#cfe3f5',
+  card: 'rgba(255,255,255,0.55)',
+  cardBorder: 'rgba(255,255,255,0.65)',
+  cardElevated: 'rgba(255,255,255,0.75)',
+  shadow: 'rgba(31,58,84,0.14)',
+  primary: '#2f8fe0',
+  secondary: '#5fc8f2',
+  onPrimary: '#ffffff',
+  textPrimary: '#16202c',
+  textSecondary: 'rgba(22,32,44,0.6)',
+  high: '#2f9e44',
+  low: '#2f8fe0',
+  rising: '#2f9e44',
+  falling: '#e0574a',
+  wind: '#e0a030',
+  precipitation: '#5b8def',
+  feelsLike: '#e0653f',
+  temperature: '#8f6fd1',
+  sun: '#f0b429',
+  cloud: '#8fa3b8',
+  night: 'rgba(22,32,44,0.16)',
+};
+
 export const posterColors: Colors = {
   background: '#f3e8d2',
   backgroundGradientEnd: '#e8dabb',
