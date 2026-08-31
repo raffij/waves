@@ -1,24 +1,17 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, type ReactNode, useContext, useEffect, useState } from 'react';
-import { defaultFonts, type Fonts, posterFonts } from '../fonts';
-import { type Colors, darkColors, lightColors, posterColors } from '../theme';
+import { appFonts, type Fonts } from '../fonts';
+import { type Colors, darkColors, posterColors } from '../theme';
 
-export type ThemeName = 'light' | 'dark' | 'poster';
+export type ThemeName = 'dark' | 'poster';
 
-const THEME_CYCLE: ThemeName[] = ['light', 'dark', 'poster'];
+const THEME_CYCLE: ThemeName[] = ['dark', 'poster'];
 
 const STORAGE_KEY = 'wave-hastings-theme';
 
 const colorsByTheme: Record<ThemeName, Colors> = {
-  light: lightColors,
   dark: darkColors,
   poster: posterColors,
-};
-
-const fontsByTheme: Record<ThemeName, Fonts> = {
-  light: defaultFonts,
-  dark: defaultFonts,
-  poster: posterFonts,
 };
 
 interface ThemeContextValue {
@@ -48,9 +41,12 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   };
 
   const colors = colorsByTheme[themeName];
-  const fonts = fontsByTheme[themeName];
 
-  return <ThemeContext.Provider value={{ themeName, colors, fonts, toggleTheme }}>{children}</ThemeContext.Provider>;
+  return (
+    <ThemeContext.Provider value={{ themeName, colors, fonts: appFonts, toggleTheme }}>
+      {children}
+    </ThemeContext.Provider>
+  );
 }
 
 export function useTheme(): ThemeContextValue {

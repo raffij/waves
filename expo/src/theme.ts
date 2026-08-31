@@ -53,30 +53,6 @@ export const darkColors: Colors = {
   night: 'rgba(0,0,0,0.38)',
 };
 
-export const lightColors: Colors = {
-  background: '#f4f8fc',
-  backgroundGradientEnd: '#dce8f5',
-  card: '#ffffff',
-  cardBorder: 'rgba(3,18,43,0.08)',
-  cardElevated: '#ffffff',
-  shadow: 'rgba(15,35,60,0.12)',
-  primary: '#0284c7',
-  secondary: '#0ea5e9',
-  onPrimary: '#f4f8fc',
-  textPrimary: '#0b1e33',
-  textSecondary: 'rgba(11,30,51,0.6)',
-  high: '#15803d',
-  low: '#0284c7',
-  rising: '#15803d',
-  falling: '#dc2626',
-  wind: '#c2650a',
-  precipitation: '#3457d5',
-  feelsLike: '#ea580c',
-  temperature: '#9333ea',
-  sun: '#f59e0b',
-  night: 'rgba(11,30,51,0.10)',
-};
-
 export const posterColors: Colors = {
   background: '#f3e8d2',
   backgroundGradientEnd: '#e8dabb',

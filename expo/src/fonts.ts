@@ -7,10 +7,11 @@ export interface Fonts {
   monoBold?: string;
 }
 
-// undefined fields fall back to the system font, so light/dark are unaffected.
-export const defaultFonts: Fonts = {};
-
-export const posterFonts: Fonts = {
+// One typography for the whole app, used by every theme — themes vary only
+// by color (see theme.ts), not by font. Originally the poster theme's own
+// look; kept as the app's typography everywhere since it reads more
+// clearly than the system font it replaced.
+export const appFonts: Fonts = {
   display: 'Anton_400Regular',
   mono: 'JetBrainsMono_400Regular',
   monoBold: 'JetBrainsMono_700Bold',
