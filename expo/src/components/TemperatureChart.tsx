@@ -102,24 +102,31 @@ export function TemperatureChart({
   const geometryRef = useRef({ start, end, plotWidth });
   geometryRef.current = { start, end, plotWidth };
 
+  // See TideChart's identical comment: a touch on the chart could just as
+  // easily be the start of a vertical scroll, so the gesture is only
+  // claimed (and the ScrollView only blocked/refused a mid-gesture
+  // handoff) once it's clearly more horizontal than vertical.
+  const isHorizontal = (g: { dx: number; dy: number }) => Math.abs(g.dx) > Math.abs(g.dy);
+
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_evt, gesture) => isHorizontal(gesture),
       onPanResponderGrant: (evt) => {
         const w = widthRef.current;
         const { start, end, plotWidth } = geometryRef.current;
         const x = Math.min(Math.max(evt.nativeEvent.locationX, PADDING_LEFT), w - PADDING_X);
         onScrub?.(new Date(start.getTime() + ((x - PADDING_LEFT) / plotWidth) * (end.getTime() - start.getTime())));
       },
-      onPanResponderMove: (evt) => {
+      onPanResponderMove: (evt, gesture) => {
+        if (!isHorizontal(gesture)) return;
         const w = widthRef.current;
         const { start, end, plotWidth } = geometryRef.current;
         const x = Math.min(Math.max(evt.nativeEvent.locationX, PADDING_LEFT), w - PADDING_X);
         onScrub?.(new Date(start.getTime() + ((x - PADDING_LEFT) / plotWidth) * (end.getTime() - start.getTime())));
       },
-      onPanResponderTerminationRequest: () => false,
-      onShouldBlockNativeResponder: () => true,
+      onPanResponderTerminationRequest: (_evt, gesture) => !isHorizontal(gesture),
+      onShouldBlockNativeResponder: (_evt, gesture) => isHorizontal(gesture),
     }),
   ).current;
 

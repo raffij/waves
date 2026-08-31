@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { CurrentLevelCard } from './src/components/CurrentLevelCard';
 import { DayInsights } from './src/components/DayInsights';
-import { type ForecastDetail, ForecastList } from './src/components/ForecastList';
+import { type ForecastDetail, ForecastList, type ForecastWindow } from './src/components/ForecastList';
 import { PrecipitationChart } from './src/components/PrecipitationChart';
 import { TemperatureChart } from './src/components/TemperatureChart';
 import { TideChart } from './src/components/TideChart';
@@ -74,10 +74,14 @@ function buildSyntheticForecast() {
     }
 
     extremes.push(
-      { localTime: `${dateKey}T04:00`, localDate: dateKey, height: 4.2 + dayOffset * 0.05, type: 'high' },
+      // Deliberately mixed — the overnight high/low are the day's biggest
+      // swing, the daytime pair more modest — so the forecast list's
+      // daytime/whole-day window toggle has something visible to show
+      // rather than both windows landing on the same overall figures.
+      { localTime: `${dateKey}T04:00`, localDate: dateKey, height: 4.6 + dayOffset * 0.05, type: 'high' },
       { localTime: `${dateKey}T10:15`, localDate: dateKey, height: 0.6 + dayOffset * 0.02, type: 'low' },
       { localTime: `${dateKey}T16:24`, localDate: dateKey, height: 4.3 + dayOffset * 0.05, type: 'high' },
-      { localTime: `${dateKey}T22:36`, localDate: dateKey, height: 0.7 + dayOffset * 0.02, type: 'low' },
+      { localTime: `${dateKey}T22:36`, localDate: dateKey, height: 0.3 + dayOffset * 0.02, type: 'low' },
     );
 
     dayKeys.push(dateKey);
@@ -108,6 +112,7 @@ function PreviewContent() {
   // here to eyeball ForecastList itself across days/themes.
   const [selectedDateKey, setSelectedDateKey] = useState(TideClock.dateKey(now));
   const [forecastDetail, setForecastDetail] = useState<ForecastDetail>('stats');
+  const [forecastWindow, setForecastWindow] = useState<ForecastWindow>('daytime');
 
   const yesterday = data.forecast.yesterday(now);
   const forecastDays = data.forecast.days(now, 5);
@@ -137,6 +142,12 @@ function PreviewContent() {
               onPress={() => setForecastDetail((mode) => (mode === 'stats' ? 'summary' : 'stats'))}
             >
               <Text style={styles.themeButtonText}>{forecastDetail}</Text>
+            </Pressable>
+            <Pressable
+              style={styles.themeButton}
+              onPress={() => setForecastWindow((mode) => (mode === 'daytime' ? 'wholeDay' : 'daytime'))}
+            >
+              <Text style={styles.themeButtonText}>{forecastWindow}</Text>
             </Pressable>
           </View>
 
@@ -202,6 +213,7 @@ function PreviewContent() {
               onSelectDay={setSelectedDateKey}
               now={now}
               detail={forecastDetail}
+              window={forecastWindow}
               windSeries={data.windSeries}
               precipitationSeries={data.precipitationSeries}
               temperatureSeries={data.temperatureSeries}

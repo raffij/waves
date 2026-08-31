@@ -21,7 +21,7 @@ import {
 import { ApiKeyPrompt } from './src/components/ApiKeyPrompt';
 import { CurrentLevelCard } from './src/components/CurrentLevelCard';
 import { DayInsights } from './src/components/DayInsights';
-import { type ForecastDetail, ForecastList } from './src/components/ForecastList';
+import { type ForecastDetail, ForecastList, type ForecastWindow } from './src/components/ForecastList';
 import { PrecipitationChart } from './src/components/PrecipitationChart';
 import { TemperatureChart } from './src/components/TemperatureChart';
 import { TideChart } from './src/components/TideChart';
@@ -65,6 +65,11 @@ const forecastDetailToggleTarget: Record<ForecastDetail, { icon: keyof typeof Io
   summary: { icon: 'stats-chart-outline', label: 'Forecast detail' },
 };
 
+const forecastWindowToggleTarget: Record<ForecastWindow, { icon: keyof typeof Ionicons.glyphMap; label: string }> = {
+  daytime: { icon: 'time-outline', label: 'Whole day' },
+  wholeDay: { icon: 'sunny-outline', label: 'Daytime only' },
+};
+
 function AppContent() {
   const { apiKey, saveKey, resetKey } = useApiKey();
   const { location, toggleLocation } = useLocation();
@@ -100,6 +105,11 @@ function AppContent() {
   // one consistent shape as you scan down it.
   const [forecastDetail, setForecastDetail] = useState<ForecastDetail>('stats');
   const toggleForecastDetail = () => setForecastDetail((mode) => (mode === 'stats' ? 'summary' : 'stats'));
+  // Defaults to daytime hours only (06:00–20:00) — a day's tide/wind/sun
+  // figures covering 3am aren't useful for deciding what to do with the
+  // day, just for reading what happened while you were asleep.
+  const [forecastWindow, setForecastWindow] = useState<ForecastWindow>('daytime');
+  const toggleForecastWindow = () => setForecastWindow((mode) => (mode === 'daytime' ? 'wholeDay' : 'daytime'));
   const { colors, fonts, themeName, toggleTheme } = useTheme();
   const styles = useMemo(() => getStyles(colors, fonts), [colors, fonts]);
   const statusBarStyle = themeName === 'dark' ? 'light-content' : 'dark-content';
@@ -243,6 +253,7 @@ function AppContent() {
               onSelectDay={selectDay}
               now={now}
               detail={forecastDetail}
+              window={forecastWindow}
               windSeries={windSeries}
               precipitationSeries={precipitationSeries}
               temperatureSeries={temperatureSeries}
@@ -282,6 +293,13 @@ function AppContent() {
               icon={forecastDetailToggleTarget[forecastDetail].icon}
               label={forecastDetailToggleTarget[forecastDetail].label}
               onPress={toggleForecastDetail}
+              colors={colors}
+              styles={styles}
+            />
+            <FooterButton
+              icon={forecastWindowToggleTarget[forecastWindow].icon}
+              label={forecastWindowToggleTarget[forecastWindow].label}
+              onPress={toggleForecastWindow}
               colors={colors}
               styles={styles}
             />
