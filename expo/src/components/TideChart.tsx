@@ -445,12 +445,14 @@ function getStyles(colors: Colors, fonts: Fonts) {
       alignItems: 'center',
       // Always a dark bubble regardless of theme, so its text (also always
       // light) has guaranteed contrast without needing its own theme variant.
-      backgroundColor: 'rgba(0,0,0,0.7)',
+      // Kept translucent and light-weight rather than a solid, bold pill —
+      // it's a passing reading, not something that should shout over the chart.
+      backgroundColor: 'rgba(0,0,0,0.55)',
       borderRadius: 8,
       paddingVertical: 3,
       paddingHorizontal: 6,
     },
-    tooltipText: { color: '#f5faff', fontSize: 12, fontWeight: '600' },
+    tooltipText: { color: '#f5faff', fontSize: 12, fontWeight: '500' },
     legendRow: {
       flexDirection: 'row',
       flexWrap: 'wrap',
