@@ -34,6 +34,10 @@ export const WIND_BAND_WINDY_MPH = 24;
 // overcast.
 export const SUN_BAND_HAZY_WM2 = 120;
 export const SUN_BAND_SUNNY_WM2 = 350;
+// A high-summer clear-sky midday UK reading peaks around 700-800 W/m²; this
+// flags the top of that range as genuinely intense rather than lumping it
+// in with an ordinary sunny spell.
+export const SUN_BAND_STRONG_WM2 = 600;
 // Cloud cover (%) at the clearest hour in the window/segment. Whichever of
 // cloud cover and brightness reads cloudier wins the final band — see
 // sunBandFor.
@@ -398,20 +402,40 @@ function rainTrendClause(slots: Slot[], precip: PrecipitationSeries | null, tens
 
 // --- sun ---------------------------------------------------------------------
 
-export type SunBand = 'overcast' | 'hazy' | 'sunny';
-const SUN_BAND_RANK: Record<SunBand, number> = { overcast: 0, hazy: 1, sunny: 2 };
+// `strong` sits above `sunny` — genuinely intense sun (high-summer clear
+// midday, the kind that wants sunscreen), not just "brighter than hazy".
+// Cloud cover has no opinion above `sunny` (a clear reading just means
+// nothing is holding brightness back, not that today's specific peak is
+// unusually strong) — see the `strong`→`sunny` collapse in sunBandFor below.
+export type SunBand = 'overcast' | 'hazy' | 'sunny' | 'strong';
+const SUN_BAND_RANK: Record<SunBand, number> = { overcast: 0, hazy: 1, sunny: 2, strong: 3 };
+// The 3-tier band cloud cover can actually speak to — `strong` collapses to
+// `sunny` for the comparison in sunBandFor, since cloud % alone can't tell
+// "clear" from "clear and unusually intense".
+const CLOUD_COMPARABLE_BAND: Record<SunBand, 'overcast' | 'hazy' | 'sunny'> = {
+  overcast: 'overcast',
+  hazy: 'hazy',
+  sunny: 'sunny',
+  strong: 'sunny',
+};
 // Same band word, tensed for the summary's main clause list — "was" for a
 // day that's over, "likely" for one that hasn't happened yet, and today's
 // bare noun phrase (a live read needs no tense marker of its own).
 const SUN_WORD: Record<DayTense, Record<SunBand, string>> = {
-  past: { overcast: 'stayed overcast', hazy: 'had hazy sun', sunny: 'had sunny spells' },
-  today: { overcast: 'overcast', hazy: 'hazy sun', sunny: 'sunny spells' },
-  future: { overcast: 'likely overcast', hazy: 'hazy sun likely', sunny: 'sunny spells likely' },
+  past: { overcast: 'stayed overcast', hazy: 'had hazy sun', sunny: 'had sunny spells', strong: 'had strong sun' },
+  today: { overcast: 'overcast', hazy: 'hazy sun', sunny: 'sunny spells', strong: 'strong sun' },
+  future: {
+    overcast: 'likely overcast',
+    hazy: 'hazy sun likely',
+    sunny: 'sunny spells likely',
+    strong: 'strong sun likely',
+  },
 };
 const SUN_ALL_DAY_PHRASE: Record<SunBand, string> = {
   overcast: 'overcast all day',
   hazy: 'hazy sun most of the day',
   sunny: 'sunny spells through the day',
+  strong: 'strong sun through the day',
 };
 
 // Brightness and cloud cover each vote for a band; whichever reads cloudier
@@ -420,7 +444,9 @@ const SUN_ALL_DAY_PHRASE: Record<SunBand, string> = {
 // not real sun (brightness alone says sunny, cloud cover corrects it to
 // overcast) — and a low cloud-cover reading before sunrise/after sunset is
 // just dark, not sunny (cloud cover alone says sunny, brightness corrects it
-// to overcast). Either signal missing, the other decides alone.
+// to overcast). Either signal missing, the other decides alone. Cloud cover
+// only ever demotes, never promotes past `sunny` — a clear reading can't
+// tell "strong" from merely "sunny", only brightness can.
 export function sunBandFor(peakWm2: number | null, minCloudPct: number | null): SunBand {
   const brightBand: SunBand | null =
     peakWm2 === null
@@ -429,7 +455,9 @@ export function sunBandFor(peakWm2: number | null, minCloudPct: number | null): 
         ? 'overcast'
         : peakWm2 < SUN_BAND_SUNNY_WM2
           ? 'hazy'
-          : 'sunny';
+          : peakWm2 < SUN_BAND_STRONG_WM2
+            ? 'sunny'
+            : 'strong';
   const cloudBand: SunBand | null =
     minCloudPct === null
       ? null
@@ -440,7 +468,7 @@ export function sunBandFor(peakWm2: number | null, minCloudPct: number | null): 
           : 'hazy';
   if (brightBand === null) return cloudBand ?? 'overcast';
   if (cloudBand === null) return brightBand;
-  return SUN_BAND_RANK[cloudBand] < SUN_BAND_RANK[brightBand] ? cloudBand : brightBand;
+  return SUN_BAND_RANK[cloudBand] < SUN_BAND_RANK[CLOUD_COMPARABLE_BAND[brightBand]] ? cloudBand : brightBand;
 }
 
 interface SunReading {

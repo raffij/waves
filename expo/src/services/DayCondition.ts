@@ -7,7 +7,15 @@ import { TideClock } from './TideClock';
 
 export type DayCondition = 'rain' | 'sunny' | 'hazy' | 'overcast';
 
-const CONDITION_FROM_SUN_BAND: Record<SunBand, DayCondition> = { overcast: 'overcast', hazy: 'hazy', sunny: 'sunny' };
+// The day-tile glyph set doesn't distinguish "strong" from an ordinary
+// sunny spell — that nuance belongs to the worded sentence, not a single
+// icon (see the file comment on dayCondition below).
+const CONDITION_FROM_SUN_BAND: Record<SunBand, DayCondition> = {
+  overcast: 'overcast',
+  hazy: 'hazy',
+  sunny: 'sunny',
+  strong: 'sunny',
+};
 
 export interface DayConditionHours {
   startHour: number;
