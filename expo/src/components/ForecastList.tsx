@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { type LayoutChangeEvent, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import type { Fonts } from '../fonts';
 import { useTheme } from '../hooks/useTheme';
 import type { ForecastDay } from '../services/TideForecast';
 import type { Colors } from '../theme';
@@ -76,8 +77,8 @@ function DayTile({
 }
 
 export function ForecastList({ yesterday, days, selectedDateKey, onSelectDay }: Props) {
-  const { colors } = useTheme();
-  const styles = useMemo(() => getStyles(colors), [colors]);
+  const { colors, fonts } = useTheme();
+  const styles = useMemo(() => getStyles(colors, fonts), [colors, fonts]);
   const [width, setWidth] = useState(DEFAULT_WIDTH);
   const onLayout = (evt: LayoutChangeEvent) => {
     const measured = evt.nativeEvent.layout.width;
@@ -106,7 +107,7 @@ export function ForecastList({ yesterday, days, selectedDateKey, onSelectDay }: 
   );
 }
 
-function getStyles(colors: Colors) {
+function getStyles(colors: Colors, fonts: Fonts) {
   return StyleSheet.create({
     grid: { flexDirection: 'row', gap: GAP },
     tile: {
@@ -128,9 +129,10 @@ function getStyles(colors: Colors) {
       fontWeight: '600',
       lineHeight: 13,
       textAlign: 'center',
+      fontFamily: fonts.mono,
     },
     dayLabelSelected: { color: colors.primary },
     extremes: { alignItems: 'center', gap: 1, marginTop: 4 },
-    extremeText: { fontSize: 12, fontWeight: '700', fontVariant: ['tabular-nums'] },
+    extremeText: { fontSize: 12, fontWeight: '700', fontVariant: ['tabular-nums'], fontFamily: fonts.monoBold },
   });
 }

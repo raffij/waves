@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import type { Fonts } from '../fonts';
 import { useTheme } from '../hooks/useTheme';
 import type { Colors } from '../theme';
 
@@ -9,8 +10,8 @@ interface Props {
 
 export function ApiKeyPrompt({ onSubmit }: Props) {
   const [value, setValue] = useState('');
-  const { colors } = useTheme();
-  const styles = useMemo(() => getStyles(colors), [colors]);
+  const { colors, fonts } = useTheme();
+  const styles = useMemo(() => getStyles(colors, fonts), [colors, fonts]);
 
   return (
     <View style={styles.container}>
@@ -41,7 +42,7 @@ export function ApiKeyPrompt({ onSubmit }: Props) {
   );
 }
 
-function getStyles(colors: Colors) {
+function getStyles(colors: Colors, fonts: Fonts) {
   return StyleSheet.create({
     container: {
       flex: 1,
@@ -51,7 +52,14 @@ function getStyles(colors: Colors) {
       alignSelf: 'center',
       paddingHorizontal: 20,
     },
-    title: { color: colors.textPrimary, fontSize: 22, fontWeight: '800', letterSpacing: -0.3, marginBottom: 8 },
+    title: {
+      color: colors.textPrimary,
+      fontSize: 22,
+      fontWeight: '800',
+      letterSpacing: -0.3,
+      marginBottom: 8,
+      fontFamily: fonts.display,
+    },
     body: { color: colors.textSecondary, fontSize: 14, lineHeight: 20, marginBottom: 20 },
     input: {
       backgroundColor: colors.card,

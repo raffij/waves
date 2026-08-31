@@ -1,4 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Anton_400Regular, useFonts as useAntonFonts } from '@expo-google-fonts/anton';
+import {
+  JetBrainsMono_400Regular,
+  JetBrainsMono_700Bold,
+  useFonts as useJetBrainsMonoFonts,
+} from '@expo-google-fonts/jetbrains-mono';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import {
@@ -18,10 +24,11 @@ import { DayInsights } from './src/components/DayInsights';
 import { ForecastList } from './src/components/ForecastList';
 import { PrecipitationChart } from './src/components/PrecipitationChart';
 import { TideChart } from './src/components/TideChart';
+import type { Fonts } from './src/fonts';
 import { useApiKey } from './src/hooks/useApiKey';
 import { useForecastData } from './src/hooks/useForecastData';
 import { useLocation } from './src/hooks/useLocation';
-import { ThemeProvider, useTheme } from './src/hooks/useTheme';
+import { type ThemeName, ThemeProvider, useTheme } from './src/hooks/useTheme';
 import { useWidgetSync } from './src/hooks/useWidgetSync';
 import { buildDayInsights } from './src/services/DayInsights';
 import { TideClock } from './src/services/TideClock';
@@ -46,6 +53,12 @@ export default function App() {
   );
 }
 
+const themeToggleTarget: Record<ThemeName, { icon: keyof typeof Ionicons.glyphMap; label: string }> = {
+  light: { icon: 'moon-outline', label: 'Dark mode' },
+  dark: { icon: 'color-palette-outline', label: 'Poster mode' },
+  poster: { icon: 'sunny-outline', label: 'Light mode' },
+};
+
 function AppContent() {
   const { apiKey, saveKey, resetKey } = useApiKey();
   const { location, toggleLocation } = useLocation();
@@ -63,11 +76,14 @@ function AppContent() {
     refresh,
   } = useForecastData(apiKey, location);
   const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
-  const { colors, themeName, toggleTheme } = useTheme();
-  const styles = useMemo(() => getStyles(colors), [colors]);
+  const { colors, fonts, themeName, toggleTheme } = useTheme();
+  const styles = useMemo(() => getStyles(colors, fonts), [colors, fonts]);
   const statusBarStyle = themeName === 'dark' ? 'light-content' : 'dark-content';
+  const [antonLoaded] = useAntonFonts({ Anton_400Regular });
+  const [jetBrainsMonoLoaded] = useJetBrainsMonoFonts({ JetBrainsMono_400Regular, JetBrainsMono_700Bold });
+  const fontsLoaded = antonLoaded && jetBrainsMonoLoaded;
 
-  if (apiKey === undefined || location === undefined) {
+  if (apiKey === undefined || location === undefined || !fontsLoaded) {
     return (
       <View style={styles.loadingState}>
         <ActivityIndicator color={colors.primary} />
@@ -204,8 +220,8 @@ function AppContent() {
               styles={styles}
             />
             <FooterButton
-              icon={themeName === 'dark' ? 'sunny-outline' : 'moon-outline'}
-              label={themeName === 'dark' ? 'Light mode' : 'Dark mode'}
+              icon={themeToggleTarget[themeName].icon}
+              label={themeToggleTarget[themeName].label}
               onPress={toggleTheme}
               colors={colors}
               styles={styles}
@@ -247,7 +263,7 @@ function FooterButton({
   );
 }
 
-function getStyles(colors: Colors) {
+function getStyles(colors: Colors, fonts: Fonts) {
   return StyleSheet.create({
     flex: { flex: 1 },
     screen: { flex: 1, backgroundColor: colors.background },
@@ -270,7 +286,7 @@ function getStyles(colors: Colors) {
       minHeight: 44,
     },
     locationRowPressed: { opacity: 0.5 },
-    locationText: { color: colors.textSecondary, fontSize: 11 },
+    locationText: { color: colors.textSecondary, fontSize: 11, fontFamily: fonts.mono },
     error: { color: colors.falling, marginTop: 12, textAlign: 'center' },
     footer: { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: 4, marginTop: 4 },
     footerButton: {
@@ -282,6 +298,6 @@ function getStyles(colors: Colors) {
       borderRadius: 8,
     },
     footerButtonPressed: { opacity: 0.5 },
-    footerButtonText: { color: colors.textSecondary, fontSize: 12 },
+    footerButtonText: { color: colors.textSecondary, fontSize: 12, fontFamily: fonts.mono },
   });
 }
