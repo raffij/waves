@@ -23,6 +23,7 @@ import { CurrentLevelCard } from './src/components/CurrentLevelCard';
 import { DayInsights } from './src/components/DayInsights';
 import { ForecastList } from './src/components/ForecastList';
 import { PrecipitationChart } from './src/components/PrecipitationChart';
+import { TemperatureChart } from './src/components/TemperatureChart';
 import { TideChart } from './src/components/TideChart';
 import type { Fonts } from './src/fonts';
 import { useApiKey } from './src/hooks/useApiKey';
@@ -70,6 +71,8 @@ function AppContent() {
     windSeries,
     precipitationSeries,
     daylightSeries,
+    temperatureSeries,
+    sunBrightnessSeries,
     fetchedAt,
     isFetching,
     error,
@@ -181,6 +184,18 @@ function AppContent() {
             <View style={styles.section}>
               <PrecipitationChart
                 series={precipitationSeries}
+                daylightSeries={daylightSeries}
+                now={referenceDate}
+                isToday={isToday}
+              />
+            </View>
+          )}
+
+          {temperatureSeries && (
+            <View style={styles.section}>
+              <TemperatureChart
+                series={temperatureSeries}
+                sunBrightnessSeries={sunBrightnessSeries}
                 daylightSeries={daylightSeries}
                 now={referenceDate}
                 isToday={isToday}

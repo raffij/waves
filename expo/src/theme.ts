@@ -19,6 +19,12 @@ export interface Colors {
   falling: string;
   wind: string;
   precipitation: string;
+  /** "Feels like" apparent temperature — the primary line on the temperature chart, since it's the actionable one. */
+  feelsLike: string;
+  /** Real (measured) air temperature — a secondary line alongside feelsLike. */
+  temperature: string;
+  /** Sun brightness (solar radiation) fill on the temperature chart. */
+  sun: string;
   /** Overlay shading the hours before sunrise / after sunset on the charts. Always darkens, never lightens. */
   night: string;
 }
@@ -41,6 +47,9 @@ export const darkColors: Colors = {
   falling: '#ff8a80',
   wind: '#ffb86c',
   precipitation: '#7aa2ff',
+  feelsLike: '#ff8a65',
+  temperature: '#c792ea',
+  sun: '#ffd54f',
   night: 'rgba(0,0,0,0.38)',
 };
 
@@ -62,6 +71,9 @@ export const lightColors: Colors = {
   falling: '#dc2626',
   wind: '#c2650a',
   precipitation: '#3457d5',
+  feelsLike: '#ea580c',
+  temperature: '#9333ea',
+  sun: '#f59e0b',
   night: 'rgba(11,30,51,0.10)',
 };
 
@@ -83,6 +95,9 @@ export const posterColors: Colors = {
   falling: '#c0432c',
   wind: '#c98a1f',
   precipitation: '#4a6fa5',
+  feelsLike: '#c1440e',
+  temperature: '#6a4c93',
+  sun: '#d9a441',
   night: 'rgba(28,43,57,0.14)',
 };
 
