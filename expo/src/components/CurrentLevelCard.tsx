@@ -1,6 +1,6 @@
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Fonts } from '../fonts';
 import { useTheme } from '../hooks/useTheme';
 import type { CurrentLevel, Trend } from '../services/TideSeries';
@@ -15,6 +15,8 @@ interface Props {
   fetchedAt: Date | null;
   /** Set when viewing a non-live day (e.g. "Tomorrow"), shown in place of the "Updated" timestamp. */
   dayLabel?: string | null;
+  /** Jumps back to today/now — the card doubles as a "back to live" control once another day is selected. */
+  onPress?: () => void;
 }
 
 const trendIcon: Record<Trend, keyof typeof Ionicons.glyphMap> = {
@@ -77,7 +79,16 @@ function Stat({
   );
 }
 
-export function CurrentLevelCard({ current, waveHeight, waveTrend, windSpeed, windTrend, fetchedAt, dayLabel }: Props) {
+export function CurrentLevelCard({
+  current,
+  waveHeight,
+  waveTrend,
+  windSpeed,
+  windTrend,
+  fetchedAt,
+  dayLabel,
+  onPress,
+}: Props) {
   const { colors, fonts } = useTheme();
   const styles = useMemo(() => getStyles(colors, fonts), [colors, fonts]);
 
@@ -86,7 +97,11 @@ export function CurrentLevelCard({ current, waveHeight, waveTrend, windSpeed, wi
     : null;
 
   return (
-    <View style={styles.card}>
+    <Pressable
+      style={({ pressed }) => [styles.card, pressed && onPress && styles.cardPressed]}
+      onPress={onPress}
+      disabled={!onPress}
+    >
       <View style={styles.topRow}>
         <Text style={styles.title}>Current conditions</Text>
         {dayLabel ? (
@@ -131,7 +146,7 @@ export function CurrentLevelCard({ current, waveHeight, waveTrend, windSpeed, wi
           styles={styles}
         />
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -140,6 +155,7 @@ type Styles = ReturnType<typeof getStyles>;
 function getStyles(colors: Colors, fonts: Fonts) {
   return StyleSheet.create({
     card: {},
+    cardPressed: { opacity: 0.6 },
     topRow: {
       flexDirection: 'row',
       alignItems: 'center',
