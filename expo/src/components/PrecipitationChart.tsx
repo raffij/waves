@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { type LayoutChangeEvent, StyleSheet, Text, View } from 'react-native';
 import Svg, { Line, Rect } from 'react-native-svg';
+import type { Fonts } from '../fonts';
 import { useTheme } from '../hooks/useTheme';
 import type { DaylightSeries } from '../services/DaylightSeries';
 import { DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR } from '../services/DayWindow';
@@ -47,8 +48,8 @@ export function PrecipitationChart({
   startHour = DAY_WINDOW_START_HOUR,
   endHour = DAY_WINDOW_END_HOUR,
 }: Props) {
-  const { colors } = useTheme();
-  const styles = useMemo(() => getStyles(colors), [colors]);
+  const { colors, fonts } = useTheme();
+  const styles = useMemo(() => getStyles(colors, fonts), [colors, fonts]);
   const [width, setWidth] = useState(DEFAULT_WIDTH);
   const onLayout = (evt: LayoutChangeEvent) => {
     const measured = evt.nativeEvent.layout.width;
@@ -169,7 +170,7 @@ export function PrecipitationChart({
   );
 }
 
-function getStyles(colors: Colors) {
+function getStyles(colors: Colors, fonts: Fonts) {
   return StyleSheet.create({
     chartArea: { position: 'relative' },
     axisRow: {
@@ -179,7 +180,7 @@ function getStyles(colors: Colors) {
       paddingRight: PADDING_X,
       marginTop: 4,
     },
-    axisLabel: { color: colors.textSecondary, fontSize: 11 },
+    axisLabel: { color: colors.textSecondary, fontSize: 11, fontFamily: fonts.mono },
     legendRow: {
       flexDirection: 'row',
       flexWrap: 'wrap',
@@ -207,6 +208,6 @@ function getStyles(colors: Colors) {
       borderWidth: 1,
       borderColor: colors.cardBorder,
     },
-    legendText: { color: colors.textSecondary, fontSize: 11, fontWeight: '600' },
+    legendText: { color: colors.textSecondary, fontSize: 11, fontWeight: '600', fontFamily: fonts.mono },
   });
 }

@@ -1,14 +1,30 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, type ReactNode, useContext, useEffect, useState } from 'react';
-import { type Colors, darkColors, lightColors } from '../theme';
+import { defaultFonts, type Fonts, posterFonts } from '../fonts';
+import { type Colors, darkColors, lightColors, posterColors } from '../theme';
 
-export type ThemeName = 'light' | 'dark';
+export type ThemeName = 'light' | 'dark' | 'poster';
+
+const THEME_CYCLE: ThemeName[] = ['light', 'dark', 'poster'];
 
 const STORAGE_KEY = 'wave-hastings-theme';
+
+const colorsByTheme: Record<ThemeName, Colors> = {
+  light: lightColors,
+  dark: darkColors,
+  poster: posterColors,
+};
+
+const fontsByTheme: Record<ThemeName, Fonts> = {
+  light: defaultFonts,
+  dark: defaultFonts,
+  poster: posterFonts,
+};
 
 interface ThemeContextValue {
   themeName: ThemeName;
   colors: Colors;
+  fonts: Fonts;
   toggleTheme: () => void;
 }
 
@@ -19,21 +35,22 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_KEY).then((saved) => {
-      if (saved === 'light' || saved === 'dark') setThemeName(saved);
+      if (THEME_CYCLE.includes(saved as ThemeName)) setThemeName(saved as ThemeName);
     });
   }, []);
 
   const toggleTheme = () => {
     setThemeName((prev) => {
-      const next: ThemeName = prev === 'dark' ? 'light' : 'dark';
+      const next = THEME_CYCLE[(THEME_CYCLE.indexOf(prev) + 1) % THEME_CYCLE.length];
       AsyncStorage.setItem(STORAGE_KEY, next);
       return next;
     });
   };
 
-  const colors = themeName === 'dark' ? darkColors : lightColors;
+  const colors = colorsByTheme[themeName];
+  const fonts = fontsByTheme[themeName];
 
-  return <ThemeContext.Provider value={{ themeName, colors, toggleTheme }}>{children}</ThemeContext.Provider>;
+  return <ThemeContext.Provider value={{ themeName, colors, fonts, toggleTheme }}>{children}</ThemeContext.Provider>;
 }
 
 export function useTheme(): ThemeContextValue {

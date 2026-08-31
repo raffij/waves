@@ -65,6 +65,27 @@ export const lightColors: Colors = {
   night: 'rgba(11,30,51,0.10)',
 };
 
+export const posterColors: Colors = {
+  background: '#f3e8d2',
+  backgroundGradientEnd: '#e8dabb',
+  card: '#faf3e2',
+  cardBorder: 'rgba(28,43,57,0.15)',
+  cardElevated: '#fffaf0',
+  shadow: 'rgba(60,40,20,0.15)',
+  primary: '#1f7a6c',
+  secondary: '#155e53',
+  onPrimary: '#f6efdd',
+  textPrimary: '#1c2b39',
+  textSecondary: 'rgba(28,43,57,0.62)',
+  high: '#3f7d44',
+  low: '#1f7a6c',
+  rising: '#3f7d44',
+  falling: '#c0432c',
+  wind: '#c98a1f',
+  precipitation: '#4a6fa5',
+  night: 'rgba(28,43,57,0.14)',
+};
+
 // Applies alpha to a 6-digit hex color, e.g. for tinted chip/pill backgrounds
 // derived from the theme's semantic colors instead of hardcoding new ones.
 export function withAlpha(hex: string, alpha: number): string {

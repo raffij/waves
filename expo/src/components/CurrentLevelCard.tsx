@@ -1,6 +1,7 @@
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import type { Fonts } from '../fonts';
 import { useTheme } from '../hooks/useTheme';
 import type { CurrentLevel, Trend } from '../services/TideSeries';
 import type { Colors } from '../theme';
@@ -77,8 +78,8 @@ function Stat({
 }
 
 export function CurrentLevelCard({ current, waveHeight, waveTrend, windSpeed, windTrend, fetchedAt, dayLabel }: Props) {
-  const { colors } = useTheme();
-  const styles = useMemo(() => getStyles(colors), [colors]);
+  const { colors, fonts } = useTheme();
+  const styles = useMemo(() => getStyles(colors, fonts), [colors, fonts]);
 
   const updatedTime = fetchedAt
     ? fetchedAt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/London' })
@@ -136,7 +137,7 @@ export function CurrentLevelCard({ current, waveHeight, waveTrend, windSpeed, wi
 
 type Styles = ReturnType<typeof getStyles>;
 
-function getStyles(colors: Colors) {
+function getStyles(colors: Colors, fonts: Fonts) {
   return StyleSheet.create({
     card: {},
     topRow: {
@@ -148,6 +149,7 @@ function getStyles(colors: Colors) {
       color: colors.textPrimary,
       fontSize: 15,
       fontWeight: '700',
+      fontFamily: fonts.display,
     },
     badge: {
       flexDirection: 'row',
@@ -155,7 +157,7 @@ function getStyles(colors: Colors) {
       gap: 5,
     },
     liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.rising },
-    badgeText: { color: colors.textSecondary, fontSize: 11, fontWeight: '600' },
+    badgeText: { color: colors.textSecondary, fontSize: 11, fontWeight: '600', fontFamily: fonts.mono },
     contentRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 16, gap: 8 },
     stat: { flex: 1 },
     statLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 6 },
@@ -171,6 +173,7 @@ function getStyles(colors: Colors) {
       fontWeight: '600',
       textTransform: 'uppercase',
       letterSpacing: 0.3,
+      fontFamily: fonts.mono,
     },
     statValueRow: { flexDirection: 'row', alignItems: 'center' },
     statValue: {
@@ -179,6 +182,7 @@ function getStyles(colors: Colors) {
       fontWeight: '800',
       letterSpacing: -0.4,
       fontVariant: ['tabular-nums'],
+      fontFamily: fonts.monoBold,
     },
     statUnit: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
     trendBadge: {

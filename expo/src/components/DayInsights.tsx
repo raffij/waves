@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import type { Fonts } from '../fonts';
 import { useTheme } from '../hooks/useTheme';
 import type { DayInsights as DayInsightsModel } from '../services/DayInsights';
 import type { Colors } from '../theme';
@@ -13,8 +14,8 @@ interface Props {
 // "Umbrella"…) with the rain / wind / light reading behind it, skipped once
 // the day is over.
 export function DayInsights({ insights }: Props) {
-  const { colors } = useTheme();
-  const styles = useMemo(() => getStyles(colors), [colors]);
+  const { colors, fonts } = useTheme();
+  const styles = useMemo(() => getStyles(colors, fonts), [colors, fonts]);
 
   return (
     <View>
@@ -33,14 +34,14 @@ export function DayInsights({ insights }: Props) {
   );
 }
 
-function getStyles(colors: Colors) {
+function getStyles(colors: Colors, fonts: Fonts) {
   return StyleSheet.create({
-    sentence: { color: colors.textPrimary, fontSize: 14, lineHeight: 19 },
+    sentence: { color: colors.textPrimary, fontSize: 14, lineHeight: 19, fontFamily: fonts.mono },
     gearRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 },
     dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.primary },
     // flexShrink lets the reason wrap under a narrow column instead of
     // pushing the garment off the row.
-    gear: { color: colors.textPrimary, fontSize: 13, fontWeight: '600', flexShrink: 1 },
+    gear: { color: colors.textPrimary, fontSize: 13, fontWeight: '600', flexShrink: 1, fontFamily: fonts.mono },
     gearReason: { color: colors.textSecondary, fontWeight: '400' },
   });
 }
