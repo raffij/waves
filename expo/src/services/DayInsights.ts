@@ -25,6 +25,11 @@ export const DRIZZLE_PEAK_MM = 0.5;
 export const HEAVY_PEAK_MM = 2;
 export const WIND_BAND_BREEZY_MPH = 12; // sentence bands: <12 calm, 12–24 breezy, ≥24 windy
 export const WIND_BAND_WINDY_MPH = 24;
+// Above this peak, gusts turn an umbrella inside out — capped separately
+// from WIND_BAND_WINDY_MPH because these are all coastal, unsheltered spots
+// (seafronts, piers) where wind is gustier than the general "windy" dress
+// band assumes, so the canopy is the first thing to go.
+export const UMBRELLA_MAX_GUST_MPH = 18;
 // Sun bands read off the brightest hour in the window/segment, W/m² (already
 // discounted for cloud cover) — below HAZY it's overcast, below SUNNY it's
 // hazy/broken cloud, at/above SUNNY it's genuinely bright. Read alongside
@@ -583,13 +588,20 @@ function lightClause(input: DayInsightsInput): string | null {
 
 // Rain band × wind band, as the lower-case noun phrase (with article) folded
 // straight into "Wear ___." — a 25mph downpour wants a dry robe, the same
-// rain in still air wants an umbrella.
+// rain in still air wants an umbrella. The umbrella entries are capped
+// separately on gusts (see UMBRELLA_MAX_GUST_MPH) rather than folded into
+// the windy column here: it's the one item in this table you don't wear,
+// so the sentence verb has to change for it too — see GARMENT_VERB.
 const GARMENT: Record<RainBand, Record<WindBand, string>> = {
   dry: { calm: 'light layers', breezy: 'a windbreaker', windy: 'a windproof jacket' },
   drizzle: { calm: 'an umbrella', breezy: 'a hooded jacket', windy: 'a waterproof shell' },
   showery: { calm: 'an umbrella', breezy: 'a rain jacket', windy: 'a waterproof shell' },
   heavy: { calm: 'waterproofs', breezy: 'waterproofs', windy: 'a dry robe' },
 };
+
+// You wear everything in GARMENT except an umbrella, which you carry.
+const GARMENT_VERB: Record<string, string> = { 'an umbrella': 'Carry' };
+const DEFAULT_GARMENT_VERB = 'Wear';
 
 // Dry hours after sunset (or before sunrise) are about warmth, not shelter,
 // so the dry row swaps for something that holds heat. A wet dark hour keeps
@@ -602,6 +614,8 @@ const DARK_DRY_GARMENT: Record<WindBand, string> = {
 
 interface ClothingAdvice {
   garment: string;
+  // "Wear" for everything except an umbrella, which reads "Carry" instead.
+  verb: string;
   // Context not already covered elsewhere in the summary — the rain/wind
   // bands themselves are already in the main clauses, so this only carries
   // what they don't: wet ground left over from earlier rain, or a garment
@@ -635,13 +649,26 @@ function clothingAdvice(
   }
   const windBand = wind ? bandToDressFor(wind) : 'calm';
 
-  const garment = rainBand === 'dry' && mostlyDark ? DARK_DRY_GARMENT[windBand] : GARMENT[rainBand][windBand];
+  let garment = rainBand === 'dry' && mostlyDark ? DARK_DRY_GARMENT[windBand] : GARMENT[rainBand][windBand];
 
   const extraParts: string[] = [];
+  // A calm mean can still hide a gust that would break an umbrella — the
+  // dress band alone isn't a fine enough read for the one item that has no
+  // shelter of its own. Falls back to the breezy garment for the same rain
+  // band, i.e. what would already be recommended one band up.
+  if (garment === 'an umbrella' && (wind?.peak ?? 0) >= UMBRELLA_MAX_GUST_MPH) {
+    garment = GARMENT[rainBand].breezy;
+    extraParts.push('too gusty for an umbrella');
+  }
+
   if (rain?.groundWet) extraParts.push('still wet underfoot');
   if (mostlyDark && !lightAlreadyStated) extraParts.push('after dark');
 
-  return { garment, extra: extraParts.length > 0 ? extraParts.join(', ') : null };
+  return {
+    garment,
+    verb: GARMENT_VERB[garment] ?? DEFAULT_GARMENT_VERB,
+    extra: extraParts.length > 0 ? extraParts.join(', ') : null,
+  };
 }
 
 // --- outlook: how rain, sun and feel change through the day ------------------
@@ -689,7 +716,7 @@ export function buildDayInsights(input: DayInsightsInput): DayInsights {
 
   const clothing = clothingAdvice(input, slots, aheadWind, rain, light !== null);
   if (clothing) {
-    summary += ` Wear ${clothing.garment}${clothing.extra ? ` — ${clothing.extra}` : ''}.`;
+    summary += ` ${clothing.verb} ${clothing.garment}${clothing.extra ? ` — ${clothing.extra}` : ''}.`;
   }
 
   return {
