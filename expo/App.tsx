@@ -28,6 +28,7 @@ import { TideChart } from './src/components/TideChart';
 import type { Fonts } from './src/fonts';
 import { useApiKey } from './src/hooks/useApiKey';
 import { useAppStateFocusManager } from './src/hooks/useAppStateFocusManager';
+import { useClockTick } from './src/hooks/useClockTick';
 import { useForecastData } from './src/hooks/useForecastData';
 import { useLocation } from './src/hooks/useLocation';
 import { type ThemeName, ThemeProvider, useTheme } from './src/hooks/useTheme';
@@ -44,6 +45,11 @@ import type { Colors } from './src/theme';
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
 });
+
+// How often the screen's "now" advances on its own (see useClockTick) —
+// tight enough that "today's summary" and the current-conditions card never
+// visibly lag the real clock, loose enough not to re-render for no reason.
+const CLOCK_TICK_MS = 60_000;
 
 export default function App() {
   return (
@@ -74,6 +80,7 @@ const forecastWindowToggleTarget: Record<ForecastWindow, { icon: keyof typeof Io
 
 function AppContent() {
   useAppStateFocusManager();
+  useClockTick(CLOCK_TICK_MS);
   const { apiKey, saveKey, resetKey } = useApiKey();
   const { location, toggleLocation } = useLocation();
   useWidgetSync(apiKey, location);
