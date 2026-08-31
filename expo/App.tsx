@@ -78,7 +78,17 @@ function AppContent() {
     error,
     refresh,
   } = useForecastData(apiKey, location);
-  const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
+  const [selectedDateKey, setSelectedDateKeyState] = useState<string | null>(null);
+  // The scrub reading (dragged/tapped position, shared by all three charts
+  // so they move together) is anchored to a specific day's window — it
+  // doesn't mean anything once that window changes, so switching days
+  // (including "back to today" via the current-conditions card) always
+  // drops it back to live.
+  const [scrubTime, setScrubTime] = useState<Date | null>(null);
+  const selectDay = (dateKey: string | null) => {
+    setSelectedDateKeyState(dateKey);
+    setScrubTime(null);
+  };
   const { colors, fonts, themeName, toggleTheme } = useTheme();
   const styles = useMemo(() => getStyles(colors, fonts), [colors, fonts]);
   const statusBarStyle = themeName === 'dark' ? 'light-content' : 'dark-content';
@@ -161,7 +171,7 @@ function AppContent() {
             windTrend={windTrend}
             fetchedAt={fetchedAt}
             dayLabel={selectedDayLabel}
-            onPress={() => setSelectedDateKey(null)}
+            onPress={() => selectDay(null)}
           />
 
           {insights && (
@@ -179,6 +189,8 @@ function AppContent() {
                 daylightSeries={daylightSeries}
                 now={referenceDate}
                 isToday={isToday}
+                scrubTime={scrubTime}
+                onScrub={setScrubTime}
               />
             </View>
           )}
@@ -190,6 +202,8 @@ function AppContent() {
                 daylightSeries={daylightSeries}
                 now={referenceDate}
                 isToday={isToday}
+                scrubTime={scrubTime}
+                onScrub={setScrubTime}
               />
             </View>
           )}
@@ -202,6 +216,8 @@ function AppContent() {
                 daylightSeries={daylightSeries}
                 now={referenceDate}
                 isToday={isToday}
+                scrubTime={scrubTime}
+                onScrub={setScrubTime}
               />
             </View>
           )}
@@ -209,12 +225,7 @@ function AppContent() {
           {error && <Text style={styles.error}>{error.message}</Text>}
 
           <View style={styles.section}>
-            <ForecastList
-              yesterday={yesterday}
-              days={days}
-              selectedDateKey={activeDateKey}
-              onSelectDay={setSelectedDateKey}
-            />
+            <ForecastList yesterday={yesterday} days={days} selectedDateKey={activeDateKey} onSelectDay={selectDay} />
           </View>
 
           <Pressable

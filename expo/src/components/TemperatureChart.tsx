@@ -18,6 +18,9 @@ interface Props {
   now: Date;
   /** Whether `now` is the real current moment vs. a same-hour projection onto another day (see App.tsx). */
   isToday?: boolean;
+  /** Shared scrub reading (dragged/tapped time), lifted to App.tsx so dragging any one chart moves the crosshair on all of them together. Null means "show the live/reference reading". */
+  scrubTime?: Date | null;
+  onScrub?: (time: Date | null) => void;
   startHour?: number;
   endHour?: number;
 }
@@ -46,6 +49,8 @@ export function TemperatureChart({
   daylightSeries,
   now,
   isToday = true,
+  scrubTime = null,
+  onScrub,
   startHour = DAY_WINDOW_START_HOUR,
   endHour = DAY_WINDOW_END_HOUR,
 }: Props) {
@@ -74,17 +79,19 @@ export function TemperatureChart({
         .filter((s): s is { time: Date; wattsPerM2: number } => s.wattsPerM2 !== null)
     : [];
 
-  const [scrubX, setScrubX] = useState<number | null>(null);
-
   const plotWidth = width - PADDING_LEFT - PADDING_X;
   const plotHeight = HEIGHT - PADDING_TOP - PADDING_BOTTOM;
   const totalMs = end.getTime() - start.getTime();
 
   // See TideChart's identical comment: PanResponder.create(...) only runs
-  // once, so its callbacks need a ref to read the current width rather than
-  // closing over the DEFAULT_WIDTH from first mount.
+  // once, so its callbacks need refs to read the current width/start/end
+  // rather than closing over stale values from first mount. Reports through
+  // onScrub (state lifted to App.tsx) so dragging this chart moves the
+  // crosshair on the other charts too.
   const widthRef = useRef(width);
   widthRef.current = width;
+  const geometryRef = useRef({ start, end, plotWidth });
+  geometryRef.current = { start, end, plotWidth };
 
   const panResponder = useRef(
     PanResponder.create({
@@ -92,11 +99,15 @@ export function TemperatureChart({
       onMoveShouldSetPanResponder: () => true,
       onPanResponderGrant: (evt) => {
         const w = widthRef.current;
-        setScrubX(Math.min(Math.max(evt.nativeEvent.locationX, PADDING_LEFT), w - PADDING_X));
+        const { start, end, plotWidth } = geometryRef.current;
+        const x = Math.min(Math.max(evt.nativeEvent.locationX, PADDING_LEFT), w - PADDING_X);
+        onScrub?.(new Date(start.getTime() + ((x - PADDING_LEFT) / plotWidth) * (end.getTime() - start.getTime())));
       },
       onPanResponderMove: (evt) => {
         const w = widthRef.current;
-        setScrubX(Math.min(Math.max(evt.nativeEvent.locationX, PADDING_LEFT), w - PADDING_X));
+        const { start, end, plotWidth } = geometryRef.current;
+        const x = Math.min(Math.max(evt.nativeEvent.locationX, PADDING_LEFT), w - PADDING_X);
+        onScrub?.(new Date(start.getTime() + ((x - PADDING_LEFT) / plotWidth) * (end.getTime() - start.getTime())));
       },
       onPanResponderTerminationRequest: () => false,
       onShouldBlockNativeResponder: () => true,
@@ -161,11 +172,8 @@ export function TemperatureChart({
   const currentX = toX(now);
   const pastFadeEndX = Math.min(Math.max(currentX, PADDING_LEFT), width - PADDING_X);
 
-  const isScrubbing = scrubX !== null;
-  const activeTime =
-    scrubX !== null
-      ? new Date(start.getTime() + ((scrubX - PADDING_LEFT) / plotWidth) * totalMs)
-      : new Date(Math.min(Math.max(now.getTime(), start.getTime()), end.getTime()));
+  const isScrubbing = scrubTime !== null;
+  const activeTime = scrubTime ?? new Date(Math.min(Math.max(now.getTime(), start.getTime()), end.getTime()));
   const activeFeelsLike = series.feelsLikeAt(activeTime);
   const activeTemp = series.tempAt(activeTime);
   const activeSun = sunBrightnessSeries?.brightnessAt(activeTime) ?? null;
