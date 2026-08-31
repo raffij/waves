@@ -60,3 +60,27 @@ Convention for this repo:
 - Omit `meta.visual_preset` (stay on the default `classic` preset) unless a
   different Archify preset is explicitly requested, so all diagrams in this
   repo share one visual identity.
+
+## Decisions get logged
+
+Any decision that changes architecture, behavior a user or another client
+depends on, or is expensive to reverse — a new dependency, a new client or
+data source, a change to caching/fetch strategy, a shared-vs-independent
+tradeoff like the one this repo is built around — gets a record in
+`docs/decisions/`, not just a PR description. PR descriptions rot out of
+search and don't survive a squash-merge; the log is the durable "why."
+
+- One file per decision: `docs/decisions/NNNN-title.md`, numbered
+  sequentially. Copy `docs/decisions/TEMPLATE.md` to start one, and add a
+  row to `docs/decisions/README.md`.
+- Write it when you make the decision, not after — capture the alternatives
+  you rejected and why while you still remember them.
+- A decision that changes what a diagram in `docs/architecture/` shows
+  (adds/removes a component, a connection, a boundary) means updating that
+  diagram's JSON source and redelivering it, per the Archify convention
+  above, as part of the same change — not a follow-up. Link the diagram
+  from the decision record's "Diagram" section. A decision with no
+  system-map impact (a naming choice, a lint rule) can skip the diagram,
+  but say so explicitly rather than leaving the section out silently.
+- Small, easily-reversed choices (a variable name, which test to add) don't
+  need a record. When in doubt, err toward writing one — they're cheap.

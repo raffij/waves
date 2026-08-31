@@ -13,6 +13,7 @@ the same shape.
 - [System map](#system-map)
 - [What's identical, what's duplicated](#whats-identical-whats-duplicated)
 - [Cold-start request lifecycle](#cold-start-request-lifecycle)
+- [Inside the Expo app](#inside-the-expo-app)
 - [The two widgets](#the-two-widgets)
 - [Notes](#notes)
 
@@ -75,6 +76,25 @@ What happens between opening the Expo app and seeing numbers on screen:
 7. **The widget gets synced.** `useWidgetSync` fires whenever the key or
    location changes, handing both to the iOS widget over a shared App Group
    (see below) and asking WidgetKit to reload.
+
+## Inside the Expo app
+
+The system map above treats each client as one "Tide/Wave Clients" box. Zooming
+into just `expo/` — the webapp — shows the layers behind that box: `App.tsx`
+wires a handful of hooks to seven presentational components; the hooks
+(`useApiKey`, `useLocation`, `useTheme`, `useForecastData`, `useWidgetSync`)
+own state and orchestrate fetching; and the services layer (the two API
+clients, `SecureKeyStore`, `AsyncStorage`, and the interpolating Series +
+`buildDayInsights()` view models) does the actual caching, fetching, and
+computation, independent of any UI framework detail.
+
+<img src="webapp-architecture.png" width="900" alt="Inside the Waves webapp: App.tsx wires state hooks and useForecastData to seven screen components; useForecastData coordinates a TideAPIClient and a WaveAPIClient that each keep their own AsyncStorage cache and call TideCheck or Open-Meteo independently; useWidgetSync hands the API key and location to the iOS widget over a shared App Group via the local WidgetBridge Expo Module." />
+
+An interactive version — guided views for boot/state hydration, the tide+wave
+fetch, cache-first resilience, and the app→widget hand-off — is in
+[`docs/architecture/webapp.architecture.html`](architecture/webapp.architecture.html)
+(open it locally; the typed source is
+[`webapp.architecture.json`](architecture/webapp.architecture.json)).
 
 ## The two widgets
 

@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Inside the Waves webapp",
+    "output": "webapp.architecture.html",
+    "quality_profile": "showcase",
+    "views": [
+      { "id": "state", "label": "Boot & state hydration", "focus": ["appScreen", "stateHooks", "useForecastData", "useWidgetSync"], "note": "apiKey and location start undefined rather than defaulting early, so nothing fires while storage is still being read." },
+      { "id": "fetch", "label": "Tide + wave fetch", "focus": ["tideClient", "waveClient", "deviceStorage", "tideAPI", "marineAPI", "forecastAPI"], "note": "Two queries run in parallel, each client checking its own cache first; a wave-query failure never blocks the tide UI." },
+      { "id": "resilience", "label": "Cache-first, stale over empty", "focus": ["tideClient", "waveClient", "deviceStorage", "seriesInsights"], "note": "On a network error each client serves its last cache; retries are disabled to protect TideCheck's 50-request/day budget." },
+      { "id": "widget-handoff", "label": "App → iOS widget hand-off", "focus": ["useWidgetSync", "widgetBridge", "secureKeyStore"], "note": "The widget can't show a text field, so the app pushes it config over a shared App Group on every key/location change." }
+    ]
+  },
+  "components": [
+    { "id": "appScreen", "type": "frontend", "label": "App.tsx", "sublabel": "wires hooks to components", "pos": [40, 40], "size": [200, 80] },
+    { "id": "uiComponents", "type": "frontend", "label": "Screen Components", "sublabel": "7 presentational components", "pos": [40, 180], "size": [200, 140] },
+
+    { "id": "stateHooks", "type": "backend", "label": "State Hooks", "sublabel": "apiKey · location · theme", "pos": [390, 40], "size": [200, 80] },
+    { "id": "useForecastData", "type": "backend", "label": "useForecastData", "tag": "TanStack Query", "sublabel": "coordinates tide & wave fetch", "pos": [390, 170], "size": [200, 90] },
+    { "id": "useWidgetSync", "type": "backend", "label": "useWidgetSync", "sublabel": "re-syncs key & location", "pos": [390, 320], "size": [200, 70] },
+    { "id": "widgetBridge", "type": "backend", "label": "WidgetBridge", "tag": "outside app render tree", "sublabel": "config hand-off to iOS widget", "pos": [390, 460], "size": [200, 90] },
+
+    { "id": "secureKeyStore", "type": "security", "label": "SecureKeyStore", "sublabel": "Keychain · localStorage (web)", "pos": [740, 40], "size": [200, 70] },
+    { "id": "deviceStorage", "type": "database", "label": "AsyncStorage", "sublabel": "location, theme, API cache", "pos": [740, 150], "size": [200, 80] },
+    { "id": "tideClient", "type": "backend", "label": "TideAPIClient", "tag": "8s timeout", "sublabel": "6h cache · stale-on-failure", "pos": [740, 280], "size": [200, 80] },
+    { "id": "waveClient", "type": "backend", "label": "WaveAPIClient", "sublabel": "6h cache, independent fetch", "pos": [740, 420], "size": [200, 90] },
+    { "id": "seriesInsights", "type": "backend", "label": "Series & Day Insights", "tag": "Europe/London", "sublabel": "Series + Forecast + Insights", "pos": [740, 570], "size": [200, 100] },
+
+    { "id": "tideAPI", "type": "external", "label": "TideCheck API", "sublabel": "tide extremes + height series", "pos": [1090, 150], "size": [200, 90] },
+    { "id": "marineAPI", "type": "external", "label": "Open-Meteo Marine", "sublabel": "wave height", "pos": [1090, 380], "size": [200, 90] },
+    { "id": "forecastAPI", "type": "external", "label": "Open-Meteo Forecast", "sublabel": "wind, rain, temp, sun", "pos": [1090, 500], "size": [200, 100] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "App.tsx — the single screen", "wraps": ["appScreen", "uiComponents"] },
+    { "kind": "region", "label": "hooks/ — state, data & widget sync", "wraps": ["stateHooks", "useForecastData", "useWidgetSync"] },
+    { "kind": "region", "label": "modules/widget-bridge/ — outside the webapp", "wraps": ["widgetBridge"] },
+    { "kind": "region", "label": "services/ — fetch, cache, security & view models", "wraps": ["secureKeyStore", "deviceStorage", "tideClient", "waveClient", "seriesInsights"] }
+  ],
+  "connections": [
+    { "id": "app-ui", "from": "appScreen", "to": "uiComponents", "label": "renders", "fromSide": "bottom", "toSide": "top", "labelAt": [140, 134] },
+    { "id": "app-state", "from": "appScreen", "to": "stateHooks", "label": "apiKey · location · theme" },
+    { "id": "app-forecast", "from": "appScreen", "to": "useForecastData", "label": "apiKey, location", "via": [[250, 80], [250, 215]], "labelAt": [250, 148] },
+    { "id": "app-widgetsync", "from": "appScreen", "to": "useWidgetSync", "label": "apiKey, location", "via": [[370, 80], [370, 355]], "labelAt": [370, 150] },
+
+    { "id": "state-securekey", "from": "stateHooks", "to": "secureKeyStore", "label": "read/write/clear key", "variant": "security" },
+    { "id": "state-storage", "from": "stateHooks", "to": "deviceStorage", "label": "persist location & theme" },
+
+    { "id": "forecast-tide", "from": "useForecastData", "to": "tideClient", "label": "tide", "labelAt": [625, 320] },
+    { "id": "forecast-wave", "from": "useForecastData", "to": "waveClient", "label": "wave", "labelAt": [625, 465] },
+    { "id": "forecast-series", "from": "useForecastData", "to": "seriesInsights", "label": "select()", "labelAt": [627, 590] },
+
+    { "id": "widgetsync-bridge", "from": "useWidgetSync", "to": "widgetBridge", "label": "syncWidgetConfig(apiKey, location)", "fromSide": "bottom", "toSide": "top", "labelAt": [490, 404] },
+
+    { "id": "tide-api", "from": "tideClient", "to": "tideAPI", "label": "X-API-Key · 8s timeout", "variant": "emphasis" },
+    { "id": "wave-marine", "from": "waveClient", "to": "marineAPI", "label": "hourly=wave_height" },
+    { "id": "wave-forecast", "from": "waveClient", "to": "forecastAPI", "label": "wind, precip, temp, sun" },
+
+    { "id": "series-ui", "from": "seriesInsights", "to": "uiComponents", "label": "current values, trends, day insights" }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "Two clocks, one screen", "items": ["Tide and wave queries run in parallel, gated until apiKey and location hydrate from storage", "A background refresh tops up any cache hit landed over an hour old, without blocking the screen"] },
+    { "dot": "violet", "title": "Cache first, stale over empty", "items": ["Each client checks its own 6h AsyncStorage cache before any network call, and serves it on failure", "Query retries are disabled — TideCheck's 50-request/day budget can't absorb them"] },
+    { "dot": "emerald", "title": "Pure computation, thin UI", "items": ["Raw JSON becomes interpolating Series answering “value now” and “trend” by linear interpolation", "Wave/wind/rain is a non-essential overlay — its failure never blocks the tide UI"] }
+  ]
+}
