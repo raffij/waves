@@ -192,12 +192,24 @@ function windShape(slots: Slot[], windSeries: WindSeries | null): WindShape | nu
   };
 }
 
-function windClause(w: WindShape): string {
+// "this morning" only reads right for today, where it genuinely is this
+// morning — a past or future day gets the tense-neutral "in the morning"
+// instead, same slot in the sentence.
+const MORNING_PHRASE: Record<DayTense, string> = {
+  past: 'in the morning',
+  today: 'this morning',
+  future: 'in the morning',
+};
+
+function windClause(w: WindShape, tense: DayTense): string {
+  const morning = MORNING_PHRASE[tense];
   if (w.morningBand === w.afternoonBand) return `${BAND_WORD[w.morningBand]} all day`;
   if (BAND_RANK[w.afternoonBand] > BAND_RANK[w.morningBand]) {
-    return `${BAND_WORD[w.morningBand]} this morning, wind building to ~${Math.round(w.afternoonPeak)}mph by mid-afternoon`;
+    const build = tense === 'past' ? 'built' : tense === 'future' ? 'will build' : 'building';
+    return `${BAND_WORD[w.morningBand]} ${morning}, wind ${build} to ~${Math.round(w.afternoonPeak)}mph by mid-afternoon`;
   }
-  return `${BAND_WORD[w.morningBand]} this morning, easing through the afternoon`;
+  const ease = tense === 'past' ? 'eased' : tense === 'future' ? 'will ease' : 'easing';
+  return `${BAND_WORD[w.morningBand]} ${morning}, ${ease} through the afternoon`;
 }
 
 // --- rain ----------------------------------------------------------------
@@ -369,7 +381,14 @@ function rainTrendClause(slots: Slot[], precip: PrecipitationSeries | null, tens
 
 type SunBand = 'overcast' | 'hazy' | 'sunny';
 const SUN_BAND_RANK: Record<SunBand, number> = { overcast: 0, hazy: 1, sunny: 2 };
-const SUN_WORD: Record<SunBand, string> = { overcast: 'overcast', hazy: 'hazy sun', sunny: 'sunny spells' };
+// Same band word, tensed for the summary's main clause list — "was" for a
+// day that's over, "likely" for one that hasn't happened yet, and today's
+// bare noun phrase (a live read needs no tense marker of its own).
+const SUN_WORD: Record<DayTense, Record<SunBand, string>> = {
+  past: { overcast: 'stayed overcast', hazy: 'had hazy sun', sunny: 'had sunny spells' },
+  today: { overcast: 'overcast', hazy: 'hazy sun', sunny: 'sunny spells' },
+  future: { overcast: 'likely overcast', hazy: 'hazy sun likely', sunny: 'sunny spells likely' },
+};
 const SUN_ALL_DAY_PHRASE: Record<SunBand, string> = {
   overcast: 'overcast all day',
   hazy: 'hazy sun most of the day',
@@ -423,10 +442,11 @@ function feelsOver(slots: Slot[], temp: TemperatureSeries | null): FeelsReading 
   return { mean: average(values), min: Math.min(...values), max: Math.max(...values) };
 }
 
-function feelsPhrase(feels: FeelsReading): string {
+function feelsPhrase(feels: FeelsReading, tense: DayTense): string {
   const lo = Math.round(feels.min);
   const hi = Math.round(feels.max);
-  return lo === hi ? `feels ${lo}°` : `feels ${lo}–${hi}°`;
+  const verb = tense === 'past' ? 'felt' : tense === 'future' ? 'will feel' : 'feels';
+  return lo === hi ? `${verb} ${lo}°` : `${verb} ${lo}–${hi}°`;
 }
 
 // How "feels like" temperature shifts across the day — warming, cooling, or
@@ -453,15 +473,18 @@ function feelsTrendClause(slots: Slot[], temp: TemperatureSeries | null): string
 // --- light ------------------------------------------------------------------
 
 // "dark by 16:21", for a day whose sunset lands inside the window and is
-// still ahead. Omitted when the light holds to the end of the window, when
-// it's already gone, and when sunrise/sunset never loaded.
+// still ahead. Omitted entirely for a day that's already over (there's
+// nothing left to warn about), when the light holds to the end of the
+// window, when today's sunset has already passed, and when sunrise/sunset
+// never loaded.
 function lightClause(input: DayInsightsInput): string | null {
   const { sunset, known } = lightBounds(input);
-  if (!known || dayTense(input.reference) === 'past') return null;
+  const tense = dayTense(input.reference);
+  if (!known || tense === 'past') return null;
   const windowEnd = TideClock.londonDateAtHour(input.reference, DAY_WINDOW_END_HOUR);
   if (sunset.getTime() >= windowEnd.getTime()) return null;
-  if (dayTense(input.reference) === 'today' && sunset.getTime() <= input.reference.getTime()) return null;
-  return `dark by ${hhmm(sunset)}`;
+  if (tense === 'today' && sunset.getTime() <= input.reference.getTime()) return null;
+  return tense === 'future' ? `will be dark by ${hhmm(sunset)}` : `dark by ${hhmm(sunset)}`;
 }
 
 // --- clothing ---------------------------------------------------------------
@@ -564,10 +587,10 @@ export function buildDayInsights(input: DayInsightsInput): DayInsights {
   const aheadWind = windOver(summarySlots, input.windSeries);
 
   const clauses: string[] = [];
-  if (shape) clauses.push(windClause(shape));
+  if (shape) clauses.push(windClause(shape, tense));
   if (rain) clauses.push(shape ? rain.text : capitalize(rain.text));
-  if (sun) clauses.push(SUN_WORD[sunBandFor(sun.peak)]);
-  if (feels) clauses.push(feelsPhrase(feels));
+  if (sun) clauses.push(SUN_WORD[tense][sunBandFor(sun.peak)]);
+  if (feels) clauses.push(feelsPhrase(feels, tense));
   if (light && clauses.length > 0) clauses.push(light);
 
   let summary = clauses.length > 0 ? `${clauses.join(', ')}.` : 'Tide data only — wind and rain forecast unavailable.';
