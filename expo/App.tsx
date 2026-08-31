@@ -272,7 +272,7 @@ function getStyles(colors: Colors, fonts: Fonts) {
       width: '100%',
       maxWidth: 640,
       alignSelf: 'center',
-      paddingHorizontal: 16,
+      paddingHorizontal: 10,
       paddingTop: 8,
       paddingBottom: 16,
     },
