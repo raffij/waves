@@ -9,9 +9,8 @@ interface Props {
   insights: DayInsightsModel;
 }
 
-// The "so what" above the charts: one description covering the day's wind,
-// rain, sun and feel plus what to wear, and — underneath it — how rain, sun
-// and feel change over the course of the day.
+// The "so what" above the charts: one deliberately wordy description that
+// covers the day's conditions, how they develop, and what to wear.
 export function DayInsights({ insights }: Props) {
   const { colors, fonts } = useTheme();
   const styles = useMemo(() => getStyles(colors, fonts), [colors, fonts]);
@@ -19,7 +18,6 @@ export function DayInsights({ insights }: Props) {
   return (
     <View>
       <Text style={styles.sentence}>{insights.summary}</Text>
-      {insights.outlook && <Text style={styles.outlook}>{insights.outlook}</Text>}
     </View>
   );
 }
@@ -27,6 +25,5 @@ export function DayInsights({ insights }: Props) {
 function getStyles(colors: Colors, fonts: Fonts) {
   return StyleSheet.create({
     sentence: { color: colors.textPrimary, fontSize: 14, lineHeight: 19, fontFamily: fonts.mono },
-    outlook: { color: colors.textSecondary, fontSize: 13, lineHeight: 18, marginTop: 4, fontFamily: fonts.mono },
   });
 }
