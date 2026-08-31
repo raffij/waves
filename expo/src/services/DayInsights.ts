@@ -58,7 +58,7 @@ export const TEMP_BAND_MILD_C = 14;
 export const TEMP_BAND_WARM_C = 19;
 export const TEMP_BAND_HOT_C = 24;
 // A morning-to-afternoon swing in mean "feels like" temperature below this
-// reads as noise — the outlook says the day stays much the same rather than
+// reads as noise — the readout says the day stays much the same rather than
 // manufacturing a warming/cooling trend out of half a degree.
 export const FEELS_TREND_THRESHOLD_C = 2;
 export const FALLBACK_SUNRISE_HOUR = 7; // light bounds used only when sunrise/sunset is unavailable
@@ -69,12 +69,9 @@ export const DARK_MAJORITY_FRACTION = 0.5; // above this share of the hours left
 
 export interface DayInsights {
   // The day's conditions — wind, rain, sun, feel, light — and what to wear,
-  // as one flowing description rather than a separate readout per signal.
+  // as one flowing, wordy description rather than separate fields that repeat
+  // the same signals.
   summary: string;
-  // How rain, sun and "feels like" temperature change over the course of
-  // the day. Null once there's nothing left to look forward to (a day
-  // that's already over) or too little data to say anything.
-  outlook: string | null;
 }
 
 export interface DayInsightsInput {
@@ -142,8 +139,8 @@ function windowSlots(input: DayInsightsInput): Slot[] {
   return slots;
 }
 
-// The morning/afternoon split every trend reading (wind shape, rain/sun/feel
-// outlook) uses, so they can never disagree about where "afternoon" starts.
+// The morning/afternoon split every trend reading (wind shape, rain/sun/feel)
+// uses, so they can never disagree about where "afternoon" starts.
 function morningSlots(slots: Slot[]): Slot[] {
   return slots.filter((s) => s.hour <= 12);
 }
@@ -234,11 +231,19 @@ function windClause(w: WindShape, tense: DayTense): string {
   const morning = MORNING_PHRASE[tense];
   if (w.morningBand === w.afternoonBand) return `${BAND_WORD[w.morningBand]} all day`;
   if (BAND_RANK[w.afternoonBand] > BAND_RANK[w.morningBand]) {
-    const build = tense === 'past' ? 'built' : tense === 'future' ? 'will build' : 'building';
-    return `${BAND_WORD[w.morningBand]} ${morning}, wind ${build} to ~${Math.round(w.afternoonPeak)}mph by mid-afternoon`;
+    if (tense === 'past') {
+      return `${BAND_WORD[w.morningBand]} ${morning}, then wind built to around ${Math.round(
+        w.afternoonPeak,
+      )}mph by mid-afternoon`;
+    }
+    const build = tense === 'future' ? 'the wind expected to build' : 'wind building';
+    return `${BAND_WORD[w.morningBand]} ${morning}, with ${build} to around ${Math.round(
+      w.afternoonPeak,
+    )}mph by mid-afternoon`;
   }
-  const ease = tense === 'past' ? 'eased' : tense === 'future' ? 'will ease' : 'easing';
-  return `${BAND_WORD[w.morningBand]} ${morning}, ${ease} through the afternoon`;
+  if (tense === 'past') return `${BAND_WORD[w.morningBand]} ${morning}, then eased through the afternoon`;
+  const ease = tense === 'future' ? 'the wind expected to ease' : 'wind easing';
+  return `${BAND_WORD[w.morningBand]} ${morning}, with ${ease} through the afternoon`;
 }
 
 // --- rain ----------------------------------------------------------------
@@ -302,14 +307,6 @@ const RAIN_NOUN: Record<RainBand, { single: string; repeated: string }> = {
   heavy: { single: 'heavy rain', repeated: 'heavy showers' },
 };
 
-// Intensity only, used both for the clothing call and the rain outlook.
-const RAIN_PHRASE: Record<RainBand, string> = {
-  dry: 'dry',
-  drizzle: 'light drizzle',
-  showery: 'rain',
-  heavy: 'heavy rain',
-};
-
 // Lower-case fragment for the summary sentence, plus what the clothing call
 // keys off (it never parses `text`):
 //   wet       — rain is still to come or under way in the rest of the day
@@ -349,10 +346,10 @@ function rainClause(input: DayInsightsInput, precip: PrecipitationSeries | null)
     const when = allBeforeMidday ? ' in the morning' : allAfterMidday ? ' in the afternoon' : ' through the day';
     const lead =
       tense === 'future'
-        ? `${noun.repeated} likely`
+        ? `${noun.repeated} are likely`
         : tense === 'past'
           ? `${noun.repeated} came and went`
-          : `${noun.repeated} on and off`;
+          : `${noun.repeated} may come and go`;
     return { text: `${lead}${when}`, wet: true, groundWet: false };
   }
 
@@ -361,13 +358,16 @@ function rainClause(input: DayInsightsInput, precip: PrecipitationSeries | null)
 
   // Today, rain already under way — the start is behind us, so lead with the end.
   if (tense === 'today' && s.start.getTime() <= input.reference.getTime()) {
-    return { text: `${noun.single} until ${hhmm(s.end)}`, wet: true, groundWet: false };
+    return { text: `${noun.single} continues until ${hhmm(s.end)}`, wet: true, groundWet: false };
   }
 
   const coverage = rainCoverage(s, bars.length, windowStart, windowEnd);
-  const likely = tense === 'future' ? 'likely ' : '';
+  const past = tense === 'past' ? 'fell ' : '';
+  const likely = tense === 'future' ? 'is likely ' : '';
   return {
-    text: coverage ? `${noun.single} ${likely}${coverage}, ${range}` : `${noun.single} ${likely}from ${range}`,
+    text: coverage
+      ? `${noun.single} ${past}${likely}${coverage}, from ${range}`
+      : `${noun.single} ${past}${likely}from ${range}`,
     wet: true,
     groundWet: false,
   };
@@ -379,31 +379,6 @@ function rainPeakOver(slots: Slot[], precip: PrecipitationSeries | null): number
   if (!precip) return 0;
   const mms = slots.map((s) => precip.mmAt(s.at)).filter((mm): mm is number => mm !== null);
   return mms.length > 0 ? Math.max(...mms) : 0;
-}
-
-// How the rain itself changes shape across the day — dry throughout, a
-// morning spell that clears, an afternoon spell moving in, or on-and-off all
-// day. Independent of `rainClause`: that one reports what's still ahead (or
-// already happened) for the sentence; this always reads the whole window,
-// since the outlook is about the day's shape, not just what's left of it.
-function rainTrendClause(slots: Slot[], precip: PrecipitationSeries | null, tense: DayTense): string | null {
-  if (!precip) return null;
-
-  const morningBand = rainBandFor(rainPeakOver(morningSlots(slots), precip));
-  const afternoonBand = rainBandFor(rainPeakOver(afternoonSlots(slots), precip));
-
-  if (morningBand === 'dry' && afternoonBand === 'dry') return tense === 'past' ? 'stayed dry all day' : 'dry all day';
-  if (morningBand !== 'dry' && afternoonBand === 'dry') {
-    return tense === 'past'
-      ? `${RAIN_PHRASE[morningBand]} cleared by afternoon`
-      : `${RAIN_PHRASE[morningBand]} clearing by afternoon`;
-  }
-  if (morningBand === 'dry' && afternoonBand !== 'dry') {
-    return tense === 'past'
-      ? `turned to ${RAIN_PHRASE[afternoonBand]} by afternoon`
-      : `${RAIN_PHRASE[afternoonBand]} moving in by afternoon`;
-  }
-  return `${RAIN_PHRASE[afternoonBand]} on and off through the day`;
 }
 
 // --- sun ---------------------------------------------------------------------
@@ -424,26 +399,6 @@ const CLOUD_COMPARABLE_BAND: Record<SunBand, 'overcast' | 'hazy' | 'sunny'> = {
   sunny: 'sunny',
   strong: 'sunny',
 };
-// Same band word, tensed for the summary's main clause list — "was" for a
-// day that's over, "likely" for one that hasn't happened yet, and today's
-// bare noun phrase (a live read needs no tense marker of its own).
-const SUN_WORD: Record<DayTense, Record<SunBand, string>> = {
-  past: { overcast: 'stayed overcast', hazy: 'had hazy sun', sunny: 'had sunny spells', strong: 'had strong sun' },
-  today: { overcast: 'overcast', hazy: 'hazy sun', sunny: 'sunny spells', strong: 'strong sun' },
-  future: {
-    overcast: 'likely overcast',
-    hazy: 'hazy sun likely',
-    sunny: 'sunny spells likely',
-    strong: 'strong sun likely',
-  },
-};
-const SUN_ALL_DAY_PHRASE: Record<SunBand, string> = {
-  overcast: 'overcast all day',
-  hazy: 'hazy sun most of the day',
-  sunny: 'sunny spells through the day',
-  strong: 'strong sun through the day',
-};
-
 // Brightness and cloud cover each vote for a band; whichever reads cloudier
 // wins. That resolves both ways a single signal misleads on its own: a
 // bright reading under a fully overcast sky is diffuse light through cloud,
@@ -493,8 +448,15 @@ function sunOver(slots: Slot[], sun: SunBrightnessSeries | null, cloud: CloudCov
 }
 
 // How strong the sun gets, morning vs. afternoon — brightening, clouding
-// over, or one band held all day.
-function sunTrendClause(slots: Slot[], sun: SunBrightnessSeries | null, cloud: CloudCoverSeries | null): string | null {
+// over, or one band held all day. This is phrased as a complete, natural
+// fragment because it now lives in the same paragraph as the headline
+// conditions rather than on a second line.
+function sunTrendClause(
+  slots: Slot[],
+  sun: SunBrightnessSeries | null,
+  cloud: CloudCoverSeries | null,
+  tense: DayTense,
+): string | null {
   const morning = sunOver(morningSlots(slots), sun, cloud);
   const afternoon = sunOver(afternoonSlots(slots), sun, cloud);
   if (!morning && !afternoon) return null;
@@ -503,10 +465,42 @@ function sunTrendClause(slots: Slot[], sun: SunBrightnessSeries | null, cloud: C
   const afternoonReading = afternoon ?? morning ?? { peak: 0, minCloudPct: null };
   const morningBand = sunBandFor(morningReading.peak, morningReading.minCloudPct);
   const afternoonBand = sunBandFor(afternoonReading.peak, afternoonReading.minCloudPct);
-  if (morningBand === afternoonBand) return SUN_ALL_DAY_PHRASE[morningBand];
-  return SUN_BAND_RANK[afternoonBand] > SUN_BAND_RANK[morningBand]
-    ? 'sunshine breaking through by afternoon'
-    : 'clouding over by afternoon';
+  if (morningBand === afternoonBand) {
+    if (morningBand === 'overcast') {
+      return tense === 'past'
+        ? 'the day stayed overcast'
+        : tense === 'today'
+          ? 'the rest of the day looks overcast'
+          : 'the day should stay overcast';
+    }
+    if (morningBand === 'hazy') {
+      return tense === 'past'
+        ? 'hazy sunshine lingered through the day'
+        : tense === 'today'
+          ? 'hazy sunshine should linger through the rest of the day'
+          : 'hazy sunshine is likely through the day';
+    }
+    if (morningBand === 'strong') {
+      return tense === 'past'
+        ? 'strong sunshine lasted through the day'
+        : tense === 'today'
+          ? 'strong sunshine should continue through the rest of the day'
+          : 'strong sunshine is likely through the day';
+    }
+    return tense === 'past'
+      ? 'sunny spells lasted through the day'
+      : tense === 'today'
+        ? 'sunny spells should continue through the rest of the day'
+        : 'sunny spells are likely through the day';
+  }
+
+  const afternoonPhrase = tense === 'today' ? 'this afternoon' : 'by afternoon';
+  if (SUN_BAND_RANK[afternoonBand] > SUN_BAND_RANK[morningBand]) {
+    return tense === 'past'
+      ? `sunshine broke through ${afternoonPhrase}`
+      : `sunshine should break through ${afternoonPhrase}`;
+  }
+  return tense === 'past' ? `cloud thickened ${afternoonPhrase}` : `cloud may thicken ${afternoonPhrase}`;
 }
 
 // --- feels-like temperature ----------------------------------------------
@@ -534,22 +528,22 @@ function tempBandFor(meanC: number): TempBand {
   return 'hot';
 }
 
-// Named alongside the figures ("feels mild, 14–17°") rather than left as
-// bare numbers — the band is what answers "is that comfortable?", the range
-// is the detail underneath it.
+// Named alongside the figures ("it should feel mild, around 14–17°C") rather
+// than left as bare numbers — the band is what answers "is that comfortable?",
+// the range is the detail underneath it.
 function feelsPhrase(feels: FeelsReading, tense: DayTense): string {
   const lo = Math.round(feels.min);
   const hi = Math.round(feels.max);
-  const verb = tense === 'past' ? 'felt' : tense === 'future' ? 'will feel' : 'feels';
+  const verb = tense === 'past' ? 'it felt' : tense === 'future' ? 'it should feel' : 'it feels';
   const band = tempBandFor(feels.mean);
-  const range = lo === hi ? `${lo}°` : `${lo}–${hi}°`;
-  return `${verb} ${band}, ${range}`;
+  const range = lo === hi ? `${lo}°C` : `${lo}–${hi}°C`;
+  return `${verb} ${band}, around ${range}`;
 }
 
 // How "feels like" temperature shifts across the day — warming, cooling, or
 // much the same throughout, keyed off the morning/afternoon mean so a single
 // warm or cold hour can't swing the read.
-function feelsTrendClause(slots: Slot[], temp: TemperatureSeries | null): string | null {
+function feelsTrendClause(slots: Slot[], temp: TemperatureSeries | null, tense: DayTense): string | null {
   if (!temp) return null;
   const morning = morningSlots(slots)
     .map((s) => temp.feelsLikeAt(s.at))
@@ -562,14 +556,22 @@ function feelsTrendClause(slots: Slot[], temp: TemperatureSeries | null): string
   const morningMean = average(morning);
   const afternoonMean = average(afternoon);
   const diff = afternoonMean - morningMean;
-  if (diff >= FEELS_TREND_THRESHOLD_C) return `warming to ${Math.round(Math.max(...afternoon))}° by afternoon`;
-  if (diff <= -FEELS_TREND_THRESHOLD_C) return `cooling to ${Math.round(Math.min(...afternoon))}° into the evening`;
-  return `feeling much the same all day, around ${Math.round((morningMean + afternoonMean) / 2)}°`;
+  if (diff >= FEELS_TREND_THRESHOLD_C) {
+    const verb = tense === 'past' ? 'and warmed' : 'warming';
+    const when = tense === 'today' ? 'this afternoon' : 'by afternoon';
+    return `${verb} to ${Math.round(Math.max(...afternoon))}°C ${when}`;
+  }
+  if (diff <= -FEELS_TREND_THRESHOLD_C) {
+    const verb = tense === 'past' ? 'and cooled' : 'cooling';
+    return `${verb} to ${Math.round(Math.min(...afternoon))}°C into the evening`;
+  }
+  const period = tense === 'today' ? 'for the rest of the day' : 'through the day';
+  return `with little change ${period}`;
 }
 
 // --- light ------------------------------------------------------------------
 
-// "dark by 16:21", for a day whose sunset lands inside the window and is
+// "it will be dark by 16:21", for a day whose sunset lands inside the window and is
 // still ahead. Omitted entirely for a day that's already over (there's
 // nothing left to warn about), when the light holds to the end of the
 // window, when today's sunset has already passed, and when sunrise/sunset
@@ -581,7 +583,7 @@ function lightClause(input: DayInsightsInput): string | null {
   const windowEnd = TideClock.londonDateAtHour(input.reference, DAY_WINDOW_END_HOUR);
   if (sunset.getTime() >= windowEnd.getTime()) return null;
   if (tense === 'today' && sunset.getTime() <= input.reference.getTime()) return null;
-  return tense === 'future' ? `will be dark by ${hhmm(sunset)}` : `dark by ${hhmm(sunset)}`;
+  return `it will be dark by ${hhmm(sunset)}`;
 }
 
 // --- clothing ---------------------------------------------------------------
@@ -671,18 +673,60 @@ function clothingAdvice(
   };
 }
 
-// --- outlook: how rain, sun and feel change through the day ------------------
+// --- combined readout --------------------------------------------------------
 
-function buildOutlook(input: DayInsightsInput, slots: Slot[], tense: DayTense): string | null {
-  if (tense === 'past') return null;
+function rainSentence(rain: RainClause, tense: DayTense): string {
+  if (rain.wet) return rain.text;
+  if (tense === 'past') return 'the day stayed dry';
+  if (tense === 'today') return 'the rest of the day should stay dry';
+  return 'the day should stay dry';
+}
 
-  const clauses = [
-    rainTrendClause(slots, input.precipitationSeries, tense),
-    sunTrendClause(slots, input.sunBrightnessSeries, input.cloudCoverSeries),
-    feelsTrendClause(slots, input.temperatureSeries),
-  ].filter((c): c is string => c !== null);
+function dryConditionsClause(tense: DayTense): string {
+  if (tense === 'past') return 'with dry conditions throughout';
+  if (tense === 'today') return 'with no further rain expected';
+  return 'with dry conditions expected';
+}
 
-  return clauses.length > 0 ? `${capitalize(clauses.join(', '))}.` : null;
+function clothingSentence(clothing: ClothingAdvice): string {
+  return `${clothing.verb} ${clothing.garment}${clothing.extra ? ` — ${clothing.extra}` : ''}`;
+}
+
+// The readout is intentionally allowed to be wordy. It is one paragraph, but
+// not one giant sentence: the first sentence gives the headline conditions,
+// the next develops the light and temperature story, and the final sentence
+// turns that into practical advice. Each signal is mentioned once, avoiding
+// the old two-part repetition.
+function buildReadout(
+  input: DayInsightsInput,
+  tense: DayTense,
+  summarySlots: Slot[],
+  shape: WindShape | null,
+  rain: RainClause | null,
+  sun: SunReading | null,
+  feels: FeelsReading | null,
+  light: string | null,
+  clothing: ClothingAdvice | null,
+): string {
+  const sentences: string[] = [];
+
+  if (shape) {
+    const wind = capitalize(windClause(shape, tense));
+    sentences.push(rain && !rain.wet ? `${wind}, ${dryConditionsClause(tense)}.` : `${wind}.`);
+  }
+  if (rain && (!shape || rain.wet)) sentences.push(`${capitalize(rainSentence(rain, tense))}.`);
+
+  const sunshine = sunTrendClause(summarySlots, input.sunBrightnessSeries, input.cloudCoverSeries, tense);
+  const trend = feels ? feelsTrendClause(summarySlots, input.temperatureSeries, tense) : null;
+  const temperature = feels ? `${feelsPhrase(feels, tense)}${trend ? `, ${trend}` : ''}` : null;
+
+  if (sunshine) sentences.push(`${capitalize(sunshine)}.`);
+  if (temperature) sentences.push(`${capitalize(temperature)}.`);
+
+  if (light && (shape || rain || sun || feels)) sentences.push(`${capitalize(light)}.`);
+  if (clothing) sentences.push(`${clothingSentence(clothing)}.`);
+
+  return sentences.length > 0 ? sentences.join(' ') : 'Tide data only — wind and rain forecast unavailable.';
 }
 
 // --- entry point --------------------------------------------------------------
@@ -690,13 +734,11 @@ function buildOutlook(input: DayInsightsInput, slots: Slot[], tense: DayTense): 
 export function buildDayInsights(input: DayInsightsInput): DayInsights {
   const slots = windowSlots(input);
   const tense = dayTense(input.reference);
-  // The headline sentence describes what's still ahead, not the whole day
-  // behind it too: on today it reads only the hours from now to the end of
-  // the window (the same cutoff the clothing call and rain clause already
-  // use). A future day has no "now" within it to cut off from, and a past
-  // day is already over, so both are read whole. `outlook` stays on the
-  // full window regardless (see its own comment) — it's about the day's
-  // shape, not just the remainder of it.
+  // The readout describes what's still ahead, not the whole day behind it:
+  // on today it reads only the hours from now to the end of the window (the
+  // same cutoff the clothing call and rain clause already use). A future day
+  // has no "now" within it and a past day is already over, so both read the
+  // window whole. Summary and progression therefore share one time scope.
   const summarySlots = tense === 'today' ? remainingSlots(input, slots) : slots;
   const shape = windShape(summarySlots, input.windSeries);
   const rain = rainClause(input, input.precipitationSeries);
@@ -705,22 +747,9 @@ export function buildDayInsights(input: DayInsightsInput): DayInsights {
   const light = lightClause(input);
   const aheadWind = windOver(summarySlots, input.windSeries);
 
-  const clauses: string[] = [];
-  if (shape) clauses.push(windClause(shape, tense));
-  if (rain) clauses.push(shape ? rain.text : capitalize(rain.text));
-  if (sun) clauses.push(SUN_WORD[tense][sunBandFor(sun.peak, sun.minCloudPct)]);
-  if (feels) clauses.push(feelsPhrase(feels, tense));
-  if (light && clauses.length > 0) clauses.push(light);
-
-  let summary = clauses.length > 0 ? `${clauses.join(', ')}.` : 'Tide data only — wind and rain forecast unavailable.';
-
   const clothing = clothingAdvice(input, slots, aheadWind, rain, light !== null);
-  if (clothing) {
-    summary += ` ${clothing.verb} ${clothing.garment}${clothing.extra ? ` — ${clothing.extra}` : ''}.`;
-  }
 
   return {
-    summary,
-    outlook: buildOutlook(input, slots, tense),
+    summary: buildReadout(input, tense, summarySlots, shape, rain, sun, feels, light, clothing),
   };
 }
