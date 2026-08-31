@@ -19,7 +19,6 @@ function partsOf(date: Date): PartsMap {
 }
 
 // Shared London-time date parsing/formatting, mirroring the macOS widget's TideClock.
-// biome-ignore lint/complexity/noStaticOnlyClass: deliberate namespace-style class, matching the Swift TideClock this mirrors
 export class TideClock {
   static readonly timeZone = LONDON_TZ;
 

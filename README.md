@@ -79,8 +79,8 @@ diagram in [`docs/architecture/`](docs/architecture/).
 ## Development
 
 - **CI** ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs
-  `npm run lint` (Biome) and `npx tsc --noEmit` against `expo/` on every PR,
-  and squash-merges automatically once checks pass on a non-draft PR.
+  Oxlint, Oxfmt and `npx tsc --noEmit` against `expo/` on every PR, and
+  squash-merges automatically once checks pass on a non-draft PR.
 - **Deploy** ([`.github/workflows/deploy-web.yml`](.github/workflows/deploy-web.yml))
   exports the static web build (`npx expo export --platform web`) and
   publishes `expo/dist` to GitHub Pages whenever `expo/**` changes on `main`.

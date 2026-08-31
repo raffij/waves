@@ -67,12 +67,14 @@ network access to TideCheck/Open-Meteo.
 ### Lint & typecheck
 
 ```bash
-npm run lint       # Biome
-npm run lint:fix   # Biome, with fixes
-npx tsc --noEmit   # types
+npm run lint          # Oxlint
+npm run lint:fix      # Oxlint, with fixes
+npm run format        # Oxfmt, with writes
+npm run format:check  # Oxfmt, without writes
+npx tsc --noEmit      # types
 ```
 
-CI runs the first and third on every PR.
+CI runs lint, format checking and typechecking on every PR.
 
 ## Project layout
 

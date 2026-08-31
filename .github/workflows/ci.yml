@@ -28,6 +28,10 @@ jobs:
         working-directory: expo
         run: npm run lint
 
+      - name: Format
+        working-directory: expo
+        run: npm run format:check
+
       - name: Typecheck
         working-directory: expo
         run: npx tsc --noEmit

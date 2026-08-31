@@ -32,7 +32,7 @@ it borrows the app's:
   `syncConfig(json)` and `reloadWidgets()` to JS.
 - `expo/src/hooks/useWidgetSync.ts` calls it whenever the app's API key or
   selected location changes, writing `{apiKey, stationId, latitude,
-  longitude, locationName}` into the shared App Group's `UserDefaults`.
+longitude, locationName}` into the shared App Group's `UserDefaults`.
 - `Widget.swift`'s `TimelineProvider` reads that config on every timeline
   reload (roughly hourly) and fetches TideCheck + Open-Meteo itself — it does
   **not** reuse the app's already-fetched data or its AsyncStorage cache,
