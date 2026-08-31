@@ -17,6 +17,22 @@ export interface PrecipitationData {
   precipitation: (number | null)[];
 }
 
+// Real (temperature_2m) and "feels like" (apparent_temperature, which factors
+// in wind chill and humidity) air temperature, °C.
+export interface TemperatureData {
+  time: string[];
+  temperature: (number | null)[];
+  apparent_temperature: (number | null)[];
+}
+
+// Shortwave (solar) radiation reaching the ground, W/m² — how bright/strong
+// the sun actually is, already discounted for cloud cover, unlike a raw UV
+// index which ignores it.
+export interface SunBrightnessData {
+  time: string[];
+  shortwave_radiation: (number | null)[];
+}
+
 // One entry per day (time is a "yyyy-MM-dd" key), sunrise/sunset as local
 // ISO strings for that day.
 export interface DaylightData {
@@ -30,6 +46,8 @@ export interface WaveDataResult {
   wind: WindData | null;
   precipitation: PrecipitationData | null;
   daylight: DaylightData | null;
+  temperature: TemperatureData | null;
+  sunBrightness: SunBrightnessData | null;
   fetchedAt: Date;
 }
 
@@ -63,21 +81,24 @@ export class WaveAPIClient {
       const cached = await AsyncStorage.getItem(this.cacheDataKey);
       if (!cached) return null;
 
-      const { data, wind, precipitation, daylight, cachedAt } = JSON.parse(cached);
+      const { data, wind, precipitation, daylight, temperature, sunBrightness, cachedAt } = JSON.parse(cached);
       const age = Date.now() - cachedAt;
       if (age > CACHE_MAX_AGE_MS) {
         await AsyncStorage.removeItem(this.cacheDataKey);
         return null;
       }
 
-      // `daylight` is absent from entries cached before it was added — the
-      // key is deliberately not versioned, so coalesce to null and let the
-      // next fetch (or the hook's 1h stale top-up) fill it in.
+      // `daylight`/`temperature`/`sunBrightness` are absent from entries
+      // cached before each was added — the key is deliberately not
+      // versioned, so coalesce to null and let the next fetch (or the
+      // hook's 1h stale top-up) fill it in.
       return {
         data,
         wind: wind ?? null,
         precipitation: precipitation ?? null,
         daylight: daylight ?? null,
+        temperature: temperature ?? null,
+        sunBrightness: sunBrightness ?? null,
         fetchedAt: new Date(cachedAt),
       };
     } catch {
@@ -97,6 +118,8 @@ export class WaveAPIClient {
           wind: result.wind,
           precipitation: result.precipitation,
           daylight: result.daylight,
+          temperature: result.temperature,
+          sunBrightness: result.sunBrightness,
           cachedAt: result.fetchedAt.getTime(),
         }),
       );
@@ -115,11 +138,15 @@ export class WaveAPIClient {
     const marineJson = await this.fetchWave(startDate, endDate);
     if (!marineJson) return null;
 
-    // Wave (marine) data is essential; wind/precipitation are a nice-to-have
-    // overlay. Fetched independently so a forecast-API request failing
-    // (network hiccup, provider outage, client-side filter) never takes wave
-    // data down with it — see the Promise.all bug this replaced.
-    const { wind, precipitation, daylight } = await this.fetchWindAndPrecipitation(startDate, endDate);
+    // Wave (marine) data is essential; wind/precipitation/temperature/sun
+    // are a nice-to-have overlay. Fetched independently so a forecast-API
+    // request failing (network hiccup, provider outage, client-side filter)
+    // never takes wave data down with it — see the Promise.all bug this
+    // replaced.
+    const { wind, precipitation, daylight, temperature, sunBrightness } = await this.fetchForecastExtras(
+      startDate,
+      endDate,
+    );
 
     return {
       data: {
@@ -129,6 +156,8 @@ export class WaveAPIClient {
       wind,
       precipitation,
       daylight,
+      temperature,
+      sunBrightness,
       fetchedAt: new Date(),
     };
   }
@@ -154,42 +183,68 @@ export class WaveAPIClient {
     }
   }
 
-  // wind_speed_10m and precipitation live on the general Forecast API, not the
-  // Marine API (the Marine API silently accepts wind_speed_10m but returns
-  // all nulls, and doesn't offer precipitation at all). Fetched together in
-  // one request since both come from the same endpoint, along with the daily
-  // sunrise/sunset the day-insights block uses to bound "the day". Unlike
-  // met.no, this supports start_date/end_date, so all of it covers the same
-  // yesterday-to-+5-days range as wave instead of forecast-only.
-  private async fetchWindAndPrecipitation(
+  // wind_speed_10m, precipitation, temperature_2m/apparent_temperature and
+  // shortwave_radiation all live on the general Forecast API, not the Marine
+  // API (the Marine API silently accepts wind_speed_10m but returns all
+  // nulls, and doesn't offer the rest at all). Fetched together in one
+  // request since they all come from the same endpoint, along with the
+  // daily sunrise/sunset the day-insights block uses to bound "the day".
+  // Unlike met.no, this supports start_date/end_date, so all of it covers
+  // the same yesterday-to-+5-days range as wave instead of forecast-only.
+  private async fetchForecastExtras(
     startDate: string,
     endDate: string,
-  ): Promise<{ wind: WindData | null; precipitation: PrecipitationData | null; daylight: DaylightData | null }> {
+  ): Promise<{
+    wind: WindData | null;
+    precipitation: PrecipitationData | null;
+    daylight: DaylightData | null;
+    temperature: TemperatureData | null;
+    sunBrightness: SunBrightnessData | null;
+  }> {
+    const empty = { wind: null, precipitation: null, daylight: null, temperature: null, sunBrightness: null };
+
     const url = new URL('https://api.open-meteo.com/v1/forecast');
     url.searchParams.append('latitude', this.latitude);
     url.searchParams.append('longitude', this.longitude);
     url.searchParams.append('start_date', startDate);
     url.searchParams.append('end_date', endDate);
-    url.searchParams.append('hourly', 'wind_speed_10m,precipitation');
+    url.searchParams.append(
+      'hourly',
+      'wind_speed_10m,precipitation,temperature_2m,apparent_temperature,shortwave_radiation',
+    );
     url.searchParams.append('daily', 'sunrise,sunset');
     url.searchParams.append('wind_speed_unit', 'mph');
+    url.searchParams.append('temperature_unit', 'celsius');
     url.searchParams.append('timezone', 'Europe/London');
 
     try {
       const response = await fetch(url.toString());
-      if (!response.ok) return { wind: null, precipitation: null, daylight: null };
+      if (!response.ok) return empty;
 
       const json = (await response.json()) as {
-        hourly: { time: string[]; wind_speed_10m: (number | null)[]; precipitation: (number | null)[] };
+        hourly: {
+          time: string[];
+          wind_speed_10m: (number | null)[];
+          precipitation: (number | null)[];
+          temperature_2m: (number | null)[];
+          apparent_temperature: (number | null)[];
+          shortwave_radiation: (number | null)[];
+        };
         daily?: { time: string[]; sunrise: string[]; sunset: string[] };
       };
       return {
         wind: { time: json.hourly.time, wind_speed: json.hourly.wind_speed_10m },
         precipitation: { time: json.hourly.time, precipitation: json.hourly.precipitation },
         daylight: json.daily ? { time: json.daily.time, sunrise: json.daily.sunrise, sunset: json.daily.sunset } : null,
+        temperature: {
+          time: json.hourly.time,
+          temperature: json.hourly.temperature_2m,
+          apparent_temperature: json.hourly.apparent_temperature,
+        },
+        sunBrightness: { time: json.hourly.time, shortwave_radiation: json.hourly.shortwave_radiation },
       };
     } catch {
-      return { wind: null, precipitation: null, daylight: null };
+      return empty;
     }
   }
 

@@ -4,6 +4,8 @@ import { useCallback, useEffect } from 'react';
 import { DEFAULT_LOCATION, type Location } from '../models/Location';
 import { DaylightSeries } from '../services/DaylightSeries';
 import { PrecipitationSeries } from '../services/PrecipitationSeries';
+import { SunBrightnessSeries } from '../services/SunBrightnessSeries';
+import { TemperatureSeries } from '../services/TemperatureSeries';
 import type { TideDataResult } from '../services/TideAPIClient';
 import { TideAPIClient } from '../services/TideAPIClient';
 import { TideForecast } from '../services/TideForecast';
@@ -24,6 +26,8 @@ interface WaveView {
   windSeries: WindSeries | null;
   precipitationSeries: PrecipitationSeries | null;
   daylightSeries: DaylightSeries | null;
+  temperatureSeries: TemperatureSeries | null;
+  sunBrightnessSeries: SunBrightnessSeries | null;
 }
 
 export interface ForecastData {
@@ -33,6 +37,8 @@ export interface ForecastData {
   windSeries: WindSeries | null;
   precipitationSeries: PrecipitationSeries | null;
   daylightSeries: DaylightSeries | null;
+  temperatureSeries: TemperatureSeries | null;
+  sunBrightnessSeries: SunBrightnessSeries | null;
   fetchedAt: Date | null;
   isFetching: boolean;
   error: Error | null;
@@ -101,13 +107,16 @@ function selectWave(result: WaveDataResult): WaveView {
     windSeries: result.wind ? new WindSeries(result.wind) : null,
     precipitationSeries: result.precipitation ? new PrecipitationSeries(result.precipitation) : null,
     daylightSeries: result.daylight ? new DaylightSeries(result.daylight) : null,
+    temperatureSeries: result.temperature ? new TemperatureSeries(result.temperature) : null,
+    sunBrightnessSeries: result.sunBrightness ? new SunBrightnessSeries(result.sunBrightness) : null,
   };
 }
 
-// Wave/wind/precipitation are a nice-to-have overlay (see WaveAPIClient's
-// own comment on fetching them independently of tide) — a wave-query error
-// is deliberately left out of the combined `error`, so a wave outage never
-// blocks the tide UI or shows a scary error for a non-essential chart.
+// Wave/wind/precipitation/temperature/sun are a nice-to-have overlay (see
+// WaveAPIClient's own comment on fetching them independently of tide) — a
+// wave-query error is deliberately left out of the combined `error`, so a
+// wave outage never blocks the tide UI or shows a scary error for a
+// non-essential chart.
 function combineForecastData([tide, wave]: [UseQueryResult<TideView, Error>, UseQueryResult<WaveView, Error>]): Omit<
   ForecastData,
   'refresh'
@@ -120,6 +129,8 @@ function combineForecastData([tide, wave]: [UseQueryResult<TideView, Error>, Use
     windSeries: wave.data?.windSeries ?? null,
     precipitationSeries: wave.data?.precipitationSeries ?? null,
     daylightSeries: wave.data?.daylightSeries ?? null,
+    temperatureSeries: wave.data?.temperatureSeries ?? null,
+    sunBrightnessSeries: wave.data?.sunBrightnessSeries ?? null,
     isFetching: tide.isFetching || wave.isFetching,
     error: tide.error ?? null,
   };
