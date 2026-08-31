@@ -50,7 +50,7 @@ function getStyles(colors: Colors, fonts: Fonts) {
       width: '100%',
       maxWidth: 640,
       alignSelf: 'center',
-      paddingHorizontal: 20,
+      paddingHorizontal: 10,
     },
     title: {
       color: colors.textPrimary,
