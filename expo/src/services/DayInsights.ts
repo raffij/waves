@@ -439,12 +439,26 @@ interface SunReading {
 
 function sunOver(slots: Slot[], sun: SunBrightnessSeries | null, cloud: CloudCoverSeries | null): SunReading | null {
   if (!sun) return null;
-  const values = slots.map((s) => sun.brightnessAt(s.at)).filter((wm2): wm2 is number => wm2 !== null);
-  if (values.length === 0) return null;
-  const cloudValues = cloud
-    ? slots.map((s) => cloud.coverageAt(s.at)).filter((pct): pct is number => pct !== null)
-    : [];
-  return { peak: Math.max(...values), minCloudPct: cloudValues.length > 0 ? Math.min(...cloudValues) : null };
+  const readings = slots
+    .map((s) => ({ wm2: sun.brightnessAt(s.at), cloudPct: cloud ? cloud.coverageAt(s.at) : null }))
+    .filter((r): r is { wm2: number; cloudPct: number | null } => r.wm2 !== null);
+  if (readings.length === 0) return null;
+
+  // Band each hour on its own brightness/cloud pair and report the
+  // best-banded hour, rather than the window's brightest hour and its
+  // clearest hour picked independently (they can be different hours) — that
+  // would pair a brief clearing's brightness with an unrelated hour's clear
+  // sky and overstate how sunny the window was.
+  let best = readings[0];
+  let bestRank = SUN_BAND_RANK[sunBandFor(best.wm2, best.cloudPct)];
+  for (const r of readings.slice(1)) {
+    const rank = SUN_BAND_RANK[sunBandFor(r.wm2, r.cloudPct)];
+    if (rank > bestRank) {
+      best = r;
+      bestRank = rank;
+    }
+  }
+  return { peak: best.wm2, minCloudPct: best.cloudPct };
 }
 
 // How strong the sun gets, morning vs. afternoon — brightening, clouding
