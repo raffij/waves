@@ -2,32 +2,40 @@ import { useMemo, useState } from 'react';
 import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { CurrentLevelCard } from './src/components/CurrentLevelCard';
 import { DayInsights } from './src/components/DayInsights';
+import { ForecastList } from './src/components/ForecastList';
 import { PrecipitationChart } from './src/components/PrecipitationChart';
 import { TemperatureChart } from './src/components/TemperatureChart';
 import { TideChart } from './src/components/TideChart';
 import type { Fonts } from './src/fonts';
 import { ThemeProvider, useTheme } from './src/hooks/useTheme';
+import type { Extreme } from './src/models/TideModels';
 import { buildDayInsights } from './src/services/DayInsights';
 import { DaylightSeries } from './src/services/DaylightSeries';
 import { PrecipitationSeries } from './src/services/PrecipitationSeries';
 import { SunBrightnessSeries } from './src/services/SunBrightnessSeries';
 import { TemperatureSeries } from './src/services/TemperatureSeries';
 import { TideClock } from './src/services/TideClock';
+import { TideForecast } from './src/services/TideForecast';
 import { TideSeries } from './src/services/TideSeries';
 import { WaveSeries } from './src/services/WaveSeries';
 import { WindSeries } from './src/services/WindSeries';
 import type { Colors } from './src/theme';
 
-// A local-only stand-in for a live day's forecast: every series the real
-// screen renders, built from simple formulas instead of a TideCheck/
-// Open-Meteo fetch. Anchored on today's real date, so the tense-sensitive
-// bits (day insights, past-hour fade) behave the way they would live.
+// A local-only stand-in for a live forecast: every series the real screen
+// renders, built from simple formulas instead of a TideCheck/Open-Meteo
+// fetch, spanning yesterday through +5 days so the forecast list has
+// something to page through. Anchored on today's real date, so the
+// tense-sensitive bits (day insights, past-hour fade) behave the way they
+// would live.
 //
 // Kept deliberately approximate — a sine-wave tide, a bell-curve sun — this
 // is for eyeballing layout, colors and copy across the three themes, not for
-// validating the science.
-function buildSyntheticDay() {
-  const today = TideClock.dateKey(new Date());
+// validating the science. One day (tomorrow) is seeded rainier than the
+// rest so the forecast list's rain icon/legend has something to show.
+function buildSyntheticForecast() {
+  const today = new Date();
+  const dayOffsets = [-1, 0, 1, 2, 3, 4, 5];
+
   const time: string[] = [];
   const height: number[] = [];
   const waveHeight: number[] = [];
@@ -36,23 +44,45 @@ function buildSyntheticDay() {
   const temperature: number[] = [];
   const apparentTemperature: number[] = [];
   const shortwaveRadiation: number[] = [];
+  const extremes: Extreme[] = [];
+  const dayKeys: string[] = [];
+  const sunriseTimes: string[] = [];
+  const sunsetTimes: string[] = [];
 
-  for (let h = 0; h < 24; h++) {
-    time.push(`${today}T${String(h).padStart(2, '0')}:00`);
+  for (const dayOffset of dayOffsets) {
+    const day = new Date(today.getTime() + dayOffset * 86_400_000);
+    const dateKey = TideClock.dateKey(day);
 
-    // Roughly semi-diurnal (~12.4h period), 0.6–4.4m.
-    height.push(Math.round((2.5 + 1.9 * Math.sin((h / 12.4) * 2 * Math.PI)) * 10) / 10);
-    waveHeight.push(Math.round((0.6 + 0.5 * Math.sin((h / 12.4) * 2 * Math.PI + 1)) * 10) / 10);
+    for (let h = 0; h < 24; h++) {
+      time.push(`${dateKey}T${String(h).padStart(2, '0')}:00`);
 
-    windSpeed.push(h < 12 ? 8 : 16 + (h > 16 ? 6 : 0));
-    precipitation.push(h >= 8 && h <= 10 ? 1.4 : 0);
+      // Roughly semi-diurnal (~12.4h period), 0.6–4.4m, phase-shifted a bit
+      // per day like a real tide's daily lag.
+      const phase = dayOffset * 0.8;
+      height.push(Math.round((2.5 + 1.9 * Math.sin((h / 12.4) * 2 * Math.PI + phase)) * 10) / 10);
+      waveHeight.push(Math.round((0.6 + 0.5 * Math.sin((h / 12.4) * 2 * Math.PI + 1 + phase)) * 10) / 10);
 
-    const diurnal = 13 + 5 * Math.sin(((h - 7) / 24) * 2 * Math.PI * 1.4);
-    temperature.push(Math.round(diurnal * 10) / 10);
-    apparentTemperature.push(Math.round((diurnal - (h < 12 ? 2.5 : 0.5)) * 10) / 10);
+      windSpeed.push((h < 12 ? 8 : 16 + (h > 16 ? 6 : 0)) + dayOffset);
+      precipitation.push(dayOffset === 1 && h >= 8 && h <= 14 ? 2.2 : dayOffset === 0 && h >= 8 && h <= 10 ? 1.4 : 0);
 
-    const sun = h >= 6 && h <= 20 ? Math.max(0, 480 * Math.sin(((h - 6) / 14) * Math.PI)) : 0;
-    shortwaveRadiation.push(Math.round(sun));
+      const diurnal = 13 + 5 * Math.sin(((h - 7) / 24) * 2 * Math.PI * 1.4) - dayOffset * 0.4;
+      temperature.push(Math.round(diurnal * 10) / 10);
+      apparentTemperature.push(Math.round((diurnal - (h < 12 ? 2.5 : 0.5)) * 10) / 10);
+
+      const sun = h >= 6 && h <= 20 ? Math.max(0, 480 * Math.sin(((h - 6) / 14) * Math.PI)) : 0;
+      shortwaveRadiation.push(Math.round(sun));
+    }
+
+    extremes.push(
+      { localTime: `${dateKey}T04:00`, localDate: dateKey, height: 4.2 + dayOffset * 0.05, type: 'high' },
+      { localTime: `${dateKey}T10:15`, localDate: dateKey, height: 0.6 + dayOffset * 0.02, type: 'low' },
+      { localTime: `${dateKey}T16:24`, localDate: dateKey, height: 4.3 + dayOffset * 0.05, type: 'high' },
+      { localTime: `${dateKey}T22:36`, localDate: dateKey, height: 0.7 + dayOffset * 0.02, type: 'low' },
+    );
+
+    dayKeys.push(dateKey);
+    sunriseTimes.push(`${dateKey}T06:15`);
+    sunsetTimes.push(`${dateKey}T19:45`);
   }
 
   return {
@@ -62,16 +92,24 @@ function buildSyntheticDay() {
     precipitationSeries: new PrecipitationSeries({ time, precipitation }),
     temperatureSeries: new TemperatureSeries({ time, temperature, apparent_temperature: apparentTemperature }),
     sunBrightnessSeries: new SunBrightnessSeries({ time, shortwave_radiation: shortwaveRadiation }),
-    daylightSeries: new DaylightSeries({ time: [today], sunrise: [`${today}T06:15`], sunset: [`${today}T19:45`] }),
+    daylightSeries: new DaylightSeries({ time: dayKeys, sunrise: sunriseTimes, sunset: sunsetTimes }),
+    forecast: new TideForecast(extremes),
   };
 }
 
 function PreviewContent() {
   const { colors, fonts, themeName, toggleTheme } = useTheme();
   const styles = useMemo(() => getStyles(colors, fonts), [colors, fonts]);
-  const data = useMemo(buildSyntheticDay, []);
+  const data = useMemo(buildSyntheticForecast, []);
   const [now, setNow] = useState(() => new Date());
   const [scrubTime, setScrubTime] = useState<Date | null>(null);
+  // Local to the preview: which forecast-list row is expanded. Doesn't drive
+  // the charts above (unlike the real App.tsx) — this harness is only here
+  // to eyeball ForecastList itself across days/themes.
+  const [selectedDateKey, setSelectedDateKey] = useState(TideClock.dateKey(now));
+
+  const yesterday = data.forecast.yesterday(now);
+  const forecastDays = data.forecast.days(now, 5);
 
   const insights = buildDayInsights({
     windSeries: data.windSeries,
@@ -146,6 +184,20 @@ function PreviewContent() {
               isToday
               scrubTime={scrubTime}
               onScrub={setScrubTime}
+            />
+          </View>
+
+          <View style={styles.section}>
+            <ForecastList
+              yesterday={yesterday}
+              days={forecastDays}
+              selectedDateKey={selectedDateKey}
+              onSelectDay={setSelectedDateKey}
+              windSeries={data.windSeries}
+              precipitationSeries={data.precipitationSeries}
+              temperatureSeries={data.temperatureSeries}
+              sunBrightnessSeries={data.sunBrightnessSeries}
+              daylightSeries={data.daylightSeries}
             />
           </View>
         </ScrollView>
