@@ -9,4 +9,5 @@ Numbered sequentially, oldest first. Use `TEMPLATE.md` to start a new one.
 | # | Decision | Status |
 | --- | --- | --- |
 | [0001](0001-adopt-a-decision-log.md) | Adopt a decision log | Accepted |
-| [0002](0002-adopt-oxlint-and-oxfmt.md) | Adopt Oxlint and Oxfmt for JavaScript tooling | Accepted |
+| [0002](0002-combine-day-insights-readout.md) | Combine the day-insights readout | Accepted |
+| [0003](0002-adopt-oxlint-and-oxfmt.md) | Adopt Oxlint and Oxfmt for JavaScript tooling | Accepted |

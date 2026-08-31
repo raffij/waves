@@ -28,6 +28,7 @@ import { TideChart } from './src/components/TideChart';
 import type { Fonts } from './src/fonts';
 import { useApiKey } from './src/hooks/useApiKey';
 import { useAppStateFocusManager } from './src/hooks/useAppStateFocusManager';
+import { useClockTick } from './src/hooks/useClockTick';
 import { useForecastData } from './src/hooks/useForecastData';
 import { useLocation } from './src/hooks/useLocation';
 import { type ThemeName, ThemeProvider, useTheme } from './src/hooks/useTheme';
@@ -44,6 +45,11 @@ import type { Colors } from './src/theme';
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
 });
+
+// How often the screen's "now" advances on its own (see useClockTick) —
+// tight enough that "today's summary" and the current-conditions card never
+// visibly lag the real clock, loose enough not to re-render for no reason.
+const CLOCK_TICK_MS = 60_000;
 
 export default function App() {
   return (
@@ -74,6 +80,7 @@ const forecastWindowToggleTarget: Record<ForecastWindow, { icon: keyof typeof Io
 
 function AppContent() {
   useAppStateFocusManager();
+  useClockTick(CLOCK_TICK_MS);
   const { apiKey, saveKey, resetKey } = useApiKey();
   const { location, toggleLocation } = useLocation();
   useWidgetSync(apiKey, location);
@@ -107,7 +114,7 @@ function AppContent() {
   // ("stats") or a worded sentence like the main day-insights summary
   // ("summary") — a footer toggle, not a per-row choice, so the list stays
   // one consistent shape as you scan down it.
-  const [forecastDetail, setForecastDetail] = useState<ForecastDetail>('stats');
+  const [forecastDetail, setForecastDetail] = useState<ForecastDetail>('summary');
   const toggleForecastDetail = () => setForecastDetail((mode) => (mode === 'stats' ? 'summary' : 'stats'));
   // Defaults to daytime hours only (06:00–20:00) — a day's tide/wind/sun
   // figures covering 3am aren't useful for deciding what to do with the
@@ -351,7 +358,7 @@ function getStyles(colors: Colors, fonts: Fonts) {
       paddingTop: 8,
       paddingBottom: 16,
     },
-    section: { marginTop: 20 },
+    section: { marginTop: 14 },
     error: { color: colors.falling, marginTop: 12, textAlign: 'center' },
     footer: { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: 4, marginTop: 4 },
     footerButton: {

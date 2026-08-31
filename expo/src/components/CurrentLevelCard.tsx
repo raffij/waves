@@ -205,9 +205,9 @@ function getStyles(colors: Colors, fonts: Fonts) {
     },
     liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.rising },
     badgeText: { color: colors.textSecondary, fontSize: 11, fontWeight: '600', fontFamily: fonts.mono },
-    contentRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 16, gap: 8 },
+    contentRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10, gap: 8 },
     stat: { flex: 1 },
-    statLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 6 },
+    statLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 4 },
     statIconWrap: {
       width: 18,
       height: 18,
