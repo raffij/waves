@@ -143,27 +143,41 @@ export function TideChart({
   // release so there's time to actually read it, rather than reverting to
   // "now" the instant your finger lifts. Lifted to App.tsx (via onScrub) so
   // dragging this chart moves the crosshair on the other charts too.
+  //
+  // A touch that starts on the chart could just as easily be the start of a
+  // vertical scroll through the page, so onMoveShouldSetPanResponder only
+  // claims the gesture once it's clearly more horizontal than vertical —
+  // otherwise scrolling past the chart reads as a scrub. Same test on
+  // onShouldBlockNativeResponder/onPanResponderTerminationRequest: a
+  // horizontal drag still refuses to hand off mid-gesture (see below), but
+  // a gesture that turns vertical lets the ScrollView take over instead of
+  // fighting it for the rest of the scroll.
+  const isHorizontal = (g: { dx: number; dy: number }) => Math.abs(g.dx) > Math.abs(g.dy);
+
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_evt, gesture) => isHorizontal(gesture),
       onPanResponderGrant: (evt) => {
         const w = widthRef.current;
         const { start, end, plotWidth } = geometryRef.current;
         const x = Math.min(Math.max(evt.nativeEvent.locationX, PADDING_LEFT), w - PADDING_X);
         onScrub?.(new Date(start.getTime() + ((x - PADDING_LEFT) / plotWidth) * (end.getTime() - start.getTime())));
       },
-      onPanResponderMove: (evt) => {
+      onPanResponderMove: (evt, gesture) => {
+        if (!isHorizontal(gesture)) return;
         const w = widthRef.current;
         const { start, end, plotWidth } = geometryRef.current;
         const x = Math.min(Math.max(evt.nativeEvent.locationX, PADDING_LEFT), w - PADDING_X);
         onScrub?.(new Date(start.getTime() + ((x - PADDING_LEFT) / plotWidth) * (end.getTime() - start.getTime())));
       },
-      // Without this, the parent ScrollView can (and does) steal the
-      // gesture partway through a drag, freezing the reading wherever the
-      // handoff happened instead of tracking the finger to the end.
-      onPanResponderTerminationRequest: () => false,
-      onShouldBlockNativeResponder: () => true,
+      // Without this, the parent ScrollView can (and does) steal a
+      // horizontal drag partway through, freezing the reading wherever the
+      // handoff happened instead of tracking the finger to the end — but
+      // only refuse the handoff for a genuine scrub; a gesture that's
+      // turned vertical should go to the ScrollView instead.
+      onPanResponderTerminationRequest: (_evt, gesture) => !isHorizontal(gesture),
+      onShouldBlockNativeResponder: (_evt, gesture) => isHorizontal(gesture),
     }),
   ).current;
 
