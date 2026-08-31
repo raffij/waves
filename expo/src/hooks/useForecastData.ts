@@ -2,6 +2,7 @@ import type { UseQueryResult } from '@tanstack/react-query';
 import { useQueries, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect } from 'react';
 import { DEFAULT_LOCATION, type Location } from '../models/Location';
+import { CloudCoverSeries } from '../services/CloudCoverSeries';
 import { DaylightSeries } from '../services/DaylightSeries';
 import { PrecipitationSeries } from '../services/PrecipitationSeries';
 import { SunBrightnessSeries } from '../services/SunBrightnessSeries';
@@ -28,6 +29,7 @@ interface WaveView {
   daylightSeries: DaylightSeries | null;
   temperatureSeries: TemperatureSeries | null;
   sunBrightnessSeries: SunBrightnessSeries | null;
+  cloudCoverSeries: CloudCoverSeries | null;
 }
 
 export interface ForecastData {
@@ -39,6 +41,7 @@ export interface ForecastData {
   daylightSeries: DaylightSeries | null;
   temperatureSeries: TemperatureSeries | null;
   sunBrightnessSeries: SunBrightnessSeries | null;
+  cloudCoverSeries: CloudCoverSeries | null;
   fetchedAt: Date | null;
   isFetching: boolean;
   error: Error | null;
@@ -109,6 +112,7 @@ function selectWave(result: WaveDataResult): WaveView {
     daylightSeries: result.daylight ? new DaylightSeries(result.daylight) : null,
     temperatureSeries: result.temperature ? new TemperatureSeries(result.temperature) : null,
     sunBrightnessSeries: result.sunBrightness ? new SunBrightnessSeries(result.sunBrightness) : null,
+    cloudCoverSeries: result.cloudCover ? new CloudCoverSeries(result.cloudCover) : null,
   };
 }
 
@@ -131,6 +135,7 @@ function combineForecastData([tide, wave]: [UseQueryResult<TideView, Error>, Use
     daylightSeries: wave.data?.daylightSeries ?? null,
     temperatureSeries: wave.data?.temperatureSeries ?? null,
     sunBrightnessSeries: wave.data?.sunBrightnessSeries ?? null,
+    cloudCoverSeries: wave.data?.cloudCoverSeries ?? null,
     isFetching: tide.isFetching || wave.isFetching,
     error: tide.error ?? null,
   };

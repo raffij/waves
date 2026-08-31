@@ -8,7 +8,9 @@ import { TemperatureChart } from './src/components/TemperatureChart';
 import { TideChart } from './src/components/TideChart';
 import type { Fonts } from './src/fonts';
 import { ThemeProvider, useTheme } from './src/hooks/useTheme';
+import { DEFAULT_LOCATION } from './src/models/Location';
 import type { Extreme } from './src/models/TideModels';
+import { CloudCoverSeries } from './src/services/CloudCoverSeries';
 import { buildDayInsights } from './src/services/DayInsights';
 import { DaylightSeries } from './src/services/DaylightSeries';
 import { PrecipitationSeries } from './src/services/PrecipitationSeries';
@@ -44,6 +46,7 @@ function buildSyntheticForecast() {
   const temperature: number[] = [];
   const apparentTemperature: number[] = [];
   const shortwaveRadiation: number[] = [];
+  const cloudCover: number[] = [];
   const extremes: Extreme[] = [];
   const dayKeys: string[] = [];
   const sunriseTimes: string[] = [];
@@ -71,6 +74,13 @@ function buildSyntheticForecast() {
 
       const sun = h >= 6 && h <= 20 ? Math.max(0, 480 * Math.sin(((h - 6) / 14) * Math.PI)) : 0;
       shortwaveRadiation.push(Math.round(sun));
+
+      // Varies independently of brightness (clearing through the morning,
+      // cloudier as each day offset increases) so the preview can show
+      // brightness and cloud cover actually disagreeing sometimes — a
+      // bright-but-overcast hour, or a clear-but-dim one.
+      const cloud = 55 - 35 * Math.sin(((h - 6) / 14) * Math.PI) + dayOffset * 6;
+      cloudCover.push(Math.max(0, Math.min(100, Math.round(cloud))));
     }
 
     extremes.push(
@@ -96,6 +106,7 @@ function buildSyntheticForecast() {
     precipitationSeries: new PrecipitationSeries({ time, precipitation }),
     temperatureSeries: new TemperatureSeries({ time, temperature, apparent_temperature: apparentTemperature }),
     sunBrightnessSeries: new SunBrightnessSeries({ time, shortwave_radiation: shortwaveRadiation }),
+    cloudCoverSeries: new CloudCoverSeries({ time, cloud_cover: cloudCover }),
     daylightSeries: new DaylightSeries({ time: dayKeys, sunrise: sunriseTimes, sunset: sunsetTimes }),
     forecast: new TideForecast(extremes),
   };
@@ -123,6 +134,7 @@ function PreviewContent() {
     daylightSeries: data.daylightSeries,
     temperatureSeries: data.temperatureSeries,
     sunBrightnessSeries: data.sunBrightnessSeries,
+    cloudCoverSeries: data.cloudCoverSeries,
     reference: now,
   });
 
@@ -159,10 +171,12 @@ function PreviewContent() {
             windTrend={data.windSeries.trend(now)}
             fetchedAt={now}
             dayLabel={null}
-            onPress={() => {
+            onPressUpdated={() => {
               setNow(new Date());
               setScrubTime(null);
             }}
+            location={DEFAULT_LOCATION}
+            onPressLocation={() => {}}
           />
 
           <View style={styles.section}>
@@ -218,6 +232,7 @@ function PreviewContent() {
               precipitationSeries={data.precipitationSeries}
               temperatureSeries={data.temperatureSeries}
               sunBrightnessSeries={data.sunBrightnessSeries}
+              cloudCoverSeries={data.cloudCoverSeries}
               daylightSeries={data.daylightSeries}
             />
           </View>

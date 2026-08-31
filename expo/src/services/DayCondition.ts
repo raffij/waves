@@ -1,10 +1,13 @@
-import { HEAVY_PEAK_MM, SUN_BAND_HAZY_WM2, SUN_BAND_SUNNY_WM2, WET_HOUR_MM } from './DayInsights';
+import type { CloudCoverSeries } from './CloudCoverSeries';
+import { HEAVY_PEAK_MM, type SunBand, sunBandFor, WET_HOUR_MM } from './DayInsights';
 import { DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR } from './DayWindow';
 import type { PrecipitationSeries } from './PrecipitationSeries';
 import type { SunBrightnessSeries } from './SunBrightnessSeries';
 import { TideClock } from './TideClock';
 
 export type DayCondition = 'rain' | 'sunny' | 'hazy' | 'overcast';
+
+const CONDITION_FROM_SUN_BAND: Record<SunBand, DayCondition> = { overcast: 'overcast', hazy: 'hazy', sunny: 'sunny' };
 
 export interface DayConditionHours {
   startHour: number;
@@ -39,6 +42,7 @@ export function dayCondition(
   dateKey: string,
   precipitationSeries: PrecipitationSeries | null,
   sunBrightnessSeries: SunBrightnessSeries | null,
+  cloudCoverSeries: CloudCoverSeries | null,
   hours: DayConditionHours = DEFAULT_HOURS,
 ): DayCondition {
   const date = TideClock.dateFromKey(dateKey);
@@ -60,8 +64,14 @@ export function dayCondition(
       if (v !== null) sunPeak = sunPeak === null ? v : Math.max(sunPeak, v);
     }
   }
-  if (sunPeak === null) return 'overcast';
-  if (sunPeak >= SUN_BAND_SUNNY_WM2) return 'sunny';
-  if (sunPeak >= SUN_BAND_HAZY_WM2) return 'hazy';
-  return 'overcast';
+
+  let minCloudPct: number | null = null;
+  if (cloudCoverSeries) {
+    for (let h = hours.startHour; h <= hours.endHour; h++) {
+      const v = cloudCoverSeries.coverageAt(TideClock.londonDateAtHour(date, h));
+      if (v !== null) minCloudPct = minCloudPct === null ? v : Math.min(minCloudPct, v);
+    }
+  }
+
+  return CONDITION_FROM_SUN_BAND[sunBandFor(sunPeak, minCloudPct)];
 }

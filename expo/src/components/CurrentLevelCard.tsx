@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Fonts } from '../fonts';
 import { useTheme } from '../hooks/useTheme';
+import type { Location } from '../models/Location';
 import type { CurrentLevel, Trend } from '../services/TideSeries';
 import type { Colors } from '../theme';
 
@@ -15,8 +16,10 @@ interface Props {
   fetchedAt: Date | null;
   /** Set when viewing a non-live day (e.g. "Tomorrow"), shown in place of the "Updated" timestamp. */
   dayLabel?: string | null;
-  /** Jumps back to today/now — the card doubles as a "back to live" control once another day is selected. */
-  onPress?: () => void;
+  /** Jumps back to today/now — tapping the "Updated"/day badge doubles as a "back to live" control once another day is selected. */
+  onPressUpdated?: () => void;
+  location: Location;
+  onPressLocation: () => void;
 }
 
 const trendIcon: Record<Trend, keyof typeof Ionicons.glyphMap> = {
@@ -87,7 +90,9 @@ export function CurrentLevelCard({
   windTrend,
   fetchedAt,
   dayLabel,
-  onPress,
+  onPressUpdated,
+  location,
+  onPressLocation,
 }: Props) {
   const { colors, fonts } = useTheme();
   const styles = useMemo(() => getStyles(colors, fonts), [colors, fonts]);
@@ -97,25 +102,38 @@ export function CurrentLevelCard({
     : null;
 
   return (
-    <Pressable
-      style={({ pressed }) => [styles.card, pressed && onPress && styles.cardPressed]}
-      onPress={onPress}
-      disabled={!onPress}
-    >
+    <View style={styles.card}>
       <View style={styles.topRow}>
-        <Text style={styles.title}>Current conditions</Text>
-        {dayLabel ? (
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>{dayLabel}</Text>
-          </View>
-        ) : (
-          updatedTime && (
+        <Pressable
+          onPress={onPressLocation}
+          style={({ pressed }) => [styles.locationButton, pressed && styles.pressedFaint]}
+          hitSlop={6}
+        >
+          <Ionicons name="location-outline" size={11} color={colors.textSecondary} />
+          <Text style={styles.locationTitle} numberOfLines={1}>
+            {location.name} · {location.region}
+          </Text>
+          <Ionicons name="swap-horizontal-outline" size={11} color={colors.textSecondary} />
+        </Pressable>
+        <Pressable
+          onPress={onPressUpdated}
+          disabled={!onPressUpdated}
+          style={({ pressed }) => [styles.badgeButton, pressed && onPressUpdated && styles.pressedFaint]}
+          hitSlop={6}
+        >
+          {dayLabel ? (
             <View style={styles.badge}>
-              <View style={styles.liveDot} />
-              <Text style={styles.badgeText}>Updated {updatedTime}</Text>
+              <Text style={styles.badgeText}>{dayLabel}</Text>
             </View>
-          )
-        )}
+          ) : (
+            updatedTime && (
+              <View style={styles.badge}>
+                <View style={styles.liveDot} />
+                <Text style={styles.badgeText}>Updated {updatedTime}</Text>
+              </View>
+            )
+          )}
+        </Pressable>
       </View>
       <View style={styles.contentRow}>
         <Stat
@@ -146,7 +164,7 @@ export function CurrentLevelCard({
           styles={styles}
         />
       </View>
-    </Pressable>
+    </View>
   );
 }
 
@@ -155,18 +173,31 @@ type Styles = ReturnType<typeof getStyles>;
 function getStyles(colors: Colors, fonts: Fonts) {
   return StyleSheet.create({
     card: {},
-    cardPressed: { opacity: 0.6 },
+    pressedFaint: { opacity: 0.5 },
     topRow: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
+      gap: 8,
     },
-    title: {
-      color: colors.textPrimary,
-      fontSize: 15,
-      fontWeight: '700',
-      fontFamily: fonts.display,
+    // Deliberately understated — this is a location switcher, not a
+    // headline, so it reads at the same weight as the "Updated" badge
+    // across from it rather than announcing itself as the card's title.
+    locationButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      flexShrink: 1,
+      minHeight: 32,
     },
+    locationTitle: {
+      color: colors.textSecondary,
+      fontSize: 11,
+      fontWeight: '600',
+      fontFamily: fonts.mono,
+      flexShrink: 1,
+    },
+    badgeButton: { minHeight: 32, justifyContent: 'center' },
     badge: {
       flexDirection: 'row',
       alignItems: 'center',

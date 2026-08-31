@@ -33,6 +33,15 @@ export interface SunBrightnessData {
   shortwave_radiation: (number | null)[];
 }
 
+// Total sky cloud cover, % (0–100) — the direct read of what the sky looks
+// like, independent of the sun's elevation/season. Brightness alone can't
+// tell a bright, fully overcast sky (thin high cloud still passes plenty of
+// diffuse light) from real sun, so the two are read together.
+export interface CloudCoverData {
+  time: string[];
+  cloud_cover: (number | null)[];
+}
+
 // One entry per day (time is a "yyyy-MM-dd" key), sunrise/sunset as local
 // ISO strings for that day.
 export interface DaylightData {
@@ -48,6 +57,7 @@ export interface WaveDataResult {
   daylight: DaylightData | null;
   temperature: TemperatureData | null;
   sunBrightness: SunBrightnessData | null;
+  cloudCover: CloudCoverData | null;
   fetchedAt: Date;
 }
 
@@ -81,15 +91,16 @@ export class WaveAPIClient {
       const cached = await AsyncStorage.getItem(this.cacheDataKey);
       if (!cached) return null;
 
-      const { data, wind, precipitation, daylight, temperature, sunBrightness, cachedAt } = JSON.parse(cached);
+      const { data, wind, precipitation, daylight, temperature, sunBrightness, cloudCover, cachedAt } =
+        JSON.parse(cached);
       const age = Date.now() - cachedAt;
       if (age > CACHE_MAX_AGE_MS) {
         await AsyncStorage.removeItem(this.cacheDataKey);
         return null;
       }
 
-      // `daylight`/`temperature`/`sunBrightness` are absent from entries
-      // cached before each was added — the key is deliberately not
+      // `daylight`/`temperature`/`sunBrightness`/`cloudCover` are absent from
+      // entries cached before each was added — the key is deliberately not
       // versioned, so coalesce to null and let the next fetch (or the
       // hook's 1h stale top-up) fill it in.
       return {
@@ -99,6 +110,7 @@ export class WaveAPIClient {
         daylight: daylight ?? null,
         temperature: temperature ?? null,
         sunBrightness: sunBrightness ?? null,
+        cloudCover: cloudCover ?? null,
         fetchedAt: new Date(cachedAt),
       };
     } catch {
@@ -120,6 +132,7 @@ export class WaveAPIClient {
           daylight: result.daylight,
           temperature: result.temperature,
           sunBrightness: result.sunBrightness,
+          cloudCover: result.cloudCover,
           cachedAt: result.fetchedAt.getTime(),
         }),
       );
@@ -143,7 +156,7 @@ export class WaveAPIClient {
     // request failing (network hiccup, provider outage, client-side filter)
     // never takes wave data down with it — see the Promise.all bug this
     // replaced.
-    const { wind, precipitation, daylight, temperature, sunBrightness } = await this.fetchForecastExtras(
+    const { wind, precipitation, daylight, temperature, sunBrightness, cloudCover } = await this.fetchForecastExtras(
       startDate,
       endDate,
     );
@@ -158,6 +171,7 @@ export class WaveAPIClient {
       daylight,
       temperature,
       sunBrightness,
+      cloudCover,
       fetchedAt: new Date(),
     };
   }
@@ -183,14 +197,15 @@ export class WaveAPIClient {
     }
   }
 
-  // wind_speed_10m, precipitation, temperature_2m/apparent_temperature and
-  // shortwave_radiation all live on the general Forecast API, not the Marine
-  // API (the Marine API silently accepts wind_speed_10m but returns all
-  // nulls, and doesn't offer the rest at all). Fetched together in one
-  // request since they all come from the same endpoint, along with the
-  // daily sunrise/sunset the day-insights block uses to bound "the day".
-  // Unlike met.no, this supports start_date/end_date, so all of it covers
-  // the same yesterday-to-+5-days range as wave instead of forecast-only.
+  // wind_speed_10m, precipitation, temperature_2m/apparent_temperature,
+  // shortwave_radiation and cloud_cover all live on the general Forecast
+  // API, not the Marine API (the Marine API silently accepts
+  // wind_speed_10m but returns all nulls, and doesn't offer the rest at
+  // all). Fetched together in one request since they all come from the
+  // same endpoint, along with the daily sunrise/sunset the day-insights
+  // block uses to bound "the day". Unlike met.no, this supports
+  // start_date/end_date, so all of it covers the same yesterday-to-+5-days
+  // range as wave instead of forecast-only.
   private async fetchForecastExtras(
     startDate: string,
     endDate: string,
@@ -200,8 +215,16 @@ export class WaveAPIClient {
     daylight: DaylightData | null;
     temperature: TemperatureData | null;
     sunBrightness: SunBrightnessData | null;
+    cloudCover: CloudCoverData | null;
   }> {
-    const empty = { wind: null, precipitation: null, daylight: null, temperature: null, sunBrightness: null };
+    const empty = {
+      wind: null,
+      precipitation: null,
+      daylight: null,
+      temperature: null,
+      sunBrightness: null,
+      cloudCover: null,
+    };
 
     const url = new URL('https://api.open-meteo.com/v1/forecast');
     url.searchParams.append('latitude', this.latitude);
@@ -210,7 +233,7 @@ export class WaveAPIClient {
     url.searchParams.append('end_date', endDate);
     url.searchParams.append(
       'hourly',
-      'wind_speed_10m,precipitation,temperature_2m,apparent_temperature,shortwave_radiation',
+      'wind_speed_10m,precipitation,temperature_2m,apparent_temperature,shortwave_radiation,cloud_cover',
     );
     url.searchParams.append('daily', 'sunrise,sunset');
     url.searchParams.append('wind_speed_unit', 'mph');
@@ -229,6 +252,7 @@ export class WaveAPIClient {
           temperature_2m: (number | null)[];
           apparent_temperature: (number | null)[];
           shortwave_radiation: (number | null)[];
+          cloud_cover: (number | null)[];
         };
         daily?: { time: string[]; sunrise: string[]; sunset: string[] };
       };
@@ -242,6 +266,7 @@ export class WaveAPIClient {
           apparent_temperature: json.hourly.apparent_temperature,
         },
         sunBrightness: { time: json.hourly.time, shortwave_radiation: json.hourly.shortwave_radiation },
+        cloudCover: { time: json.hourly.time, cloud_cover: json.hourly.cloud_cover },
       };
     } catch {
       return empty;
