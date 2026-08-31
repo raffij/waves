@@ -1,17 +1,18 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, type ReactNode, useContext, useEffect, useState } from 'react';
 import { appFonts, type Fonts } from '../fonts';
-import { type Colors, darkColors, posterColors } from '../theme';
+import { type Colors, darkColors, glassColors, posterColors } from '../theme';
 
-export type ThemeName = 'dark' | 'poster';
+export type ThemeName = 'dark' | 'poster' | 'glass';
 
-const THEME_CYCLE: ThemeName[] = ['dark', 'poster'];
+const THEME_CYCLE: ThemeName[] = ['dark', 'poster', 'glass'];
 
 const STORAGE_KEY = 'wave-hastings-theme';
 
 const colorsByTheme: Record<ThemeName, Colors> = {
   dark: darkColors,
   poster: posterColors,
+  glass: glassColors,
 };
 
 interface ThemeContextValue {
