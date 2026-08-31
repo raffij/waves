@@ -245,12 +245,6 @@ export function PrecipitationChart({
             {(total > 0 ? `Rain ${total.toFixed(1)}mm total` : 'No rain expected') + nextRainLabel}
           </Text>
         </View>
-        {daylight.label && (
-          <View style={styles.legendItem}>
-            <View style={styles.legendNightSwatch} />
-            <Text style={styles.legendText}>{daylight.label}</Text>
-          </View>
-        )}
       </View>
     </View>
   );
@@ -298,16 +292,6 @@ function getStyles(colors: Colors, fonts: Fonts) {
       paddingVertical: 2,
     },
     legendDot: { width: 7, height: 7, borderRadius: 4 },
-    // Square, outlined: it stands for the shaded night band rather than a
-    // plotted series, and the night fill alone is too faint to find.
-    legendNightSwatch: {
-      width: 7,
-      height: 7,
-      borderRadius: 2,
-      backgroundColor: colors.night,
-      borderWidth: 1,
-      borderColor: colors.cardBorder,
-    },
     legendText: { color: colors.textSecondary, fontSize: 11, fontWeight: '600', fontFamily: fonts.mono },
   });
 }

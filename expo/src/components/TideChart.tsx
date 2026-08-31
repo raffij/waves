@@ -425,12 +425,6 @@ export function TideChart({
             </Text>
           </View>
         )}
-        {daylight.label && (
-          <View style={styles.legendItem}>
-            <View style={styles.legendNightSwatch} />
-            <Text style={styles.legendText}>{daylight.label}</Text>
-          </View>
-        )}
       </View>
     </View>
   );
@@ -482,17 +476,6 @@ function getStyles(colors: Colors, fonts: Fonts) {
       paddingVertical: 2,
     },
     legendDot: { width: 7, height: 7, borderRadius: 4 },
-    // A square rather than a dot: it stands for the shaded night band, not
-    // a plotted series, and the night fill alone is too faint to find
-    // without an outline.
-    legendNightSwatch: {
-      width: 7,
-      height: 7,
-      borderRadius: 2,
-      backgroundColor: colors.night,
-      borderWidth: 1,
-      borderColor: colors.cardBorder,
-    },
     legendText: { color: colors.textSecondary, fontSize: 11, fontWeight: '600', fontFamily: fonts.mono },
   });
 }
