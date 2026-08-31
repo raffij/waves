@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { CurrentLevelCard } from './src/components/CurrentLevelCard';
 import { DayInsights } from './src/components/DayInsights';
-import { ForecastList } from './src/components/ForecastList';
+import { type ForecastDetail, ForecastList } from './src/components/ForecastList';
 import { PrecipitationChart } from './src/components/PrecipitationChart';
 import { TemperatureChart } from './src/components/TemperatureChart';
 import { TideChart } from './src/components/TideChart';
@@ -103,10 +103,11 @@ function PreviewContent() {
   const data = useMemo(buildSyntheticForecast, []);
   const [now, setNow] = useState(() => new Date());
   const [scrubTime, setScrubTime] = useState<Date | null>(null);
-  // Local to the preview: which forecast-list row is expanded. Doesn't drive
-  // the charts above (unlike the real App.tsx) — this harness is only here
-  // to eyeball ForecastList itself across days/themes.
+  // Local to the preview: which forecast-list row is highlighted. Doesn't
+  // drive the charts above (unlike the real App.tsx) — this harness is only
+  // here to eyeball ForecastList itself across days/themes.
   const [selectedDateKey, setSelectedDateKey] = useState(TideClock.dateKey(now));
+  const [forecastDetail, setForecastDetail] = useState<ForecastDetail>('stats');
 
   const yesterday = data.forecast.yesterday(now);
   const forecastDays = data.forecast.days(now, 5);
@@ -130,6 +131,12 @@ function PreviewContent() {
             <Text style={styles.headerText}>Preview harness · synthetic data, no network</Text>
             <Pressable style={styles.themeButton} onPress={toggleTheme}>
               <Text style={styles.themeButtonText}>{themeName}</Text>
+            </Pressable>
+            <Pressable
+              style={styles.themeButton}
+              onPress={() => setForecastDetail((mode) => (mode === 'stats' ? 'summary' : 'stats'))}
+            >
+              <Text style={styles.themeButtonText}>{forecastDetail}</Text>
             </Pressable>
           </View>
 
@@ -193,6 +200,8 @@ function PreviewContent() {
               days={forecastDays}
               selectedDateKey={selectedDateKey}
               onSelectDay={setSelectedDateKey}
+              now={now}
+              detail={forecastDetail}
               windSeries={data.windSeries}
               precipitationSeries={data.precipitationSeries}
               temperatureSeries={data.temperatureSeries}

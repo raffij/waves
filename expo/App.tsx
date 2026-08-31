@@ -21,7 +21,7 @@ import {
 import { ApiKeyPrompt } from './src/components/ApiKeyPrompt';
 import { CurrentLevelCard } from './src/components/CurrentLevelCard';
 import { DayInsights } from './src/components/DayInsights';
-import { ForecastList } from './src/components/ForecastList';
+import { type ForecastDetail, ForecastList } from './src/components/ForecastList';
 import { PrecipitationChart } from './src/components/PrecipitationChart';
 import { TemperatureChart } from './src/components/TemperatureChart';
 import { TideChart } from './src/components/TideChart';
@@ -60,6 +60,12 @@ const themeToggleTarget: Record<ThemeName, { icon: keyof typeof Ionicons.glyphMa
   poster: { icon: 'sunny-outline', label: 'Light mode' },
 };
 
+// Shows the target of the next tap, same as themeToggleTarget above.
+const forecastDetailToggleTarget: Record<ForecastDetail, { icon: keyof typeof Ionicons.glyphMap; label: string }> = {
+  stats: { icon: 'document-text-outline', label: 'Forecast summary' },
+  summary: { icon: 'stats-chart-outline', label: 'Forecast detail' },
+};
+
 function AppContent() {
   const { apiKey, saveKey, resetKey } = useApiKey();
   const { location, toggleLocation } = useLocation();
@@ -89,6 +95,12 @@ function AppContent() {
     setSelectedDateKeyState(dateKey);
     setScrubTime(null);
   };
+  // Per-day forecast rows read either as tide/wind/sun/light figures
+  // ("stats") or a worded sentence like the main day-insights summary
+  // ("summary") — a footer toggle, not a per-row choice, so the list stays
+  // one consistent shape as you scan down it.
+  const [forecastDetail, setForecastDetail] = useState<ForecastDetail>('stats');
+  const toggleForecastDetail = () => setForecastDetail((mode) => (mode === 'stats' ? 'summary' : 'stats'));
   const { colors, fonts, themeName, toggleTheme } = useTheme();
   const styles = useMemo(() => getStyles(colors, fonts), [colors, fonts]);
   const statusBarStyle = themeName === 'dark' ? 'light-content' : 'dark-content';
@@ -230,6 +242,8 @@ function AppContent() {
               days={days}
               selectedDateKey={activeDateKey}
               onSelectDay={selectDay}
+              now={now}
+              detail={forecastDetail}
               windSeries={windSeries}
               precipitationSeries={precipitationSeries}
               temperatureSeries={temperatureSeries}
@@ -262,6 +276,13 @@ function AppContent() {
               icon={themeToggleTarget[themeName].icon}
               label={themeToggleTarget[themeName].label}
               onPress={toggleTheme}
+              colors={colors}
+              styles={styles}
+            />
+            <FooterButton
+              icon={forecastDetailToggleTarget[forecastDetail].icon}
+              label={forecastDetailToggleTarget[forecastDetail].label}
+              onPress={toggleForecastDetail}
               colors={colors}
               styles={styles}
             />
