@@ -27,6 +27,6 @@ export function DayInsights({ insights }: Props) {
 function getStyles(colors: Colors, fonts: Fonts) {
   return StyleSheet.create({
     sentence: { color: colors.textPrimary, fontSize: 14, lineHeight: 19, fontFamily: fonts.mono },
-    outlook: { color: colors.textSecondary, fontSize: 13, lineHeight: 18, marginTop: 6, fontFamily: fonts.mono },
+    outlook: { color: colors.textSecondary, fontSize: 13, lineHeight: 18, marginTop: 4, fontFamily: fonts.mono },
   });
 }

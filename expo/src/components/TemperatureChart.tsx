@@ -505,7 +505,7 @@ function getStyles(colors: Colors, fonts: Fonts) {
       flexWrap: 'wrap',
       justifyContent: 'center',
       gap: 12,
-      marginTop: 6,
+      marginTop: 3,
       paddingLeft: PADDING_LEFT,
       paddingRight: PADDING_X,
     },
