@@ -107,7 +107,7 @@ function AppContent() {
   // ("stats") or a worded sentence like the main day-insights summary
   // ("summary") — a footer toggle, not a per-row choice, so the list stays
   // one consistent shape as you scan down it.
-  const [forecastDetail, setForecastDetail] = useState<ForecastDetail>('stats');
+  const [forecastDetail, setForecastDetail] = useState<ForecastDetail>('summary');
   const toggleForecastDetail = () => setForecastDetail((mode) => (mode === 'stats' ? 'summary' : 'stats'));
   // Defaults to daytime hours only (06:00–20:00) — a day's tide/wind/sun
   // figures covering 3am aren't useful for deciding what to do with the
