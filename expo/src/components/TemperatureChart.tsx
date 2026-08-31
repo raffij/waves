@@ -3,6 +3,7 @@ import { type LayoutChangeEvent, PanResponder, StyleSheet, Text, View } from 're
 import Svg, { Circle, Line, Path, Rect } from 'react-native-svg';
 import type { Fonts } from '../fonts';
 import { useTheme } from '../hooks/useTheme';
+import type { CloudCoverSeries } from '../services/CloudCoverSeries';
 import type { DaylightSeries } from '../services/DaylightSeries';
 import { DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR } from '../services/DayWindow';
 import type { SunBrightnessSeries } from '../services/SunBrightnessSeries';
@@ -14,6 +15,7 @@ import { daylightBands } from './daylight';
 interface Props {
   series: TemperatureSeries;
   sunBrightnessSeries?: SunBrightnessSeries | null;
+  cloudCoverSeries?: CloudCoverSeries | null;
   daylightSeries?: DaylightSeries | null;
   now: Date;
   /** Whether `now` is the real current moment vs. a same-hour projection onto another day (see App.tsx). */
@@ -46,6 +48,7 @@ const MIN_TEMP_SPAN_C = 4;
 export function TemperatureChart({
   series,
   sunBrightnessSeries,
+  cloudCoverSeries,
   daylightSeries,
   now,
   isToday = true,
@@ -86,6 +89,12 @@ export function TemperatureChart({
     ? sunBrightnessSeries
         .samplesEvery(15, start, end)
         .filter((s): s is { time: Date; wattsPerM2: number } => s.wattsPerM2 !== null)
+    : [];
+
+  const cloudSamples = cloudCoverSeries
+    ? cloudCoverSeries
+        .samplesEvery(15, start, end)
+        .filter((s): s is { time: Date; percent: number } => s.percent !== null)
     : [];
 
   const plotWidth = width - PADDING_LEFT - PADDING_X;
@@ -157,6 +166,10 @@ export function TemperatureChart({
   const toX = (time: Date) => PADDING_LEFT + ((time.getTime() - start.getTime()) / totalMs) * plotWidth;
   const toTempY = (value: number) => PADDING_TOP + (1 - (value - tempMin) / tempSpan) * plotHeight;
   const toSunY = (value: number) => PADDING_TOP + (1 - value / sunSpread) * plotHeight;
+  // Cloud cover is already a 0–100 percentage, so it plots on a fixed scale
+  // rather than sun's own peak-scaled one — 100% cloud always sits at the
+  // floor, not wherever the day's cloudiest hour happened to land.
+  const toCloudY = (value: number) => PADDING_TOP + (1 - value / 100) * plotHeight;
 
   const floorY = PADDING_TOP + plotHeight;
   const tempGridLines = [tempMax, (tempMax + tempMin) / 2, tempMin].map((value) => ({ value, y: toTempY(value) }));
@@ -185,6 +198,12 @@ export function TemperatureChart({
       ? `${sunPath} L ${sunPoints[sunPoints.length - 1].x.toFixed(1)} ${floorY} L ${sunPoints[0].x.toFixed(1)} ${floorY} Z`
       : '';
 
+  // A plain line, not an area like sun's — it's there to explain the sun
+  // reading (why a bright hour reads bright, or doesn't), not to compete
+  // with it for the eye.
+  const cloudPoints = cloudSamples.map((s) => ({ x: toX(s.time), y: toCloudY(s.percent) }));
+  const cloudPath = cloudPoints.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
+
   const currentX = toX(now);
   const pastFadeEndX = Math.min(Math.max(currentX, PADDING_LEFT), width - PADDING_X);
 
@@ -200,6 +219,7 @@ export function TemperatureChart({
 
   const feelsLikeValues = feelsLikeSamples.map((s) => s.feelsLike);
   const realTempValues = realTempSamples.map((s) => s.temp);
+  const cloudValues = cloudSamples.map((s) => s.percent);
 
   return (
     <View onLayout={onLayout}>
@@ -249,6 +269,18 @@ export function TemperatureChart({
               strokeLinecap="round"
               strokeLinejoin="round"
               opacity={0.55}
+            />
+          )}
+          {cloudPath && (
+            <Path
+              d={cloudPath}
+              fill="none"
+              stroke={colors.cloud}
+              strokeWidth={1.5}
+              strokeDasharray="2,3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              opacity={0.7}
             />
           )}
           {feelsLikeAreaPath && <Path d={feelsLikeAreaPath} fill={colors.feelsLike} fillOpacity={0.14} stroke="none" />}
@@ -362,6 +394,14 @@ export function TemperatureChart({
           <View style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: colors.sun }]} />
             <Text style={styles.legendText}>Sun up to {Math.round(Math.max(...sunValues))}W/m²</Text>
+          </View>
+        )}
+        {cloudValues.length > 0 && (
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: colors.cloud }]} />
+            <Text style={styles.legendText}>
+              Cloud {Math.round(Math.min(...cloudValues))}–{Math.round(Math.max(...cloudValues))}%
+            </Text>
           </View>
         )}
         {daylight.label && (

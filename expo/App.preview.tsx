@@ -211,6 +211,7 @@ function PreviewContent() {
             <TemperatureChart
               series={data.temperatureSeries}
               sunBrightnessSeries={data.sunBrightnessSeries}
+              cloudCoverSeries={data.cloudCoverSeries}
               daylightSeries={data.daylightSeries}
               now={now}
               isToday

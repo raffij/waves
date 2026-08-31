@@ -34,4 +34,18 @@ export class CloudCoverSeries {
     const ratio = (ms - before.time.getTime()) / (after.time.getTime() - before.time.getTime());
     return before.percent + (after.percent - before.percent) * ratio;
   }
+
+  samplesEvery(minutes: number, from: Date, to: Date): Array<{ time: Date; percent: number | null }> {
+    const samples: Array<{ time: Date; percent: number | null }> = [];
+    let current = from.getTime();
+    const interval = minutes * 60 * 1000;
+
+    while (current <= to.getTime()) {
+      const time = new Date(current);
+      samples.push({ time, percent: this.coverageAt(time) });
+      current += interval;
+    }
+
+    return samples;
+  }
 }

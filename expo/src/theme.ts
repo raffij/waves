@@ -25,6 +25,8 @@ export interface Colors {
   temperature: string;
   /** Sun brightness (solar radiation) fill on the temperature chart. */
   sun: string;
+  /** Cloud cover (%) line on the temperature chart. */
+  cloud: string;
   /** Overlay shading the hours before sunrise / after sunset on the charts. Always darkens, never lightens. */
   night: string;
 }
@@ -50,6 +52,7 @@ export const darkColors: Colors = {
   feelsLike: '#ff8a65',
   temperature: '#c792ea',
   sun: '#ffd54f',
+  cloud: '#9fb3c8',
   night: 'rgba(0,0,0,0.38)',
 };
 
@@ -74,6 +77,7 @@ export const posterColors: Colors = {
   feelsLike: '#c1440e',
   temperature: '#6a4c93',
   sun: '#d9a441',
+  cloud: '#7d7568',
   night: 'rgba(28,43,57,0.14)',
 };
 
