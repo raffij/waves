@@ -615,10 +615,11 @@ const BOTTOM_FOR_TEMP: Record<TempBand, string> = {
 // Footwear is about wet ground first, temperature second: walking boots
 // whenever it's rained or is going to, since none of the dry-weather shoes
 // are waterproof. Dry and cold enough that sandals would be uncomfortable
-// falls back to camper shoes; dry and merely mild still takes sandals, just
-// with socks.
+// falls back to camper shoes — with thick socks once it's cold rather than
+// merely cool — and dry and merely mild still takes sandals, just with
+// socks.
 const FOOTWEAR_FOR_TEMP: Record<TempBand, string> = {
-  cold: 'camper shoes',
+  cold: 'camper shoes with thick socks',
   cool: 'camper shoes',
   mild: 'sandals with socks',
   warm: 'sandals',
