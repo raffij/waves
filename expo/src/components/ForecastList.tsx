@@ -7,7 +7,7 @@ import type { CloudCoverSeries } from '../services/CloudCoverSeries';
 import { type DayCondition, dayCondition } from '../services/DayCondition';
 import { buildDayInsights } from '../services/DayInsights';
 import type { DaylightSeries } from '../services/DaylightSeries';
-import { DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR } from '../services/DayWindow';
+import { type ForecastWindow, type Hours, hoursFor } from '../services/DayWindow';
 import type { PrecipitationSeries } from '../services/PrecipitationSeries';
 import type { SunBrightnessSeries } from '../services/SunBrightnessSeries';
 import type { TemperatureSeries } from '../services/TemperatureSeries';
@@ -17,10 +17,7 @@ import type { WindSeries } from '../services/WindSeries';
 import type { Colors } from '../theme';
 
 export type ForecastDetail = 'stats' | 'summary';
-// "daytime" reads only DAY_WINDOW's waking hours (06:00–20:00) — the
-// figures that actually help decide what to do with the day, rather than
-// a high/low dragged down by 3am. "wholeDay" reads the full 24h.
-export type ForecastWindow = 'daytime' | 'wholeDay';
+export type { ForecastWindow };
 
 interface Props {
   yesterday: ForecastDay | null;
@@ -47,23 +44,13 @@ type Series = Pick<
   | 'cloudCoverSeries'
   | 'daylightSeries'
 >;
-// Resolved start/end hours for the chosen ForecastWindow. Named `hours`
-// rather than `window` throughout below (unlike the public prop, which
-// takes the prop-naming convention from `detail`) to avoid shadowing the
-// DOM/browser `window` global this runs under on web.
-interface Hours {
-  startHour: number;
-  endHour: number;
-}
+// `hours` below (rather than `window`) throughout this file, unlike the
+// public `window` prop (which takes the prop-naming convention from
+// `detail`), to avoid shadowing the DOM/browser `window` global this runs
+// under on web.
 type Styles = ReturnType<typeof getStyles>;
 
 const HHMM: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit', hour12: false };
-const WHOLE_DAY_HOURS: Hours = { startHour: 0, endHour: 23 };
-const DAYTIME_HOURS: Hours = { startHour: DAY_WINDOW_START_HOUR, endHour: DAY_WINDOW_END_HOUR };
-
-function hoursFor(forecastWindow: ForecastWindow): Hours {
-  return forecastWindow === 'daytime' ? DAYTIME_HOURS : WHOLE_DAY_HOURS;
-}
 
 const CONDITION_ICON: Record<DayCondition, keyof typeof Ionicons.glyphMap> = {
   rain: 'rainy-outline',

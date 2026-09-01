@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { CurrentLevelCard } from './src/components/CurrentLevelCard';
 import { DayInsights } from './src/components/DayInsights';
-import { type ForecastDetail, ForecastList, type ForecastWindow } from './src/components/ForecastList';
+import { type ForecastDetail, ForecastList } from './src/components/ForecastList';
 import { PrecipitationChart } from './src/components/PrecipitationChart';
 import { TemperatureChart } from './src/components/TemperatureChart';
 import { TideChart } from './src/components/TideChart';
@@ -13,6 +13,7 @@ import type { Extreme } from './src/models/TideModels';
 import { CloudCoverSeries } from './src/services/CloudCoverSeries';
 import { buildDayInsights } from './src/services/DayInsights';
 import { DaylightSeries } from './src/services/DaylightSeries';
+import { type ForecastWindow, hoursFor } from './src/services/DayWindow';
 import { PrecipitationSeries } from './src/services/PrecipitationSeries';
 import { SunBrightnessSeries } from './src/services/SunBrightnessSeries';
 import { TemperatureSeries } from './src/services/TemperatureSeries';
@@ -118,12 +119,11 @@ function PreviewContent() {
   const data = useMemo(buildSyntheticForecast, []);
   const [now, setNow] = useState(() => new Date());
   const [scrubTime, setScrubTime] = useState<Date | null>(null);
-  // Local to the preview: which forecast-list row is highlighted. Doesn't
-  // drive the charts above (unlike the real App.tsx) — this harness is only
-  // here to eyeball ForecastList itself across days/themes.
+  // Local to the preview: which forecast-list row is highlighted.
   const [selectedDateKey, setSelectedDateKey] = useState(TideClock.dateKey(now));
   const [forecastDetail, setForecastDetail] = useState<ForecastDetail>('stats');
   const [forecastWindow, setForecastWindow] = useState<ForecastWindow>('daytime');
+  const chartHours = hoursFor(forecastWindow);
 
   const yesterday = data.forecast.yesterday(now);
   const forecastDays = data.forecast.days(now, 5);
@@ -193,6 +193,8 @@ function PreviewContent() {
               isToday
               scrubTime={scrubTime}
               onScrub={setScrubTime}
+              startHour={chartHours.startHour}
+              endHour={chartHours.endHour}
             />
           </View>
 
@@ -204,6 +206,8 @@ function PreviewContent() {
               isToday
               scrubTime={scrubTime}
               onScrub={setScrubTime}
+              startHour={chartHours.startHour}
+              endHour={chartHours.endHour}
             />
           </View>
 
@@ -217,6 +221,8 @@ function PreviewContent() {
               isToday
               scrubTime={scrubTime}
               onScrub={setScrubTime}
+              startHour={chartHours.startHour}
+              endHour={chartHours.endHour}
             />
           </View>
 
