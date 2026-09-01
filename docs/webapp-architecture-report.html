@@ -1,0 +1,481 @@
+<title>Inside the Waves Web App</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Anton&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+  :root {
+    --bg: #f3e8d2;
+    --bg-grad-end: #e8dabb;
+    --card: #faf3e2;
+    --card-elevated: #fffaf0;
+    --card-border: rgba(28, 43, 57, 0.16);
+    --text: #1c2b39;
+    --text-secondary: rgba(28, 43, 57, 0.68);
+    --text-faint: rgba(28, 43, 57, 0.46);
+    --accent: #1f7a6c;
+    --accent-2: #155e53;
+    --rust: #b83a24;
+    --ochre: #a3730f;
+    --shadow: rgba(60, 40, 20, 0.14);
+    --rail: rgba(28, 43, 57, 0.22);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #03122b;
+      --bg-grad-end: #0b3a63;
+      --card: rgba(255, 255, 255, 0.055);
+      --card-elevated: rgba(255, 255, 255, 0.09);
+      --card-border: rgba(255, 255, 255, 0.14);
+      --text: #f5faff;
+      --text-secondary: rgba(245, 250, 255, 0.7);
+      --text-faint: rgba(245, 250, 255, 0.45);
+      --accent: #4fd1ff;
+      --accent-2: #8be9fd;
+      --rust: #ff9a86;
+      --ochre: #ffc476;
+      --shadow: rgba(0, 4, 15, 0.5);
+      --rail: rgba(255, 255, 255, 0.18);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #03122b;
+    --bg-grad-end: #0b3a63;
+    --card: rgba(255, 255, 255, 0.055);
+    --card-elevated: rgba(255, 255, 255, 0.09);
+    --card-border: rgba(255, 255, 255, 0.14);
+    --text: #f5faff;
+    --text-secondary: rgba(245, 250, 255, 0.7);
+    --text-faint: rgba(245, 250, 255, 0.45);
+    --accent: #4fd1ff;
+    --accent-2: #8be9fd;
+    --rust: #ff9a86;
+    --ochre: #ffc476;
+    --shadow: rgba(0, 4, 15, 0.5);
+    --rail: rgba(255, 255, 255, 0.18);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: linear-gradient(180deg, var(--bg), var(--bg-grad-end) 900px, var(--bg) 1800px);
+    color: var(--text);
+    font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+    font-size: 15px;
+    line-height: 1.55;
+  }
+
+  .page {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 56px 24px 80px;
+  }
+
+  a { color: var(--accent-2); }
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  h1, h2, h3 { text-wrap: balance; margin: 0; }
+
+  .eyebrow {
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--rust);
+    font-weight: 700;
+  }
+
+  /* ---------- hero ---------- */
+  .hero { padding-bottom: 28px; border-bottom: 3px solid var(--text); }
+  .hero h1 {
+    font-family: Anton, "JetBrains Mono", sans-serif;
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0.01em;
+    font-size: clamp(38px, 6.4vw, 64px);
+    line-height: 0.98;
+    margin-top: 10px;
+    color: var(--text);
+  }
+  .dek {
+    max-width: 62ch;
+    margin-top: 16px;
+    color: var(--text-secondary);
+    font-size: 14.5px;
+  }
+  .dek b { color: var(--text); font-weight: 700; }
+  .meta {
+    margin-top: 18px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    font-size: 11.5px;
+    color: var(--text-faint);
+    letter-spacing: 0.03em;
+  }
+  .meta span::before { content: "· "; }
+  .meta span:first-child::before { content: ""; }
+
+  /* ---------- stat strip ---------- */
+  .stats {
+    margin-top: 34px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--rail);
+    border: 1px solid var(--rail);
+  }
+  .stat {
+    background: var(--bg);
+    padding: 18px 16px;
+  }
+  .stat .n {
+    font-family: Anton, sans-serif;
+    font-size: clamp(26px, 4vw, 34px);
+    color: var(--rust);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .stat .label {
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.4;
+  }
+
+  /* ---------- section scaffolding ---------- */
+  section.doc { margin-top: 64px; }
+  .sec-head {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    border-bottom: 2px solid var(--text);
+    padding-bottom: 10px;
+  }
+  .sec-num {
+    font-family: Anton, sans-serif;
+    font-size: 20px;
+    color: var(--rust);
+  }
+  .sec-title {
+    font-family: Anton, sans-serif;
+    font-weight: 400;
+    text-transform: uppercase;
+    font-size: clamp(19px, 2.6vw, 24px);
+    letter-spacing: 0.01em;
+  }
+  .sec-sub {
+    margin-top: 4px;
+    margin-bottom: 20px;
+    color: var(--text-secondary);
+    font-size: 13.5px;
+    max-width: 68ch;
+  }
+
+  /* ---------- flow / timeline ---------- */
+  .flow { position: relative; padding-left: 34px; }
+  .flow::before {
+    content: "";
+    position: absolute;
+    left: 10px;
+    top: 6px;
+    bottom: 6px;
+    width: 2px;
+    background: var(--rail);
+  }
+  .step { position: relative; padding: 0 0 22px; }
+  .step:last-child { padding-bottom: 0; }
+  .step::before {
+    content: attr(data-n);
+    position: absolute;
+    left: -34px;
+    top: -2px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--bg);
+    border: 2px solid var(--rust);
+    color: var(--rust);
+    font-family: "JetBrains Mono", monospace;
+    font-weight: 700;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .step .t { font-weight: 700; font-size: 14px; }
+  .step .d { margin-top: 4px; color: var(--text-secondary); font-size: 13px; max-width: 66ch; }
+  .step .d code { color: var(--accent-2); }
+  .step .tag {
+    display: inline-block;
+    margin-left: 8px;
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ochre);
+    border: 1px solid currentColor;
+    border-radius: 3px;
+    padding: 1px 6px;
+    vertical-align: middle;
+  }
+
+  code {
+    font-family: "JetBrains Mono", monospace;
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 3px;
+    padding: 0 4px;
+    font-size: 0.92em;
+  }
+
+  /* ---------- tables ---------- */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  caption { caption-side: top; text-align: left; margin-bottom: 8px; color: var(--text-faint); font-size: 11.5px; }
+  thead th {
+    text-align: left;
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    padding: 0 10px 8px 0;
+    border-bottom: 2px solid var(--text);
+    white-space: nowrap;
+  }
+  tbody td {
+    padding: 9px 10px 9px 0;
+    border-bottom: 1px solid var(--card-border);
+    vertical-align: top;
+  }
+  tbody tr:last-child td { border-bottom: 2px solid var(--text); }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  td.hi { color: var(--rust); font-weight: 700; }
+  td.file { color: var(--accent-2); white-space: nowrap; }
+
+  /* ---------- cards ---------- */
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 18px; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-left: 3px solid var(--accent);
+    border-radius: 4px;
+    padding: 14px 16px;
+    box-shadow: 0 1px 0 var(--shadow);
+  }
+  .card h4 { font-size: 12.5px; letter-spacing: 0.02em; }
+  .card p { margin: 6px 0 0; font-size: 12.5px; color: var(--text-secondary); }
+
+  .bands { display: grid; grid-template-columns: 110px repeat(3, 1fr); gap: 1px; background: var(--rail); border: 1px solid var(--rail); margin-top: 16px; font-size: 12.5px; }
+  .bands > div { background: var(--bg); padding: 10px 12px; }
+  .bands .h { font-weight: 700; font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-faint); }
+  .bands .row-label { font-weight: 700; }
+  .bands .lo { color: var(--text-secondary); }
+  .bands .mid { color: var(--ochre); }
+  .bands .hi { color: var(--rust); font-weight: 700; }
+
+  .quote {
+    margin-top: 16px;
+    padding: 14px 16px;
+    border-left: 3px solid var(--rust);
+    background: var(--card-elevated);
+    color: var(--text-secondary);
+    font-size: 12.5px;
+    font-style: normal;
+  }
+  .quote b { color: var(--text); }
+
+  footer {
+    margin-top: 70px;
+    padding-top: 20px;
+    border-top: 3px solid var(--text);
+    font-size: 11.5px;
+    color: var(--text-faint);
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  @media (max-width: 700px) {
+    .stats, .cards { grid-template-columns: 1fr 1fr; }
+    .bands { grid-template-columns: 90px repeat(3, 1fr); font-size: 11.5px; }
+  }
+  @media (max-width: 480px) {
+    .stats, .cards { grid-template-columns: 1fr; }
+  }
+</style>
+
+<div class="page">
+
+  <div class="hero">
+    <div class="eyebrow">Companion narrative to docs/architecture.md</div>
+    <h1>Inside the Waves web app</h1>
+    <p class="dek">
+      <b>expo/</b> is one of four independent Waves clients — the only one with a public URL.
+      It reads a TideCheck API key and a saved location, fetches tide, wave and wind
+      conditions for Hastings Pier, and turns them into a chart-and-verdict screen that
+      leaves the other three clients' code untouched. This walks the path one page load
+      takes through it: what it's allowed to fetch, what it caches, and where the actual
+      judgement calls live.
+    </p>
+    <div class="meta">
+      <span>expo/ · React Native 0.86 + react-native-web</span>
+      <span>deployed to raffij.github.io/waves</span>
+      <span>TanStack Query + AsyncStorage</span>
+      <span>Hastings Pier, Europe/London</span>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="n">5,161</div><div class="label">lines of TypeScript — App.tsx plus everything under src/</div></div>
+    <div class="stat"><div class="n">0</div><div class="label">lines shared with the other three Waves clients</div></div>
+    <div class="stat"><div class="n">50/day</div><div class="label">TideCheck's free-tier budget every cache layer exists to protect</div></div>
+    <div class="stat"><div class="n">6h</div><div class="label">cache TTL on both the tide and wave/wind clients</div></div>
+    <div class="stat"><div class="n">0</div><div class="label">query retries — disabled so one blip can't burn the budget</div></div>
+    <div class="stat"><div class="n">755</div><div class="label">lines in DayInsights.ts, the file that owns every judgement call</div></div>
+  </div>
+
+  <section class="doc">
+    <div class="sec-head"><span class="sec-num">01</span><h2 class="sec-title">The path of one page load</h2></div>
+    <p class="sec-sub">From an empty screen to numbers on it — what fires, in what order, and what it's gated on.</p>
+
+    <div class="flow">
+      <div class="step" data-n="1">
+        <div class="t">Key and location hydrate</div>
+        <div class="d"><code>useApiKey</code> and <code>useLocation</code> both start <code>undefined</code> rather than defaulting early, while <code>SecureKeyStore</code> and <code>AsyncStorage</code> are still being read — nothing fires a request for the wrong key or place.</div>
+      </div>
+      <div class="step" data-n="2">
+        <div class="t">Two queries enable at once</div>
+        <div class="d">Once both resolve, <code>useForecastData</code> turns on a tide query keyed on <code>(stationId, apiKey)</code> and a wave query keyed on <code>(location.id)</code>, run in parallel through <code>useQueries</code>.</div>
+      </div>
+      <div class="step" data-n="3">
+        <div class="t">TideAPIClient checks its cache first</div>
+        <div class="d">A hit under six hours old in AsyncStorage returns immediately. Otherwise it calls <code>tidecheck.com/api/station/&lt;id&gt;/tides</code> with an <code>X-API-Key</code> header and an 8-second AbortController timeout, then writes the new cache.</div>
+      </div>
+      <div class="step" data-n="4">
+        <div class="t">WaveAPIClient does the same, against two calls</div>
+        <div class="d">Open-Meteo's Marine API for wave height, then — independently, so one outage can't take the other down — the Forecast API for wind, precipitation, temperature, sun brightness and cloud cover together.</div>
+      </div>
+      <div class="step" data-n="5">
+        <div class="t">Raw JSON becomes interpolating series</div>
+        <div class="d">Points turn into <code>TideSeries</code> / <code>WaveSeries</code> / <code>WindSeries</code> / …, which answer "value right now" and "trend" by linear interpolation — then <code>buildDayInsights()</code> turns those series into the day's worded verdict.</div>
+      </div>
+      <div class="step" data-n="6">
+        <div class="t">Seven components render</div>
+        <div class="d">A wave-query error is deliberately left out of the combined <code>error</code> field — wave/wind/rain is a nice-to-have overlay, so its failure never blocks the tide UI or throws a scary error over a non-essential chart.</div>
+      </div>
+      <div class="step" data-n="7">
+        <div class="t">A silent background top-up</div>
+        <div class="d">If the cache hit that just landed is over an hour old, an effect quietly calls the cache-bypassing <code>refresh()</code> — the already-rendered screen never blocks on it.</div>
+      </div>
+      <div class="step" data-n="8">
+        <div class="t">Widget hand-off <span class="tag">iOS only</span></div>
+        <div class="d"><code>useWidgetSync</code> fires on every key/location change, but <code>syncWidgetConfig()</code> opens with <code>if (Platform.OS !== 'ios') return</code> — on the web build this step runs every time and does nothing.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="doc">
+    <div class="sec-head"><span class="sec-num">02</span><h2 class="sec-title">Cache economics</h2></div>
+    <p class="sec-sub">The same day of use, priced in network calls — one tide call plus two wave/wind calls per full fetch.</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Session</th><th class="num">Calls, uncached</th><th class="num">Calls, as built</th><th>Why</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>First open of the day</td><td class="num">3</td><td class="num">3</td><td>cache empty — 1 tide + 2 wave/wind, always fetched</td></tr>
+          <tr><td>Reopened 20 minutes later</td><td class="num">3</td><td class="num hi">0</td><td>served straight from AsyncStorage, under the 6h TTL</td></tr>
+          <tr><td>Left open past the 1‑hour mark</td><td class="num">3</td><td class="num">3</td><td><code>useForecastData</code>'s background top-up force-refetches once</td></tr>
+          <tr><td>Pull-to-refresh / footer's "Force refresh"</td><td class="num">3</td><td class="num">3</td><td><code>forceRefresh()</code> deletes the cache key first, on purpose</td></tr>
+          <tr><td>8 opens spread across one day</td><td class="num">24</td><td class="num hi">3</td><td>cache absorbs 21 of 24 calls — <b>87% saved</b></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="quote">
+      <b>Retries are off by design.</b> <code>QueryClient</code> sets <code>retry: false</code> for every
+      query — TideCheck's 50-request/day free tier can't absorb a blind retry stacked on top
+      of an already-failed call. On a network error, both clients hand back their last cache
+      instead: stale beats empty.
+    </div>
+  </section>
+
+  <section class="doc">
+    <div class="sec-head"><span class="sec-num">03</span><h2 class="sec-title">What's actually in expo/src</h2></div>
+    <p class="sec-sub">37 files, four layers — presentation, orchestration, and the services doing the real work underneath.</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Layer</th><th class="num">Files</th><th class="num">Lines</th><th>What lives there</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="file">App.tsx</td><td class="num">1</td><td class="num">387</td><td>wires state hooks + <code>useForecastData</code> to seven screen components; owns selected day, scrub position, theme, refresh</td></tr>
+          <tr><td class="file">components/</td><td class="num">7</td><td class="num">2,165</td><td>CurrentLevelCard, TideChart, PrecipitationChart, TemperatureChart, ForecastList, DayInsights, ApiKeyPrompt — props in, SVG/text out, no fetch or cache</td></tr>
+          <tr><td class="file">hooks/</td><td class="num">7</td><td class="num">434</td><td>useApiKey, useLocation, useTheme, useForecastData, useWidgetSync, useClockTick, useAppStateFocusManager — state and orchestration, no direct fetch calls</td></tr>
+          <tr><td class="file">services/</td><td class="num">17</td><td class="num">1,936</td><td>2 API clients, 2 storage layers, 12 interpolating Series/computation classes, 1 widget bridge — every fetch, cache write and W/m²-to-"hazy" call happens here</td></tr>
+          <tr><td class="file">models/</td><td class="num">3</td><td class="num">98</td><td>Location, TideModels, WeatherModels — plain shapes, no behaviour</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="doc">
+    <div class="sec-head"><span class="sec-num">04</span><h2 class="sec-title">The judgement engine</h2></div>
+    <p class="sec-sub">DayInsights.ts is the largest file in the app by a wide margin — every "wear a coat", "breezy but dry" call for a day comes from thresholds tuned here, over the same 06:00–20:00 window both charts plot.</p>
+
+    <div class="bands">
+      <div class="h"></div><div class="h">Below</div><div class="h">Mid</div><div class="h">At / above</div>
+      <div class="row-label">Rain</div><div class="lo">dry (&lt; 0.2mm/h)</div><div class="mid">drizzle (&lt; 0.5mm)</div><div class="hi">heavy (≥ 2mm)</div>
+      <div class="row-label">Wind</div><div class="lo">calm (&lt; 12mph)</div><div class="mid">breezy</div><div class="hi">windy (≥ 24mph)</div>
+      <div class="row-label">Sun</div><div class="lo">overcast (&lt; 120 W/m²)</div><div class="mid">hazy</div><div class="hi">bright (≥ 350 W/m²)</div>
+    </div>
+
+    <div class="quote">
+      "It's a walk-on-the-pier judgement — wind band, rain spell, what to wear — not a
+      water-sports one; <b>tide is reported but never scored</b>." — from the file's own tuning
+      comments. Today's sentence and clothing call both narrow the window to "now through
+      the end"; any other day reads the window whole, so the sentence, the clothing call and
+      the bars can never disagree about whether it rains.
+    </div>
+  </section>
+
+  <section class="doc">
+    <div class="sec-head"><span class="sec-num">05</span><h2 class="sec-title">What only happens on the web build</h2></div>
+    <p class="sec-sub">Same components, same services — four places the platform check actually changes behaviour.</p>
+
+    <div class="cards">
+      <div class="card">
+        <h4>Key storage</h4>
+        <p><code>expo-secure-store</code> has no web implementation, so <code>SecureKeyStore</code> falls back to <code>window.localStorage</code> — less secure than Keychain, but the key never leaves the device on either path.</p>
+      </div>
+      <div class="card">
+        <h4>Widget hand-off</h4>
+        <p><code>useWidgetSync</code> still fires on every render, but <code>syncWidgetConfig()</code> checks <code>Platform.OS === 'ios'</code> first — on web, and on Android, it's a guaranteed no-op.</p>
+      </div>
+      <div class="card">
+        <h4>Rendering</h4>
+        <p>The same seven components and the same react-native-svg charts run through <code>react-native-web</code> rather than a native host — no separate web-only component tree.</p>
+      </div>
+      <div class="card">
+        <h4>Shipping</h4>
+        <p>CI runs Biome lint + <code>tsc --noEmit</code> and squash-merges to <code>main</code>; that push runs <code>expo export --platform web</code> and publishes <code>expo/dist</code> to GitHub Pages.</p>
+      </div>
+      <div class="card">
+        <h4>Themes</h4>
+        <p>Dark → Poster → Glass, cycled from one footer toggle — <code>useTheme</code> persists the choice, all three render on every platform this app ships to, web included.</p>
+      </div>
+      <div class="card">
+        <h4>The only public URL</h4>
+        <p>Of the four Waves clients, only this build is reachable without installing anything — <b>raffij.github.io/waves</b>.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span>Scope: <code>expo/</code> only — the iOS widget, macOS menu-bar script and macOS desktop widget are covered in <a href="architecture.md">docs/architecture.md</a>, with an interactive diagram at <a href="architecture/webapp.architecture.html">docs/architecture/webapp.architecture.html</a>.</span>
+    <span>Waves · Hastings Pier</span>
+  </footer>
+
+</div>
