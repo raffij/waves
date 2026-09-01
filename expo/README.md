@@ -83,8 +83,9 @@ src/
     CurrentLevelCard.tsx    the three current readings + trend arrows
     TideChart.tsx           SVG tide/wave/wind chart with drag-to-scrub
     PrecipitationChart.tsx  hourly rain bars
-    daylight.ts             night-band geometry shared by both charts
-    DayInsights.tsx         the plain-language day summary block
+    TemperatureChart.tsx    feels-like/temperature line with sun + cloud overlay
+    daylight.ts             night-band geometry shared by all three charts
+    DayInsights.tsx         renders the plain-language day summary
     ForecastList.tsx        the horizontal day scroller
     ApiKeyPrompt.tsx        first-launch key entry
   hooks/
@@ -92,23 +93,47 @@ src/
     useApiKey.ts            reads/writes the key via SecureKeyStore
     useLocation.ts          Hastings ⇄ Morecambe, persisted
     useWidgetSync.ts        pushes {key, location} to the iOS widget
-    useTheme.tsx            light/dark, persisted
+    useTheme.tsx            dark/poster/glass themes, persisted; syncs the
+                            web <meta name="theme-color"> tag on change
+    useClockTick.ts         re-renders "now" on an interval, foreground-only
+    useAppStateFocusManager.ts
+                            wires TanStack Query's refetch-on-focus to
+                            AppState on native (web gets it for free)
   services/
     TideAPIClient.ts        TideCheck fetch + 6h AsyncStorage cache
     WaveAPIClient.ts        Open-Meteo Marine + Forecast fetch + cache
-    TideSeries / WaveSeries / WindSeries / PrecipitationSeries
+    SecureKeyStore.ts       Keychain-backed key storage, localStorage on web
+    WidgetSync.ts           pushes {key, location} to the iOS widget over
+                            the shared App Group
+    TideSeries / WaveSeries / WindSeries / PrecipitationSeries /
+    TemperatureSeries / SunBrightnessSeries / CloudCoverSeries
                             raw points → "value now" + "trend" by interpolation
     TideForecast.ts         groups tidal extremes into labelled days
     DaylightSeries.ts       per-day sunrise/sunset
     DayWindow.ts            the 06:00–20:00 window both charts and the
                             insights judge the day over
+    DayCondition.ts         one glyph-worthy condition (rain/sunny/hazy/
+                            overcast) per day, for the forecast list's tiles
     DayInsights.ts          pure buildDayInsights() + its tuning constants
     TideClock.ts            all Europe/London date parsing / formatting
-  models/                   Location list, TideCheck response types
-  theme.ts                  the light and dark colour tokens
+  models/                   plain data shapes, no behaviour
+    Location.ts             the location list + selected-location type
+    TideModels.ts           TideCheck response shapes
+    WeatherModels.ts        Open-Meteo response shapes (wave/wind/rain/
+                            temperature/sun/cloud/daylight)
+  theme.ts                  the dark/poster/glass colour tokens
 modules/widget-bridge/      local Expo Module (Swift) that the iOS widget uses
 targets/widget/             the iOS home-screen widget itself
 ```
+
+Within `services/`, a `*Series` class wraps one model's raw time-stamped
+points and answers "value now" / "trend" by interpolation; a plain function
+(`buildDayInsights`, `dayCondition`, `hoursFor`) derives something from one or
+more of those series instead. Both API clients keep the same split: the
+request/cache/response-shaped types they hand back live in `models/`, and
+only their own cache-wrapper type (`TideDataResult`, `WaveDataResult` — the
+data plus a `fetchedAt`) stays in the client file itself, since that shape is
+an artifact of the client's own caching, not something the API returned.
 
 ## How it fetches
 

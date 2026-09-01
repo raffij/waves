@@ -12,3 +12,4 @@ Numbered sequentially, oldest first. Use `TEMPLATE.md` to start a new one.
 | [0002](0002-combine-day-insights-readout.md) | Combine the day-insights readout | Accepted |
 | [0003](0003-clothing-advice-matches-actual-wardrobe.md) | Clothing advice matches the user's actual wardrobe | Accepted |
 | [0004](0004-mild-band-treated-as-shorts-weather.md) | The mild feels-like band is treated as shorts weather | Accepted |
+| [0005](0005-weather-response-shapes-live-in-models.md) | Weather response shapes live in `models/`, not in `WaveAPIClient.ts` | Accepted |

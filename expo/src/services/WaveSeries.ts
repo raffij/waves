@@ -1,6 +1,6 @@
+import type { WaveData } from '../models/WeatherModels';
 import { TideClock } from './TideClock';
 import type { Trend } from './TideSeries';
-import type { WaveData } from './WaveAPIClient';
 
 // Below this, an hour-over-hour change reads as noise rather than a
 // genuine rise or fall (wave height typically moves gradually, 0.2-1.5m).

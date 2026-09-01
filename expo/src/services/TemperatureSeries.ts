@@ -1,5 +1,5 @@
+import type { TemperatureData } from '../models/WeatherModels';
 import { TideClock } from './TideClock';
-import type { TemperatureData } from './WaveAPIClient';
 
 // Real (measured) and "feels like" (apparent — factors in wind chill and
 // humidity) air temperature, °C. Point-in-time hourly readings, so linearly

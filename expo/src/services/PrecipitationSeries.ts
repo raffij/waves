@@ -1,5 +1,5 @@
+import type { PrecipitationData } from '../models/WeatherModels';
 import { TideClock } from './TideClock';
-import type { PrecipitationData } from './WaveAPIClient';
 
 // Precipitation is an hourly total (mm that fell during that hour), not a
 // point-in-time reading, so — unlike tide/wave/wind — it's never

@@ -62,7 +62,7 @@ export const RAIN_DOMINATES_FRACTION = 0.55; // a single spell covering this sha
 export const RAIN_LONG_SPELL_HOURS = 4; // at/above this, a spell gets a "through the morning/afternoon/middle" phrase
 export const DARK_MAJORITY_FRACTION = 0.5; // above this share of the hours left, the call shifts to keeping warm
 
-export interface DayInsights {
+export interface DayInsightsReadout {
   // The day's conditions — wind, rain, sun, feel, light — and what to wear,
   // as one flowing, wordy description rather than separate fields that repeat
   // the same signals.
@@ -732,7 +732,7 @@ function buildReadout(
 
 // --- entry point --------------------------------------------------------------
 
-export function buildDayInsights(input: DayInsightsInput): DayInsights {
+export function buildDayInsights(input: DayInsightsInput): DayInsightsReadout {
   const slots = windowSlots(input);
   const tense = dayTense(input.reference);
   // The readout describes what's still ahead, not the whole day behind it:

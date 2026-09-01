@@ -1,5 +1,5 @@
+import type { CloudCoverData } from '../models/WeatherModels';
 import { TideClock } from './TideClock';
-import type { CloudCoverData } from './WaveAPIClient';
 
 // Total sky cloud cover, % (0 clear – 100 fully overcast). Point-in-time
 // hourly readings, interpolated like wind/wave/sun brightness.

@@ -1,6 +1,6 @@
+import type { WindData } from '../models/WeatherModels';
 import { TideClock } from './TideClock';
 import type { Trend } from './TideSeries';
-import type { WindData } from './WaveAPIClient';
 
 // Below this, an hour-over-hour change reads as noise rather than a
 // genuine rise or fall in wind speed.
