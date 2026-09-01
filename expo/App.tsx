@@ -21,7 +21,7 @@ import {
 import { ApiKeyPrompt } from './src/components/ApiKeyPrompt';
 import { CurrentLevelCard } from './src/components/CurrentLevelCard';
 import { DayInsights } from './src/components/DayInsights';
-import { type ForecastDetail, ForecastList, type ForecastWindow } from './src/components/ForecastList';
+import { type ForecastDetail, ForecastList } from './src/components/ForecastList';
 import { PrecipitationChart } from './src/components/PrecipitationChart';
 import { TemperatureChart } from './src/components/TemperatureChart';
 import { TideChart } from './src/components/TideChart';
@@ -34,6 +34,7 @@ import { useLocation } from './src/hooks/useLocation';
 import { type ThemeName, ThemeProvider, useTheme } from './src/hooks/useTheme';
 import { useWidgetSync } from './src/hooks/useWidgetSync';
 import { buildDayInsights } from './src/services/DayInsights';
+import { type ForecastWindow, hoursFor } from './src/services/DayWindow';
 import { TideClock } from './src/services/TideClock';
 import type { Colors } from './src/theme';
 
@@ -121,6 +122,11 @@ function AppContent() {
   // day, just for reading what happened while you were asleep.
   const [forecastWindow, setForecastWindow] = useState<ForecastWindow>('daytime');
   const toggleForecastWindow = () => setForecastWindow((mode) => (mode === 'daytime' ? 'wholeDay' : 'daytime'));
+  // Drives the tide/rain/temperature charts' own x-axis range too, so
+  // switching to "whole day" doesn't just widen the forecast list's
+  // figures — it shows the same fuller stretch of the forecast the charts
+  // were built from, night hours included.
+  const chartHours = hoursFor(forecastWindow);
   const { colors, fonts, themeName, toggleTheme } = useTheme();
   const styles = useMemo(() => getStyles(colors, fonts), [colors, fonts]);
   const statusBarStyle = themeName === 'dark' ? 'light-content' : 'dark-content';
@@ -226,6 +232,8 @@ function AppContent() {
                 isToday={isToday}
                 scrubTime={scrubTime}
                 onScrub={setScrubTime}
+                startHour={chartHours.startHour}
+                endHour={chartHours.endHour}
               />
             </View>
           )}
@@ -239,6 +247,8 @@ function AppContent() {
                 isToday={isToday}
                 scrubTime={scrubTime}
                 onScrub={setScrubTime}
+                startHour={chartHours.startHour}
+                endHour={chartHours.endHour}
               />
             </View>
           )}
@@ -254,6 +264,8 @@ function AppContent() {
                 isToday={isToday}
                 scrubTime={scrubTime}
                 onScrub={setScrubTime}
+                startHour={chartHours.startHour}
+                endHour={chartHours.endHour}
               />
             </View>
           )}
