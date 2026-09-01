@@ -10,3 +10,4 @@ Numbered sequentially, oldest first. Use `TEMPLATE.md` to start a new one.
 | --- | --- | --- |
 | [0001](0001-adopt-a-decision-log.md) | Adopt a decision log | Accepted |
 | [0002](0002-combine-day-insights-readout.md) | Combine the day-insights readout | Accepted |
+| [0003](0003-clothing-advice-matches-actual-wardrobe.md) | Clothing advice matches the user's actual wardrobe | Accepted |

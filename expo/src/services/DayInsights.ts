@@ -25,11 +25,6 @@ export const DRIZZLE_PEAK_MM = 0.5;
 export const HEAVY_PEAK_MM = 2;
 export const WIND_BAND_BREEZY_MPH = 12; // sentence bands: <12 calm, 12–24 breezy, ≥24 windy
 export const WIND_BAND_WINDY_MPH = 24;
-// Above this peak, gusts turn an umbrella inside out — capped separately
-// from WIND_BAND_WINDY_MPH because these are all coastal, unsheltered spots
-// (seafronts, piers) where wind is gustier than the general "windy" dress
-// band assumes, so the canopy is the first thing to go.
-export const UMBRELLA_MAX_GUST_MPH = 18;
 // Sun bands read off the brightest hour in the window/segment, W/m² (already
 // discounted for cloud cover) — below HAZY it's overcast, below SUNNY it's
 // hazy/broken cloud, at/above SUNNY it's genuinely bright. Read alongside
@@ -191,13 +186,6 @@ function windOver(slots: Slot[], windSeries: WindSeries | null): WindReading | n
   const speeds = slots.map((s) => windSeries.speedAt(s.at)).filter((mph): mph is number => mph !== null);
   if (speeds.length === 0) return null;
   return { mean: average(speeds), peak: Math.max(...speeds) };
-}
-
-// The band to dress for. A day that peaks in the windy band is a windy day
-// even if it averages out breezy — that peak is when the umbrella turns
-// inside out — but a single 12mph hour doesn't make a calm day breezy.
-function bandToDressFor(wind: WindReading): WindBand {
-  return bandFor(wind.peak) === 'windy' ? 'windy' : bandFor(wind.mean);
 }
 
 interface WindShape {
@@ -602,52 +590,61 @@ function lightClause(input: DayInsightsInput): string | null {
 
 // --- clothing ---------------------------------------------------------------
 
-// Rain band × wind band, as the lower-case noun phrase (with article) folded
-// straight into "Wear ___." — a 25mph downpour wants a dry robe, the same
-// rain in still air wants an umbrella. The umbrella entries are capped
-// separately on gusts (see UMBRELLA_MAX_GUST_MPH) rather than folded into
-// the windy column here: it's the one item in this table you don't wear,
-// so the sentence verb has to change for it too — see GARMENT_VERB.
-const GARMENT: Record<RainBand, Record<WindBand, string>> = {
-  dry: { calm: 'light layers', breezy: 'a windbreaker', windy: 'a windproof jacket' },
-  drizzle: { calm: 'an umbrella', breezy: 'a hooded jacket', windy: 'a waterproof shell' },
-  showery: { calm: 'an umbrella', breezy: 'a rain jacket', windy: 'a waterproof shell' },
-  heavy: { calm: 'waterproofs', breezy: 'waterproofs', windy: 'a dry robe' },
+// Top and bottom are read off the feels-like band (see TempBand) — the same
+// bands the temperature sentence already names, so "it feels mild" and
+// "wear a jumper" can never disagree. Rain overrides the top outright: a
+// wet forecast means a dry robe regardless of temperature, since none of
+// the wardrobe's other tops are rainproof.
+const TOP_FOR_TEMP: Record<TempBand, string> = {
+  cold: 'a jumper',
+  cool: 'a jumper',
+  mild: 'a jumper',
+  warm: 'a t-shirt',
+  hot: 'a t-shirt',
+};
+const WET_TOP = 'a dry robe';
+
+const BOTTOM_FOR_TEMP: Record<TempBand, string> = {
+  cold: 'trousers',
+  cool: 'trousers',
+  mild: 'trousers',
+  warm: 'shorts',
+  hot: 'shorts',
 };
 
-// You wear everything in GARMENT except an umbrella, which you carry.
-const GARMENT_VERB: Record<string, string> = { 'an umbrella': 'Carry' };
-const DEFAULT_GARMENT_VERB = 'Wear';
-
-// Dry hours after sunset (or before sunrise) are about warmth, not shelter,
-// so the dry row swaps for something that holds heat. A wet dark hour keeps
-// its rain gear — that's still the binding problem.
-const DARK_DRY_GARMENT: Record<WindBand, string> = {
-  calm: 'a warm layer',
-  breezy: 'a warm coat',
-  windy: 'a windproof coat',
+// Footwear is about wet ground first, temperature second: walking boots
+// whenever it's rained or is going to, since none of the dry-weather shoes
+// are waterproof. Dry and cold enough that sandals would be uncomfortable
+// falls back to camper shoes; dry and merely mild still takes sandals, just
+// with socks.
+const FOOTWEAR_FOR_TEMP: Record<TempBand, string> = {
+  cold: 'camper shoes',
+  cool: 'camper shoes',
+  mild: 'sandals with socks',
+  warm: 'sandals',
+  hot: 'sandals',
 };
+const WET_FOOTWEAR = 'walking boots';
 
 interface ClothingAdvice {
-  garment: string;
-  // "Wear" for everything except an umbrella, which reads "Carry" instead.
-  verb: string;
-  // Context not already covered elsewhere in the summary — the rain/wind
-  // bands themselves are already in the main clauses, so this only carries
-  // what they don't: wet ground left over from earlier rain, or a garment
-  // that's really about it being dark rather than the stated conditions.
+  top: string;
+  bottom: string;
+  footwear: string;
+  // Context not already covered elsewhere in the summary — the rain band
+  // itself is already in the main clauses, so this only carries what it
+  // doesn't: wet ground left over from earlier rain, or that it's dark.
   extra: string | null;
 }
 
 function clothingAdvice(
   input: DayInsightsInput,
   slots: Slot[],
-  wind: WindReading | null,
   rain: RainClause | null,
+  feels: FeelsReading | null,
   lightAlreadyStated: boolean,
 ): ClothingAdvice | null {
   if (dayTense(input.reference) === 'past') return null;
-  if (!rain && !wind) return null;
+  if (!rain && !feels) return null;
 
   const ahead = remainingSlots(input, slots);
   const darkShare = ahead.filter((s) => !s.isLight).length / ahead.length;
@@ -663,28 +660,19 @@ function clothingAdvice(
     const byPeak = rainBandFor(rainPeakOver(ahead, input.precipitationSeries));
     rainBand = byPeak === 'dry' ? 'drizzle' : byPeak;
   }
-  const windBand = wind ? bandToDressFor(wind) : 'calm';
+  const wet = rainBand !== 'dry';
+  const groundWet = rain?.groundWet ?? false;
+  const tempBand = feels ? tempBandFor(feels.mean) : 'mild';
 
-  let garment = rainBand === 'dry' && mostlyDark ? DARK_DRY_GARMENT[windBand] : GARMENT[rainBand][windBand];
+  const top = wet ? WET_TOP : TOP_FOR_TEMP[tempBand];
+  const bottom = BOTTOM_FOR_TEMP[tempBand];
+  const footwear = wet || groundWet ? WET_FOOTWEAR : FOOTWEAR_FOR_TEMP[tempBand];
 
   const extraParts: string[] = [];
-  // A calm mean can still hide a gust that would break an umbrella — the
-  // dress band alone isn't a fine enough read for the one item that has no
-  // shelter of its own. Falls back to the breezy garment for the same rain
-  // band, i.e. what would already be recommended one band up.
-  if (garment === 'an umbrella' && (wind?.peak ?? 0) >= UMBRELLA_MAX_GUST_MPH) {
-    garment = GARMENT[rainBand].breezy;
-    extraParts.push('too gusty for an umbrella');
-  }
-
-  if (rain?.groundWet) extraParts.push('still wet underfoot');
+  if (groundWet && !wet) extraParts.push('still wet underfoot');
   if (mostlyDark && !lightAlreadyStated) extraParts.push('after dark');
 
-  return {
-    garment,
-    verb: GARMENT_VERB[garment] ?? DEFAULT_GARMENT_VERB,
-    extra: extraParts.length > 0 ? extraParts.join(', ') : null,
-  };
+  return { top, bottom, footwear, extra: extraParts.length > 0 ? extraParts.join(', ') : null };
 }
 
 // --- combined readout --------------------------------------------------------
@@ -703,7 +691,7 @@ function dryConditionsClause(tense: DayTense): string {
 }
 
 function clothingSentence(clothing: ClothingAdvice): string {
-  return `${clothing.verb} ${clothing.garment}${clothing.extra ? ` — ${clothing.extra}` : ''}`;
+  return `Wear ${clothing.top} and ${clothing.bottom}, with ${clothing.footwear}${clothing.extra ? ` — ${clothing.extra}` : ''}`;
 }
 
 // The readout is intentionally allowed to be wordy. It is one paragraph, but
@@ -759,9 +747,8 @@ export function buildDayInsights(input: DayInsightsInput): DayInsights {
   const sun = sunOver(summarySlots, input.sunBrightnessSeries, input.cloudCoverSeries);
   const feels = feelsOver(summarySlots, input.temperatureSeries);
   const light = lightClause(input);
-  const aheadWind = windOver(summarySlots, input.windSeries);
 
-  const clothing = clothingAdvice(input, slots, aheadWind, rain, light !== null);
+  const clothing = clothingAdvice(input, slots, rain, feels, light !== null);
 
   return {
     summary: buildReadout(input, tense, summarySlots, shape, rain, sun, feels, light, clothing),
