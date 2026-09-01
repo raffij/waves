@@ -1,5 +1,5 @@
+import type { SunBrightnessData } from '../models/WeatherModels';
 import { TideClock } from './TideClock';
-import type { SunBrightnessData } from './WaveAPIClient';
 
 // Shortwave (solar) radiation reaching the ground, W/m² — already accounts
 // for cloud cover, so it reads as "how bright it actually is" rather than a

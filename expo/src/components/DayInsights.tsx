@@ -2,11 +2,11 @@ import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import type { Fonts } from '../fonts';
 import { useTheme } from '../hooks/useTheme';
-import type { DayInsights as DayInsightsModel } from '../services/DayInsights';
+import type { DayInsightsReadout } from '../services/DayInsights';
 import type { Colors } from '../theme';
 
 interface Props {
-  insights: DayInsightsModel;
+  insights: DayInsightsReadout;
 }
 
 // The "so what" above the charts: one deliberately wordy description that

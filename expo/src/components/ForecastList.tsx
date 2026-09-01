@@ -17,7 +17,6 @@ import type { WindSeries } from '../services/WindSeries';
 import type { Colors } from '../theme';
 
 export type ForecastDetail = 'stats' | 'summary';
-export type { ForecastWindow };
 
 interface Props {
   yesterday: ForecastDay | null;

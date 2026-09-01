@@ -1,54 +1,15 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import type {
+  CloudCoverData,
+  DaylightData,
+  PrecipitationData,
+  SunBrightnessData,
+  TemperatureData,
+  WaveData,
+  WindData,
+} from '../models/WeatherModels';
 
 const CACHE_MAX_AGE_MS = 6 * 60 * 60 * 1000; // 6 hours
-
-export interface WaveData {
-  time: string[];
-  wave_height: (number | null)[];
-}
-
-export interface WindData {
-  time: string[];
-  wind_speed: (number | null)[];
-}
-
-export interface PrecipitationData {
-  time: string[];
-  precipitation: (number | null)[];
-}
-
-// Real (temperature_2m) and "feels like" (apparent_temperature, which factors
-// in wind chill and humidity) air temperature, °C.
-export interface TemperatureData {
-  time: string[];
-  temperature: (number | null)[];
-  apparent_temperature: (number | null)[];
-}
-
-// Shortwave (solar) radiation reaching the ground, W/m² — how bright/strong
-// the sun actually is, already discounted for cloud cover, unlike a raw UV
-// index which ignores it.
-export interface SunBrightnessData {
-  time: string[];
-  shortwave_radiation: (number | null)[];
-}
-
-// Total sky cloud cover, % (0–100) — the direct read of what the sky looks
-// like, independent of the sun's elevation/season. Brightness alone can't
-// tell a bright, fully overcast sky (thin high cloud still passes plenty of
-// diffuse light) from real sun, so the two are read together.
-export interface CloudCoverData {
-  time: string[];
-  cloud_cover: (number | null)[];
-}
-
-// One entry per day (time is a "yyyy-MM-dd" key), sunrise/sunset as local
-// ISO strings for that day.
-export interface DaylightData {
-  time: string[];
-  sunrise: string[];
-  sunset: string[];
-}
 
 export interface WaveDataResult {
   data: WaveData;

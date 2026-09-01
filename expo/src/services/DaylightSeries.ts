@@ -1,5 +1,5 @@
+import type { DaylightData } from '../models/WeatherModels';
 import { TideClock } from './TideClock';
-import type { DaylightData } from './WaveAPIClient';
 
 // Per-day sunrise/sunset, looked up by London calendar day. Open-Meteo
 // returns one row per day with a "yyyy-MM-dd" key and local ISO
