@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, type ReactNode, useContext, useEffect, useState } from 'react';
+import { Platform } from 'react-native';
 import { appFonts, type Fonts } from '../fonts';
 import { type Colors, darkColors, glassColors, posterColors } from '../theme';
 
@@ -42,6 +43,17 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   };
 
   const colors = colorsByTheme[themeName];
+
+  // On web, the browser (and, once "Added to Home Screen", iOS's own
+  // chrome) tints its UI from <meta name="theme-color">. It's static in
+  // index.html/app.json, baked in at the dark theme's navy — so switching
+  // to poster/glass left that chrome mismatched against the page behind
+  // it, breaking the immersive/full-screen feel. Keep it in lockstep with
+  // whatever's actually on screen.
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', colors.background);
+  }, [colors.background]);
 
   return (
     <ThemeContext.Provider value={{ themeName, colors, fonts: appFonts, toggleTheme }}>
