@@ -612,10 +612,8 @@ const BOTTOM_FOR_TEMP: Record<TempBand, string> = {
   hot: 'shorts',
 };
 
-// Footwear is about wet ground first, temperature second: walking boots
-// whenever it's rained or is going to, since none of the dry-weather shoes
-// are waterproof. Dry and cold enough that sandals would be uncomfortable
-// falls back to camper shoes; dry and mild or above takes sandals, no socks.
+// Footwear default by temperature: cold/cool falls back to camper shoes,
+// mild or above takes sandals, no socks.
 const FOOTWEAR_FOR_TEMP: Record<TempBand, string> = {
   cold: 'camper shoes',
   cool: 'camper shoes',
@@ -624,6 +622,13 @@ const FOOTWEAR_FOR_TEMP: Record<TempBand, string> = {
   hot: 'sandals',
 };
 const WET_FOOTWEAR = 'walking boots';
+
+// Rain overrides footwear only when it's cold/cool enough that sandals
+// were already off the table (camper shoes, not waterproof, get swapped
+// for boots) — mild or above stays on sandals even when wet, since bare
+// sandals are meant to get wet and dry fast, unlike walking boots and
+// socks, which soak through and stay that way.
+const WET_OVERRIDE_TEMP_BANDS = new Set<TempBand>(['cold', 'cool']);
 
 interface ClothingAdvice {
   top: string;
@@ -665,7 +670,8 @@ function clothingAdvice(
 
   const top = wet ? WET_TOP : TOP_FOR_TEMP[tempBand];
   const bottom = BOTTOM_FOR_TEMP[tempBand];
-  const footwear = wet || groundWet ? WET_FOOTWEAR : FOOTWEAR_FOR_TEMP[tempBand];
+  const footwear =
+    (wet || groundWet) && WET_OVERRIDE_TEMP_BANDS.has(tempBand) ? WET_FOOTWEAR : FOOTWEAR_FOR_TEMP[tempBand];
 
   const extraParts: string[] = [];
   if (groundWet && !wet) extraParts.push('still wet underfoot');
