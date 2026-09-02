@@ -418,7 +418,8 @@ export function TemperatureChart({
           >
             <Text style={styles.tooltipText} numberOfLines={1}>
               {TideClock.format(activeTime, { hour: '2-digit', minute: '2-digit', hour12: false })} ·{' '}
-              {Math.round(activeFeelsLike)}°{activeTemp !== null && ` / ${Math.round(activeTemp)}° real`}
+              {Math.round(activeTemp ?? activeFeelsLike)}°
+              {activeTemp !== null && ` / ${Math.round(activeFeelsLike)}° feels`}
             </Text>
           </View>
         )}
