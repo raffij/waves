@@ -525,6 +525,12 @@ function getStyles(colors: Colors, fonts: Fonts) {
       borderWidth: 1,
       borderColor: colors.cardBorder,
     },
-    legendText: { color: colors.textSecondary, fontSize: 11, lineHeight: 13, fontWeight: '600', fontFamily: fonts.mono },
+    legendText: {
+      color: colors.textSecondary,
+      fontSize: 11,
+      lineHeight: 13,
+      fontWeight: '600',
+      fontFamily: fonts.mono,
+    },
   });
 }
