@@ -505,7 +505,8 @@ function getStyles(colors: Colors, fonts: Fonts) {
       flexDirection: 'row',
       flexWrap: 'wrap',
       justifyContent: 'center',
-      gap: 12,
+      columnGap: 12,
+      rowGap: 2,
       marginTop: 3,
       paddingLeft: PADDING_LEFT,
       paddingRight: PADDING_X,
@@ -514,8 +515,6 @@ function getStyles(colors: Colors, fonts: Fonts) {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 5,
-      minHeight: 24,
-      paddingVertical: 2,
     },
     legendDot: { width: 7, height: 7, borderRadius: 4 },
     legendNightSwatch: {
@@ -526,6 +525,12 @@ function getStyles(colors: Colors, fonts: Fonts) {
       borderWidth: 1,
       borderColor: colors.cardBorder,
     },
-    legendText: { color: colors.textSecondary, fontSize: 11, fontWeight: '600', fontFamily: fonts.mono },
+    legendText: {
+      color: colors.textSecondary,
+      fontSize: 11,
+      lineHeight: 13,
+      fontWeight: '600',
+      fontFamily: fonts.mono,
+    },
   });
 }
