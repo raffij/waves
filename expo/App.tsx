@@ -370,7 +370,7 @@ function getStyles(colors: Colors, fonts: Fonts) {
       paddingTop: 8,
       paddingBottom: 16,
     },
-    section: { marginTop: 14 },
+    section: { marginTop: 10 },
     error: { color: colors.falling, marginTop: 12, textAlign: 'center' },
     footer: { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: 4, marginTop: 4 },
     footerButton: {

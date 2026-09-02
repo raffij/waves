@@ -557,6 +557,6 @@ function getStyles(colors: Colors, fonts: Fonts) {
       paddingVertical: 2,
     },
     legendDot: { width: 7, height: 7, borderRadius: 4 },
-    legendText: { color: colors.textSecondary, fontSize: 11, fontWeight: '600', fontFamily: fonts.mono },
+    legendText: { color: colors.textSecondary, fontSize: 11, lineHeight: 13, fontWeight: '600', fontFamily: fonts.mono },
   });
 }
