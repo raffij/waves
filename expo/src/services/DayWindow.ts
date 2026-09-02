@@ -20,7 +20,11 @@ export interface Hours {
   endHour: number;
 }
 
-const WHOLE_DAY_HOURS: Hours = { startHour: 0, endHour: 23 };
+// endHour is the window's right *boundary* (matching DAYTIME_HOURS, whose
+// 20 is 8pm, not "the last hour to sample") — so a whole day runs 0 to 24
+// (midnight to midnight), not 0 to 23. TideClock.londonDateAtHour normalizes
+// hour 24 to 00:00 the next day, so this lands on the correct instant.
+const WHOLE_DAY_HOURS: Hours = { startHour: 0, endHour: 24 };
 const DAYTIME_HOURS: Hours = { startHour: DAY_WINDOW_START_HOUR, endHour: DAY_WINDOW_END_HOUR };
 
 export function hoursFor(forecastWindow: ForecastWindow): Hours {
