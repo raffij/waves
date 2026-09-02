@@ -14,3 +14,4 @@ Numbered sequentially, oldest first. Use `TEMPLATE.md` to start a new one.
 | [0004](0004-mild-band-treated-as-shorts-weather.md) | The mild feels-like band is treated as shorts weather | Accepted |
 | [0005](0005-weather-response-shapes-live-in-models.md) | Weather response shapes live in `models/`, not in `WaveAPIClient.ts` | Accepted |
 | [0006](0006-sandals-win-over-boots-when-mild-and-wet.md) | Sandals win over walking boots when it's mild and wet | Accepted |
+| [0007](0007-clothing-advice-split-by-time-of-day.md) | Clothing advice splits into a core-hours pick and a rest-of-day pick | Accepted |

@@ -61,6 +61,13 @@ export const FALLBACK_SUNSET_HOUR = 21;
 export const RAIN_DOMINATES_FRACTION = 0.55; // a single spell covering this share of the window reads as "most of the day"
 export const RAIN_LONG_SPELL_HOURS = 4; // at/above this, a spell gets a "through the morning/afternoon/middle" phrase
 export const DARK_MAJORITY_FRACTION = 0.5; // above this share of the hours left, the call shifts to keeping warm
+// The clothing call is split into two time-of-day segments rather than one
+// mean over the whole window — a summer morning and afternoon can straddle a
+// temp band even when the whole-day mean doesn't. CORE is the middle of the
+// day, REST is everything outside it (early morning and evening, both within
+// the day window).
+export const CLOTHING_CORE_START_HOUR = 8;
+export const CLOTHING_CORE_END_HOUR = 16;
 
 export interface DayInsightsReadout {
   // The day's conditions — wind, rain, sun, feel, light — and what to wear,
@@ -630,7 +637,7 @@ const WET_FOOTWEAR = 'walking boots';
 // socks, which soak through and stay that way.
 const WET_OVERRIDE_TEMP_BANDS = new Set<TempBand>(['cold', 'cool']);
 
-interface ClothingAdvice {
+interface ClothingPick {
   top: string;
   bottom: string;
   footwear: string;
@@ -638,6 +645,59 @@ interface ClothingAdvice {
   // itself is already in the main clauses, so this only carries what it
   // doesn't: wet ground left over from earlier rain, or that it's dark.
   extra: string | null;
+}
+
+interface ClothingAdvice {
+  primary: ClothingPick;
+  // The 08:00–16:00 core and the rest of the day (early morning/evening)
+  // often call for the same outfit — the same "don't repeat a signal" rule
+  // the rest of the readout follows (see buildReadout) applies here too, so
+  // secondary is only set when the two segments actually differ.
+  secondary: ClothingPick | null;
+}
+
+function equalPick(a: ClothingPick, b: ClothingPick): boolean {
+  return a.top === b.top && a.bottom === b.bottom && a.footwear === b.footwear && a.extra === b.extra;
+}
+
+function coreClothingSlots(slots: Slot[]): Slot[] {
+  return slots.filter((s) => s.hour >= CLOTHING_CORE_START_HOUR && s.hour <= CLOTHING_CORE_END_HOUR);
+}
+
+function restClothingSlots(slots: Slot[]): Slot[] {
+  return slots.filter((s) => s.hour < CLOTHING_CORE_START_HOUR || s.hour > CLOTHING_CORE_END_HOUR);
+}
+
+// One segment's pick. `wet`/`groundWet` are read off the whole remaining
+// day (see clothingAdvice) rather than this segment alone — decision 0003
+// already treats any rain still ahead as reason enough to dress for rain
+// for the rest of the day, not just the hours it actually falls. Only the
+// temperature band and the dark share are read per segment, since those
+// genuinely differ between the middle of the day and its edges.
+function pickForSegment(
+  segAhead: Slot[],
+  wet: boolean,
+  groundWet: boolean,
+  temp: TemperatureSeries | null,
+  lightAlreadyStated: boolean,
+): ClothingPick | null {
+  if (segAhead.length === 0) return null;
+
+  const feels = feelsOver(segAhead, temp);
+  const tempBand = feels ? tempBandFor(feels.mean) : 'mild';
+  const darkShare = segAhead.filter((s) => !s.isLight).length / segAhead.length;
+  const mostlyDark = darkShare > DARK_MAJORITY_FRACTION;
+
+  const top = wet ? WET_TOP : TOP_FOR_TEMP[tempBand];
+  const bottom = BOTTOM_FOR_TEMP[tempBand];
+  const footwear =
+    (wet || groundWet) && WET_OVERRIDE_TEMP_BANDS.has(tempBand) ? WET_FOOTWEAR : FOOTWEAR_FOR_TEMP[tempBand];
+
+  const extraParts: string[] = [];
+  if (groundWet && !wet) extraParts.push('still wet underfoot');
+  if (mostlyDark && !lightAlreadyStated) extraParts.push('after dark');
+
+  return { top, bottom, footwear, extra: extraParts.length > 0 ? extraParts.join(', ') : null };
 }
 
 function clothingAdvice(
@@ -651,8 +711,6 @@ function clothingAdvice(
   if (!rain && !feels) return null;
 
   const ahead = remainingSlots(input, slots);
-  const darkShare = ahead.filter((s) => !s.isLight).length / ahead.length;
-  const mostlyDark = darkShare > DARK_MAJORITY_FRACTION;
 
   // The rain clause has the last word on whether it's wet: it's what the
   // sentence says, and it already discounts spells that are over. A spell
@@ -666,18 +724,14 @@ function clothingAdvice(
   }
   const wet = rainBand !== 'dry';
   const groundWet = rain?.groundWet ?? false;
-  const tempBand = feels ? tempBandFor(feels.mean) : 'mild';
 
-  const top = wet ? WET_TOP : TOP_FOR_TEMP[tempBand];
-  const bottom = BOTTOM_FOR_TEMP[tempBand];
-  const footwear =
-    (wet || groundWet) && WET_OVERRIDE_TEMP_BANDS.has(tempBand) ? WET_FOOTWEAR : FOOTWEAR_FOR_TEMP[tempBand];
+  const core = pickForSegment(coreClothingSlots(ahead), wet, groundWet, input.temperatureSeries, lightAlreadyStated);
+  const rest = pickForSegment(restClothingSlots(ahead), wet, groundWet, input.temperatureSeries, lightAlreadyStated);
 
-  const extraParts: string[] = [];
-  if (groundWet && !wet) extraParts.push('still wet underfoot');
-  if (mostlyDark && !lightAlreadyStated) extraParts.push('after dark');
-
-  return { top, bottom, footwear, extra: extraParts.length > 0 ? extraParts.join(', ') : null };
+  if (core && rest)
+    return equalPick(core, rest) ? { primary: core, secondary: null } : { primary: core, secondary: rest };
+  const only = core ?? rest;
+  return only ? { primary: only, secondary: null } : null;
 }
 
 // --- combined readout --------------------------------------------------------
@@ -695,8 +749,19 @@ function dryConditionsClause(tense: DayTense): string {
   return 'with dry conditions expected';
 }
 
+function hourLabel(hour: number): string {
+  return `${hour.toString().padStart(2, '0')}:00`;
+}
+
+function pickPhrase(pick: ClothingPick): string {
+  return `${pick.top} and ${pick.bottom}, with ${pick.footwear}${pick.extra ? ` — ${pick.extra}` : ''}`;
+}
+
 function clothingSentence(clothing: ClothingAdvice): string {
-  return `Wear ${clothing.top} and ${clothing.bottom}, with ${clothing.footwear}${clothing.extra ? ` — ${clothing.extra}` : ''}`;
+  if (!clothing.secondary) return `Wear ${pickPhrase(clothing.primary)}`;
+  return `Between ${hourLabel(CLOTHING_CORE_START_HOUR)} and ${hourLabel(CLOTHING_CORE_END_HOUR)}, wear ${pickPhrase(
+    clothing.primary,
+  )}. Outside those hours, wear ${pickPhrase(clothing.secondary)}`;
 }
 
 // The readout is intentionally allowed to be wordy. It is one paragraph, but
