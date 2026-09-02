@@ -24,6 +24,6 @@ export function DayInsights({ insights }: Props) {
 
 function getStyles(colors: Colors, fonts: Fonts) {
   return StyleSheet.create({
-    sentence: { color: colors.textPrimary, fontSize: 14, lineHeight: 19, fontFamily: fonts.mono },
+    sentence: { color: colors.textPrimary, fontSize: 12, lineHeight: 16, fontFamily: fonts.mono },
   });
 }
