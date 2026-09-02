@@ -67,8 +67,8 @@ network access to TideCheck/Open-Meteo.
 ### Lint & typecheck
 
 ```bash
-npm run lint       # Biome
-npm run lint:fix   # Biome, with fixes
+npm run lint       # oxlint + oxfmt --check
+npm run lint:fix   # oxlint --fix + oxfmt, with fixes
 npx tsc --noEmit   # types
 ```
 

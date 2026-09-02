@@ -17,3 +17,4 @@ Numbered sequentially, oldest first. Use `TEMPLATE.md` to start a new one.
 | [0007](0007-clothing-advice-split-by-time-of-day.md) | Clothing advice splits into a core-hours pick and a rest-of-day pick | Accepted |
 | [0008](0008-mild-wet-days-get-a-light-jacket-and-umbrella.md) | Mild/warm/hot wet days get a light jacket, with an umbrella when calm | Accepted |
 | [0009](0009-clothing-core-hours-widened-to-8-17.md) | Clothing core hours widen from 08:00–16:00 to 08:00–17:00 | Accepted |
+| [0010](0010-replace-biome-with-oxlint-and-oxfmt.md) | Replace Biome with oxlint and oxfmt | Accepted |
