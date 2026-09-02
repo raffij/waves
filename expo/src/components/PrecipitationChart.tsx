@@ -31,9 +31,6 @@ const PADDING_X = 8;
 const PADDING_TOP = 26;
 const PADDING_BOTTOM = 4;
 const TOOLTIP_WIDTH = 150;
-// Fixed estimate for centering hour labels on their bar (see hourTicks) —
-// unlike the tooltip, not worth measuring via onLayout for a label this small.
-const AXIS_LABEL_WIDTH = 36;
 const HOUR_MS = 3_600_000;
 const BAR_GAP = 2;
 // Below this, the tallest bar in the window would be too short to see —
@@ -93,7 +90,18 @@ export function PrecipitationChart({
     const start = new Date(startMs);
     const end = new Date(endMs);
     const now = new Date(nowMs);
-    const bars = series.hourlyBars(start, end);
+    const rawBars = series.hourlyBars(start, end);
+    // hourlyBars is inclusive of `to`, so it always tacks on one extra
+    // bucket for the hour starting exactly at `endHour` — one hour past
+    // what every other element on this chart (the hour ticks, daylight
+    // shading, the shared scrub line, and the temp/tide charts stacked
+    // with it) treats as the window's right edge. Left in, that extra
+    // column stretched the bars across a scale one hour wider than
+    // everything they're drawn against, so the bars themselves — not just
+    // their hour labels — drifted out of step with the rest of the chart.
+    // Dropping it here keeps the bars tiling exactly onto the shared
+    // [startHour, endHour) scale instead of overhanging it by one column.
+    const bars = rawBars.length > 1 ? rawBars.slice(0, -1) : rawBars;
 
     const plotWidth = width - PADDING_X * 2;
     const plotHeight = HEIGHT - PADDING_TOP - PADDING_BOTTOM;
@@ -128,18 +136,6 @@ export function PrecipitationChart({
     // Same night shading as the tide chart, so a shower at dusk reads as one.
     const daylight = daylightBands({ series: daylightSeries, start, end, plotLeft: PADDING_X, plotWidth });
 
-    // Hour labels positioned from the same index math as the bars
-    // themselves (a bar's x is PADDING_X + i*(barWidth+BAR_GAP)), not from
-    // an even 0/50/100% spread across the row — bars are columns, one per
-    // hour, so their centers sit inset from the plot edges by half a
-    // column, unlike a line chart's point-per-hour samples which do land
-    // exactly on the edges. Reusing that spread here left the first/last
-    // labels visibly off from the bars they were meant to sit under.
-    const hourTicks = [startHour, Math.round((startHour + endHour) / 2), endHour].map((hour) => {
-      const i = Math.max(0, Math.min(bars.length - 1, hour - startHour));
-      return { hour, x: PADDING_X + i * (barWidth + BAR_GAP) + barWidth / 2 };
-    });
-
     return {
       bars,
       plotWidth,
@@ -152,9 +148,8 @@ export function PrecipitationChart({
       totalMs,
       pastFadeEndX,
       daylight,
-      hourTicks,
     };
-  }, [series, daylightSeries, startMs, endMs, nowMs, isToday, width, startHour, endHour]);
+  }, [series, daylightSeries, startMs, endMs, nowMs, isToday, width]);
 
   const {
     bars,
@@ -168,7 +163,6 @@ export function PrecipitationChart({
     totalMs,
     pastFadeEndX,
     daylight,
-    hourTicks,
   } = geometry;
 
   // See TideChart's identical comment: PanResponder.create(...) only runs
@@ -217,6 +211,8 @@ export function PrecipitationChart({
       : -1;
   const activeMm = activeBarIndex >= 0 ? (bars[activeBarIndex].mm ?? 0) : null;
   const activeX = PADDING_X + ((activeTime.getTime() - start.getTime()) / totalMs) * plotWidth;
+
+  const hourTicks = [startHour, Math.round((startHour + endHour) / 2), endHour];
 
   return (
     <View onLayout={onLayout}>
@@ -297,19 +293,9 @@ export function PrecipitationChart({
         <View style={StyleSheet.absoluteFill} {...panResponder.panHandlers} />
       </View>
       <View style={styles.axisRow}>
-        {hourTicks.map((tick) => (
-          <Text
-            key={tick.hour}
-            style={[
-              styles.axisLabel,
-              {
-                position: 'absolute',
-                width: AXIS_LABEL_WIDTH,
-                left: Math.min(Math.max(tick.x - AXIS_LABEL_WIDTH / 2, 0), width - AXIS_LABEL_WIDTH),
-              },
-            ]}
-          >
-            {String(tick.hour).padStart(2, '0')}:00
+        {hourTicks.map((h) => (
+          <Text key={h} style={styles.axisLabel}>
+            {String(h).padStart(2, '0')}:00
           </Text>
         ))}
       </View>
@@ -329,10 +315,13 @@ function getStyles(colors: Colors, fonts: Fonts) {
   return StyleSheet.create({
     chartArea: { position: 'relative' },
     axisRow: {
-      height: 14,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      paddingLeft: PADDING_X,
+      paddingRight: PADDING_X,
       marginTop: 4,
     },
-    axisLabel: { color: colors.textSecondary, fontSize: 11, fontFamily: fonts.mono, textAlign: 'center' },
+    axisLabel: { color: colors.textSecondary, fontSize: 11, fontFamily: fonts.mono },
     tooltip: {
       position: 'absolute',
       top: 0,
