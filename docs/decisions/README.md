@@ -21,3 +21,4 @@ Numbered sequentially, oldest first. Use `TEMPLATE.md` to start a new one.
 | [0011](0011-rain-clause-describes-intensity-trend.md) | The rain clause describes how a spell's intensity changes | Accepted |
 | [0012](0012-heavy-rain-mild-days-get-a-coat-not-a-dry-robe.md) | Heavy rain on a mild/warm/hot day gets a coat, not a dry robe | Accepted |
 | [0013](0013-wind-direction-added-app-only.md) | Wind direction is added to the app only, with a backing/veering readout | Accepted |
+| [0014](0014-sea-current-and-sea-temperature-from-marine-api.md) | Surface sea current direction and sea surface temperature from Open-Meteo Marine | Accepted |

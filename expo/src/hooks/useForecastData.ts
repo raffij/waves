@@ -5,6 +5,8 @@ import { DEFAULT_LOCATION, type Location } from '../models/Location';
 import { CloudCoverSeries } from '../services/CloudCoverSeries';
 import { DaylightSeries } from '../services/DaylightSeries';
 import { PrecipitationSeries } from '../services/PrecipitationSeries';
+import { SeaCurrentSeries } from '../services/SeaCurrentSeries';
+import { SeaTemperatureSeries } from '../services/SeaTemperatureSeries';
 import { SunBrightnessSeries } from '../services/SunBrightnessSeries';
 import { TemperatureSeries } from '../services/TemperatureSeries';
 import type { TideDataResult } from '../services/TideAPIClient';
@@ -30,6 +32,8 @@ interface WaveView {
   temperatureSeries: TemperatureSeries | null;
   sunBrightnessSeries: SunBrightnessSeries | null;
   cloudCoverSeries: CloudCoverSeries | null;
+  seaCurrentSeries: SeaCurrentSeries | null;
+  seaTemperatureSeries: SeaTemperatureSeries | null;
 }
 
 export interface ForecastData {
@@ -42,6 +46,8 @@ export interface ForecastData {
   temperatureSeries: TemperatureSeries | null;
   sunBrightnessSeries: SunBrightnessSeries | null;
   cloudCoverSeries: CloudCoverSeries | null;
+  seaCurrentSeries: SeaCurrentSeries | null;
+  seaTemperatureSeries: SeaTemperatureSeries | null;
   fetchedAt: Date | null;
   isFetching: boolean;
   error: Error | null;
@@ -113,6 +119,8 @@ function selectWave(result: WaveDataResult): WaveView {
     temperatureSeries: result.temperature ? new TemperatureSeries(result.temperature) : null,
     sunBrightnessSeries: result.sunBrightness ? new SunBrightnessSeries(result.sunBrightness) : null,
     cloudCoverSeries: result.cloudCover ? new CloudCoverSeries(result.cloudCover) : null,
+    seaCurrentSeries: result.seaCurrent ? new SeaCurrentSeries(result.seaCurrent) : null,
+    seaTemperatureSeries: result.seaTemperature ? new SeaTemperatureSeries(result.seaTemperature) : null,
   };
 }
 
@@ -136,6 +144,8 @@ function combineForecastData([tide, wave]: [UseQueryResult<TideView, Error>, Use
     temperatureSeries: wave.data?.temperatureSeries ?? null,
     sunBrightnessSeries: wave.data?.sunBrightnessSeries ?? null,
     cloudCoverSeries: wave.data?.cloudCoverSeries ?? null,
+    seaCurrentSeries: wave.data?.seaCurrentSeries ?? null,
+    seaTemperatureSeries: wave.data?.seaTemperatureSeries ?? null,
     isFetching: tide.isFetching || wave.isFetching,
     error: tide.error ?? null,
   };

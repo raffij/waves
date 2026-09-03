@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Fonts } from '../fonts';
 import { useTheme } from '../hooks/useTheme';
 import type { Location } from '../models/Location';
+import { compassPoint } from '../services/SeaCurrentSeries';
 import type { CurrentLevel, Trend } from '../services/TideSeries';
 import { compassPointFor } from '../services/WindSeries';
 import type { Colors } from '../theme';
@@ -15,6 +16,10 @@ interface Props {
   windSpeed: number | null;
   windDirection: number | null;
   windTrend: Trend;
+  seaTemp: number | null;
+  /** Degrees the sea current is flowing TOWARD (oceanographic convention), null when unavailable. */
+  currentDirection: number | null;
+  currentVelocity: number | null;
   fetchedAt: Date | null;
   /** Set when viewing a non-live day (e.g. "Tomorrow"), shown in place of the "Updated" timestamp. */
   dayLabel?: string | null;
@@ -59,7 +64,10 @@ function Stat({
   label: string;
   value: string | null;
   unit: string;
-  trend: Trend;
+  // Omitted for readings with no notion of "rising/falling" (e.g. sea
+  // temperature) — the badge is skipped entirely rather than shown as
+  // "unknown", which would otherwise look like a transient loading state.
+  trend?: Trend;
   colors: Colors;
   styles: Styles;
 }) {
@@ -75,7 +83,7 @@ function Stat({
             {value}
             <Text style={styles.statUnit}>{unit}</Text>
           </Text>
-          <TrendBadge trend={trend} colors={colors} styles={styles} />
+          {trend && <TrendBadge trend={trend} colors={colors} styles={styles} />}
         </View>
       ) : (
         <Text style={styles.statValue}>—</Text>
@@ -91,6 +99,9 @@ export function CurrentLevelCard({
   windSpeed,
   windDirection,
   windTrend,
+  seaTemp,
+  currentDirection,
+  currentVelocity,
   fetchedAt,
   dayLabel,
   onPressUpdated,
@@ -166,7 +177,32 @@ export function CurrentLevelCard({
           colors={colors}
           styles={styles}
         />
+        <Stat
+          icon={<Ionicons name="thermometer-outline" size={13} color={colors.temperature} />}
+          label="Sea"
+          value={seaTemp !== null ? seaTemp.toFixed(1) : null}
+          unit="°C"
+          colors={colors}
+          styles={styles}
+        />
       </View>
+      {currentDirection !== null && (
+        <View style={styles.currentRow}>
+          {/* Ionicons' "navigate" glyph points due north at 0°, so rotating it
+              by the current's own bearing (already "toward", not "from" —
+              see SeaCurrentData) points it exactly where the water is heading. */}
+          <Ionicons
+            name="navigate"
+            size={13}
+            color={colors.primary}
+            style={{ transform: [{ rotate: `${currentDirection}deg` }] }}
+          />
+          <Text style={styles.currentText}>
+            Current flowing {compassPoint(currentDirection)}
+            {currentVelocity !== null ? ` at ${currentVelocity.toFixed(1)}km/h` : ''}
+          </Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -209,6 +245,8 @@ function getStyles(colors: Colors, fonts: Fonts) {
     liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.rising },
     badgeText: { color: colors.textSecondary, fontSize: 11, fontWeight: '600', fontFamily: fonts.mono },
     contentRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10, gap: 8 },
+    currentRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 8 },
+    currentText: { color: colors.textSecondary, fontSize: 11, fontWeight: '600', fontFamily: fonts.mono },
     stat: { flex: 1 },
     statLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 4 },
     statIconWrap: {
