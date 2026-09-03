@@ -196,7 +196,7 @@ export class WaveAPIClient {
     }
   }
 
-  // wind_speed_10m/wind_direction_10m, precipitation,
+  // wind_speed_10m/wind_direction_10m/wind_gusts_10m, precipitation,
   // temperature_2m/apparent_temperature, shortwave_radiation and
   // cloud_cover all live on the general Forecast API, not the Marine API
   // (the Marine API silently accepts wind_speed_10m but returns all nulls,
@@ -232,7 +232,7 @@ export class WaveAPIClient {
     url.searchParams.append('end_date', endDate);
     url.searchParams.append(
       'hourly',
-      'wind_speed_10m,wind_direction_10m,precipitation,temperature_2m,apparent_temperature,shortwave_radiation,cloud_cover',
+      'wind_speed_10m,wind_direction_10m,wind_gusts_10m,precipitation,temperature_2m,apparent_temperature,shortwave_radiation,cloud_cover',
     );
     url.searchParams.append('daily', 'sunrise,sunset');
     url.searchParams.append('wind_speed_unit', 'mph');
@@ -248,6 +248,7 @@ export class WaveAPIClient {
           time: string[];
           wind_speed_10m: (number | null)[];
           wind_direction_10m: (number | null)[];
+          wind_gusts_10m: (number | null)[];
           precipitation: (number | null)[];
           temperature_2m: (number | null)[];
           apparent_temperature: (number | null)[];
@@ -261,6 +262,7 @@ export class WaveAPIClient {
           time: json.hourly.time,
           wind_speed: json.hourly.wind_speed_10m,
           wind_direction: json.hourly.wind_direction_10m,
+          wind_gusts: json.hourly.wind_gusts_10m,
         },
         precipitation: { time: json.hourly.time, precipitation: json.hourly.precipitation },
         daylight: json.daily ? { time: json.daily.time, sunrise: json.daily.sunrise, sunset: json.daily.sunset } : null,

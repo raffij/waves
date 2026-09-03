@@ -140,9 +140,17 @@ export function TideChart({
     const waveSamples = waveSeries
       ? waveSeries.samplesEvery(15, start, end).filter((s): s is { time: Date; height: number } => s.height !== null)
       : [];
-    const windSamples = windSeries
-      ? windSeries.samplesEvery(15, start, end).filter((s): s is { time: Date; speed: number } => s.speed !== null)
-      : [];
+    const windSamplesRaw = windSeries ? windSeries.samplesEvery(15, start, end) : [];
+    const windSamples = windSamplesRaw.filter(
+      (s): s is { time: Date; speed: number; gust: number | null } => s.speed !== null,
+    );
+    // A separate filter from windSamples (rather than reading .gust off it)
+    // since a gust reading can be missing for an hour that still has a wind
+    // speed — same "gust is optional, wind speed isn't" fallback WindSeries
+    // itself applies.
+    const gustSamples = windSamplesRaw.filter(
+      (s): s is { time: Date; speed: number | null; gust: number } => s.gust !== null,
+    );
 
     const plotWidth = width - PADDING_LEFT - PADDING_X;
     const plotHeight = HEIGHT - PADDING_TOP - PADDING_BOTTOM;
@@ -165,11 +173,16 @@ export function TideChart({
     const waveMaxHeight = waveHeights.length > 0 ? Math.max(...waveHeights) : 1;
     const waveSpread = waveMaxHeight || 1;
 
-    // Wind scaling: different unit (mph) with typical range 0-40
+    // Wind scaling: different unit (mph) with typical range 0-40. Gusts are
+    // always ≥ the sustained speed for the same hour, so they're folded into
+    // the same spread rather than given their own axis — otherwise a strong
+    // gust would plot above the top of the chart.
     const windSpeeds = windSamples.map((s) => s.speed);
+    const gustSpeeds = gustSamples.map((s) => s.gust);
     const windMinSpeed = windSpeeds.length > 0 ? Math.min(...windSpeeds) : 0;
     const windMaxSpeed = windSpeeds.length > 0 ? Math.max(...windSpeeds) : 1;
-    const windSpread = windMaxSpeed || 1;
+    const gustMaxSpeed = gustSpeeds.length > 0 ? Math.max(...gustSpeeds) : 0;
+    const windSpread = Math.max(windMaxSpeed, gustMaxSpeed) || 1;
 
     const toTideXY = (time: Date, height: number) => {
       const x = PADDING_LEFT + ((time.getTime() - startMs) / totalMs) * plotWidth;
@@ -213,6 +226,17 @@ export function TideChart({
     const windPoints = windSamples.map((s, i) => toWindXY(s.time, smoothedWindSpeeds[i]));
     const windPath = smoothPath(windPoints);
 
+    // Smoothed the same way as wind speed (gusts jump around even more from
+    // hour to hour), and drawn as its own path rather than a band around the
+    // speed line — gust and sustained speed can diverge by enough that a
+    // band would dominate the chart.
+    const smoothedGusts = movingAverage(
+      gustSamples.map((s) => s.gust),
+      3,
+    );
+    const gustPoints = gustSamples.map((s, i) => toWindXY(s.time, smoothedGusts[i]));
+    const gustPath = smoothPath(gustPoints);
+
     // Shading for the hours outside sunrise–sunset, so the curve reads
     // against when it's actually light on the pier.
     const daylight = daylightBands({ series: daylightSeries, start, end, plotLeft: PADDING_LEFT, plotWidth });
@@ -222,6 +246,7 @@ export function TideChart({
       tideSamples,
       waveSamples,
       windSamples,
+      gustSamples,
       plotWidth,
       plotHeight,
       totalMs,
@@ -234,12 +259,14 @@ export function TideChart({
       windSpeeds,
       windMinSpeed,
       windMaxSpeed,
+      gustSpeeds,
       toTideXY,
       tideGridLines,
       tidePath,
       tideAreaPath,
       wavePath,
       windPath,
+      gustPath,
       floorY,
       daylight,
     };
@@ -309,6 +336,7 @@ export function TideChart({
   const {
     waveHeights,
     windSpeeds,
+    gustSpeeds,
     tideMinHeight,
     tideMaxHeight,
     waveMinHeight,
@@ -321,6 +349,7 @@ export function TideChart({
     tideAreaPath,
     wavePath,
     windPath,
+    gustPath,
     plotWidth,
     plotHeight,
     totalMs,
@@ -340,6 +369,7 @@ export function TideChart({
   const activeTideHeight = series.heightAt(activeTime);
   const activeWaveHeight = waveSeries?.heightAt(activeTime) ?? null;
   const activeWindSpeed = windSeries?.speedAt(activeTime) ?? null;
+  const activeGust = windSeries?.gustAt(activeTime) ?? null;
   const activeTidePoint = activeTideHeight !== null ? toTideXY(activeTime, activeTideHeight) : null;
 
   const hourTicks = [startHour, Math.round((startHour + endHour) / 2), endHour];
@@ -419,6 +449,23 @@ export function TideChart({
               opacity={0.6}
             />
           )}
+          {gustPath && (
+            // Dashed, thinner and fainter than the sustained-speed line
+            // rather than a distinct color — a gust reading is the same
+            // wind signal at its peak, not a separate quantity (compare
+            // TemperatureChart's real-vs-feels-like pair, which does get
+            // two colors since those are genuinely different readings).
+            <Path
+              d={gustPath}
+              fill="none"
+              stroke={colors.wind}
+              strokeWidth={1.5}
+              strokeDasharray="3,3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              opacity={0.4}
+            />
+          )}
           {isToday && pastFadeEndX > PADDING_LEFT && (
             <Rect
               x={PADDING_LEFT}
@@ -475,6 +522,7 @@ export function TideChart({
               {TideClock.format(activeTime, { hour: '2-digit', minute: '2-digit', hour12: false })} ·{' '}
               {activeTideHeight.toFixed(1)}m{activeWaveHeight !== null && ` / ${activeWaveHeight.toFixed(1)}w`}
               {activeWindSpeed !== null && ` / ${activeWindSpeed.toFixed(1)}s`}
+              {activeGust !== null && ` / ${activeGust.toFixed(1)}g`}
             </Text>
           </View>
         )}
@@ -511,6 +559,14 @@ export function TideChart({
             <Text style={styles.legendText}>
               Wind {windMinSpeed.toFixed(1)}–{windMaxSpeed.toFixed(1)} mph
             </Text>
+          </View>
+        )}
+        {gustSpeeds.length > 0 && (
+          // A single peak figure, not a range — unlike wind speed, a "low"
+          // gust reading is just a calm patch, not a number worth reporting.
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDotOutline, { borderColor: colors.wind }]} />
+            <Text style={styles.legendText}>Gust up to {Math.max(...gustSpeeds).toFixed(1)} mph</Text>
           </View>
         )}
       </View>
@@ -580,6 +636,9 @@ function getStyles(colors: Colors, fonts: Fonts) {
       gap: 5,
     },
     legendDot: { width: 7, height: 7, borderRadius: 4 },
+    // Hollow, not filled — reads as the gust line's own dashed/faint style
+    // in miniature, next to the solid wind dot beside it.
+    legendDotOutline: { width: 7, height: 7, borderRadius: 4, borderWidth: 1.5 },
     legendText: {
       color: colors.textSecondary,
       fontSize: 11,
