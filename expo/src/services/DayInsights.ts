@@ -5,7 +5,8 @@ import type { PrecipitationSeries } from './PrecipitationSeries';
 import type { SunBrightnessSeries } from './SunBrightnessSeries';
 import type { TemperatureSeries } from './TemperatureSeries';
 import { TideClock } from './TideClock';
-import type { WindSeries } from './WindSeries';
+import { angularDelta, circularMean, compassPointFor } from './WindSeries';
+import type { CompassPoint, WindSeries } from './WindSeries';
 
 // Tuning knobs for the day-insights readout. It's a walk-on-the-pier
 // judgement — wind band, rain spell, what to wear — not a water-sports
@@ -25,6 +26,10 @@ export const DRIZZLE_PEAK_MM = 0.5;
 export const HEAVY_PEAK_MM = 2;
 export const WIND_BAND_BREEZY_MPH = 12; // sentence bands: <12 calm, 12–24 breezy, ≥24 windy
 export const WIND_BAND_WINDY_MPH = 24;
+// A morning-to-afternoon swing in mean wind direction below this reads as
+// noise — the sentence names a single "from the <point>" rather than
+// manufacturing a backing/veering story out of a few degrees of wander.
+export const WIND_DIRECTION_SHIFT_THRESHOLD_DEG = 45;
 // Sun bands read off the brightest hour in the window/segment, W/m² (already
 // discounted for cloud cover) — below HAZY it's overcast, below SUNNY it's
 // hazy/broken cloud, at/above SUNNY it's genuinely bright. Read alongside
@@ -195,22 +200,87 @@ function windOver(slots: Slot[], windSeries: WindSeries | null): WindReading | n
   return { mean: average(speeds), peak: Math.max(...speeds) };
 }
 
+// Full compass-point names as the sentence says them ("from the
+// southwest"), keyed off the same 8-point WindSeries.compassPointFor the
+// current-conditions stat uses, so the two can never disagree about what a
+// given degree reading is called.
+const COMPASS_NAME: Record<CompassPoint, string> = {
+  N: 'north',
+  NE: 'northeast',
+  E: 'east',
+  SE: 'southeast',
+  S: 'south',
+  SW: 'southwest',
+  W: 'west',
+  NW: 'northwest',
+};
+
+function directionOver(slots: Slot[], windSeries: WindSeries | null): number | null {
+  if (!windSeries) return null;
+  const degrees = slots.map((s) => windSeries.directionAt(s.at)).filter((deg): deg is number => deg !== null);
+  return degrees.length > 0 ? circularMean(degrees) : null;
+}
+
 interface WindShape {
   morningBand: WindBand;
   afternoonBand: WindBand;
   afternoonPeak: number;
+  // Circular mean direction, morning vs. afternoon — null when direction
+  // data isn't available (older cached forecasts, or the field temporarily
+  // missing from the response) rather than failing the whole wind clause.
+  direction: { morning: number; afternoon: number } | null;
 }
 
 function windShape(slots: Slot[], windSeries: WindSeries | null): WindShape | null {
   const all = windOver(slots, windSeries);
   if (!all) return null;
-  const morning = windOver(morningSlots(slots), windSeries);
-  const afternoon = windOver(afternoonSlots(slots), windSeries);
+  const morningWindow = morningSlots(slots);
+  const afternoonWindow = afternoonSlots(slots);
+  const morning = windOver(morningWindow, windSeries);
+  const afternoon = windOver(afternoonWindow, windSeries);
+
+  const allDir = directionOver(slots, windSeries);
+  const morningDir = directionOver(morningWindow, windSeries) ?? allDir;
+  const afternoonDir = directionOver(afternoonWindow, windSeries) ?? allDir;
+  const direction =
+    morningDir !== null && afternoonDir !== null ? { morning: morningDir, afternoon: afternoonDir } : null;
+
   return {
     morningBand: bandFor((morning ?? all).mean),
     afternoonBand: bandFor((afternoon ?? all).mean),
     afternoonPeak: (afternoon ?? all).peak,
+    direction,
   };
+}
+
+// "from the southwest" when the direction barely shifts across the window;
+// "backing/veering from southwest to south" when it swings past the noise
+// threshold. Backing (anticlockwise) and veering (clockwise) are the actual
+// sailing/forecasting terms — kept rather than invented plain-English ones
+// since this is exactly the audience ("Hastings Pier ... 5-day forecast")
+// that already knows them.
+function windDirectionPhrase(direction: { morning: number; afternoon: number }, tense: DayTense): string {
+  const morningPoint = compassPointFor(direction.morning);
+  const afternoonPoint = compassPointFor(direction.afternoon);
+  const delta = angularDelta(direction.morning, direction.afternoon);
+
+  if (morningPoint === afternoonPoint || Math.abs(delta) < WIND_DIRECTION_SHIFT_THRESHOLD_DEG) {
+    return `from the ${COMPASS_NAME[afternoonPoint]}`;
+  }
+
+  const verb =
+    delta > 0
+      ? tense === 'past'
+        ? 'veered'
+        : tense === 'future'
+          ? 'expected to veer'
+          : 'veering'
+      : tense === 'past'
+        ? 'backed'
+        : tense === 'future'
+          ? 'expected to back'
+          : 'backing';
+  return `${verb} from ${COMPASS_NAME[morningPoint]} to ${COMPASS_NAME[afternoonPoint]}`;
 }
 
 // "this morning" only reads right for today, where it genuinely is this
@@ -222,23 +292,31 @@ const MORNING_PHRASE: Record<DayTense, string> = {
   future: 'in the morning',
 };
 
+// The direction phrase reads as a trailing clause on whichever speed
+// sentence windClause already builds ("Breezy all day, from the
+// southwest.") rather than a sentence of its own — wind speed and direction
+// are one signal to a reader deciding what to wear or which way to face on
+// the pier, not two.
 function windClause(w: WindShape, tense: DayTense): string {
   const morning = MORNING_PHRASE[tense];
-  if (w.morningBand === w.afternoonBand) return `${BAND_WORD[w.morningBand]} all day`;
+  const directionSuffix = w.direction ? `, ${windDirectionPhrase(w.direction, tense)}` : '';
+
+  if (w.morningBand === w.afternoonBand) return `${BAND_WORD[w.morningBand]} all day${directionSuffix}`;
   if (BAND_RANK[w.afternoonBand] > BAND_RANK[w.morningBand]) {
     if (tense === 'past') {
       return `${BAND_WORD[w.morningBand]} ${morning}, then wind built to around ${Math.round(
         w.afternoonPeak,
-      )}mph by mid-afternoon`;
+      )}mph by mid-afternoon${directionSuffix}`;
     }
     const build = tense === 'future' ? 'the wind expected to build' : 'wind building';
     return `${BAND_WORD[w.morningBand]} ${morning}, with ${build} to around ${Math.round(
       w.afternoonPeak,
-    )}mph by mid-afternoon`;
+    )}mph by mid-afternoon${directionSuffix}`;
   }
-  if (tense === 'past') return `${BAND_WORD[w.morningBand]} ${morning}, then eased through the afternoon`;
+  if (tense === 'past')
+    return `${BAND_WORD[w.morningBand]} ${morning}, then eased through the afternoon${directionSuffix}`;
   const ease = tense === 'future' ? 'the wind expected to ease' : 'wind easing';
-  return `${BAND_WORD[w.morningBand]} ${morning}, with ${ease} through the afternoon`;
+  return `${BAND_WORD[w.morningBand]} ${morning}, with ${ease} through the afternoon${directionSuffix}`;
 }
 
 // --- rain ----------------------------------------------------------------

@@ -6,8 +6,8 @@ web build is live at **<https://raffij.github.io/waves/>**.
 
 ## What it shows
 
-- **Current conditions** — tide height, wave height and wind speed right now,
-  each with a rising / falling / steady arrow.
+- **Current conditions** — tide height, wave height and wind speed/direction
+  right now, each with a rising / falling / steady arrow.
 - **Tide chart** — the tide curve from 06:00–20:00 with wave and wind drawn
   over it; drag to scrub a reading at any time.
 - **Precipitation chart** — hourly rain bars with the next rain time.
@@ -16,9 +16,10 @@ web build is live at **<https://raffij.github.io/waves/>**.
   (e.g. "Light 07:52–16:05"), so you can see at a glance which part of the
   window is actually light.
 - **Day insights** — a plain-language read of the selected day: a one-line
-  summary (wind shape + rain spell, named by how hard it falls, plus "dark
-  by …" when the light goes before the window ends), and a call on **what to
-  wear** with the reading behind it — e.g. "Dry robe · heavy rain, 26mph
+  summary (wind shape and direction — "Breezy all day, backing from
+  southwest to south" — plus rain spell, named by how hard it falls, plus
+  "dark by …" when the light goes before the window ends), and a call on
+  **what to wear** with the reading behind it — e.g. "Dry robe · heavy rain, 26mph
   wind", "Umbrella · light drizzle, light wind", "Warm layer · dry, light
   wind, after dark". The garment comes from how hard the rain still to come
   is falling, the wind it arrives on, and whether the hours you'd be out in

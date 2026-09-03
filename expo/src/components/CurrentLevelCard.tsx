@@ -5,6 +5,7 @@ import type { Fonts } from '../fonts';
 import { useTheme } from '../hooks/useTheme';
 import type { Location } from '../models/Location';
 import type { CurrentLevel, Trend } from '../services/TideSeries';
+import { compassPointFor } from '../services/WindSeries';
 import type { Colors } from '../theme';
 
 interface Props {
@@ -12,6 +13,7 @@ interface Props {
   waveHeight: number | null;
   waveTrend: Trend;
   windSpeed: number | null;
+  windDirection: number | null;
   windTrend: Trend;
   fetchedAt: Date | null;
   /** Set when viewing a non-live day (e.g. "Tomorrow"), shown in place of the "Updated" timestamp. */
@@ -87,6 +89,7 @@ export function CurrentLevelCard({
   waveHeight,
   waveTrend,
   windSpeed,
+  windDirection,
   windTrend,
   fetchedAt,
   dayLabel,
@@ -158,7 +161,7 @@ export function CurrentLevelCard({
           icon={<Feather name="wind" size={13} color={colors.wind} />}
           label="Wind"
           value={windSpeed !== null ? windSpeed.toFixed(1) : null}
-          unit="mph"
+          unit={windDirection !== null ? `mph ${compassPointFor(windDirection)}` : 'mph'}
           trend={windTrend}
           colors={colors}
           styles={styles}

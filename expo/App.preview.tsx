@@ -43,6 +43,7 @@ function buildSyntheticForecast() {
   const height: number[] = [];
   const waveHeight: number[] = [];
   const windSpeed: number[] = [];
+  const windDirection: number[] = [];
   const precipitation: number[] = [];
   const temperature: number[] = [];
   const apparentTemperature: number[] = [];
@@ -67,6 +68,10 @@ function buildSyntheticForecast() {
       waveHeight.push(Math.round((0.6 + 0.5 * Math.sin((h / 12.4) * 2 * Math.PI + 1 + phase)) * 10) / 10);
 
       windSpeed.push((h < 12 ? 8 : 16 + (h > 16 ? 6 : 0)) + dayOffset);
+      // Veers from southwest in the morning toward north by evening, shifted
+      // a little per day — enough swing to exercise the day-insights
+      // backing/veering phrase, not just the "from the <point>" steady case.
+      windDirection.push(Math.round((215 + 200 * (h / 23) + dayOffset * 10) % 360));
       precipitation.push(dayOffset === 1 && h >= 8 && h <= 14 ? 2.2 : dayOffset === 0 && h >= 8 && h <= 10 ? 1.4 : 0);
 
       const diurnal = 13 + 5 * Math.sin(((h - 7) / 24) * 2 * Math.PI * 1.4) - dayOffset * 0.4;
@@ -103,7 +108,7 @@ function buildSyntheticForecast() {
   return {
     tideSeries: new TideSeries(time.map((t, i) => ({ time: t, height: height[i] }))),
     waveSeries: new WaveSeries({ time, wave_height: waveHeight }),
-    windSeries: new WindSeries({ time, wind_speed: windSpeed }),
+    windSeries: new WindSeries({ time, wind_speed: windSpeed, wind_direction: windDirection }),
     precipitationSeries: new PrecipitationSeries({ time, precipitation }),
     temperatureSeries: new TemperatureSeries({ time, temperature, apparent_temperature: apparentTemperature }),
     sunBrightnessSeries: new SunBrightnessSeries({ time, shortwave_radiation: shortwaveRadiation }),
@@ -168,6 +173,7 @@ function PreviewContent() {
             waveHeight={data.waveSeries.heightAt(now)}
             waveTrend={data.waveSeries.trend(now)}
             windSpeed={data.windSeries.speedAt(now)}
+            windDirection={data.windSeries.directionAt(now)}
             windTrend={data.windSeries.trend(now)}
             fetchedAt={now}
             dayLabel={null}
