@@ -18,3 +18,4 @@ Numbered sequentially, oldest first. Use `TEMPLATE.md` to start a new one.
 | [0008](0008-mild-wet-days-get-a-light-jacket-and-umbrella.md) | Mild/warm/hot wet days get a light jacket, with an umbrella when calm | Accepted |
 | [0009](0009-clothing-core-hours-widened-to-8-17.md) | Clothing core hours widen from 08:00–16:00 to 08:00–17:00 | Accepted |
 | [0010](0010-replace-biome-with-oxlint-and-oxfmt.md) | Replace Biome with oxlint and oxfmt | Accepted |
+| [0011](0011-rain-clause-describes-intensity-trend.md) | The rain clause describes how a spell's intensity changes | Accepted |

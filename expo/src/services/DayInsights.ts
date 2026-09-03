@@ -257,6 +257,7 @@ interface RainSpell {
   end: Date; // last wet hour + 1h
   hours: number;
   peakMm: number;
+  mms: number[]; // one entry per wet hour, in order — how hard it's coming down across the spell
 }
 
 // Contiguous runs of wet hours within the window.
@@ -270,6 +271,7 @@ function rainSpells(bars: Array<{ time: Date; mm: number | null }>): RainSpell[]
       end: new Date(run[run.length - 1].time.getTime() + HOUR_MS),
       hours: run.length,
       peakMm: Math.max(...run.map((r) => r.mm)),
+      mms: run.map((r) => r.mm),
     });
     run = [];
   };
@@ -301,6 +303,38 @@ const RAIN_NOUN: Record<RainBand, { single: string; repeated: string }> = {
   showery: { single: 'rain', repeated: 'showers' },
   heavy: { single: 'heavy rain', repeated: 'heavy showers' },
 };
+
+const RAIN_BAND_RANK: Record<RainBand, number> = { dry: 0, drizzle: 1, showery: 2, heavy: 3 };
+
+// How a single spell's intensity changes from its start to its end — read
+// off the first and last third of its wet hours (at least one hour each),
+// wide enough that a single wetter or drier hour can't flip the read but
+// still narrow enough to catch a spell that genuinely changes character
+// partway through (drizzle building to a downpour, a downpour tailing off
+// to showers). Only worth mentioning for a spell long enough that this
+// reads as a real trend — the same length rainCoverage requires before it
+// characterises a spell at all.
+function rainIntensityTrend(mms: number[], tense: DayTense): { startBand: RainBand; phrase: string } | null {
+  if (mms.length < RAIN_LONG_SPELL_HOURS) return null;
+  const edge = Math.max(1, Math.floor(mms.length / 3));
+  const startBand = rainBandFor(Math.max(...mms.slice(0, edge)));
+  const endBand = rainBandFor(Math.max(...mms.slice(-edge)));
+  if (startBand === endBand) return null;
+  const endWord = RAIN_NOUN[endBand].single;
+  const building = RAIN_BAND_RANK[endBand] > RAIN_BAND_RANK[startBand];
+  const verb = building
+    ? tense === 'past'
+      ? 'built to'
+      : tense === 'future'
+        ? 'expected to build to'
+        : 'building to'
+    : tense === 'past'
+      ? 'eased to'
+      : tense === 'future'
+        ? 'expected to ease to'
+        : 'easing to';
+  return { startBand, phrase: `${verb} ${endWord}` };
+}
 
 // Lower-case fragment for the summary sentence, plus what the clothing call
 // keys off (it never parses `text`):
@@ -351,18 +385,26 @@ function rainClause(input: DayInsightsInput, precip: PrecipitationSeries | null)
   const s = spells[0];
   const range = `${hhmm(s.start)} to ${hhmm(s.end)}`;
 
-  // Today, rain already under way — the start is behind us, so lead with the end.
+  // Today, rain already under way — the start is behind us, so lead with the
+  // end, but still describe how what's left of it changes (only the hours
+  // still ahead, not the part already fallen).
   if (tense === 'today' && s.start.getTime() <= input.reference.getTime()) {
-    return { text: `${noun.single} continues until ${hhmm(s.end)}`, wet: true, groundWet: false };
+    const elapsedHours = Math.floor((input.reference.getTime() - s.start.getTime()) / HOUR_MS);
+    const remainingTrend = rainIntensityTrend(s.mms.slice(Math.max(0, elapsedHours)), tense);
+    const suffix = remainingTrend ? `, ${remainingTrend.phrase}` : '';
+    return { text: `${noun.single} continues until ${hhmm(s.end)}${suffix}`, wet: true, groundWet: false };
   }
 
   const coverage = rainCoverage(s, bars.length, windowStart, windowEnd);
+  const trend = rainIntensityTrend(s.mms, tense);
+  const leadNoun = trend ? RAIN_NOUN[trend.startBand].single : noun.single;
   const past = tense === 'past' ? 'fell ' : '';
   const likely = tense === 'future' ? 'is likely ' : '';
+  const suffix = trend ? `, ${trend.phrase}` : '';
   return {
     text: coverage
-      ? `${noun.single} ${past}${likely}${coverage}, from ${range}`
-      : `${noun.single} ${past}${likely}from ${range}`,
+      ? `${leadNoun} ${past}${likely}${coverage}${suffix}, from ${range}`
+      : `${leadNoun} ${past}${likely}from ${range}${suffix}`,
     wet: true,
     groundWet: false,
   };
