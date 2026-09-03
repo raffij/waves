@@ -59,8 +59,9 @@ same Forecast API call as `wind_speed_10m`.
 
 `WindSeries` adds `directionAt(date)` (circular interpolation),
 `compassPointFor(degrees)` (8-point compass), `circularMean(degrees[])` and
-`angularDelta(a, b)`. `CurrentLevelCard`'s Wind stat appends the compass
-point to the unit ("8.4 `mph SW`") rather than adding a fourth stat column.
+`angularDelta(a, b)`. `CurrentLevelCard`'s Wind stat shows the compass
+point in brackets after the label ("`WIND (SW)`" · `8.4 mph`) rather than
+adding a fourth stat column.
 
 `DayInsights.ts`'s `windShape` now also carries a circular-mean direction
 for the morning and afternoon halves of the window; `windClause` appends a
