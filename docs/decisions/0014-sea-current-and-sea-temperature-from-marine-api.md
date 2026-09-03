@@ -1,4 +1,4 @@
-# 0012. Surface sea current direction and sea surface temperature from Open-Meteo Marine
+# 0014. Surface sea current direction and sea surface temperature from Open-Meteo Marine
 
 - **Date:** 2026-09-03
 - **Status:** Accepted
@@ -58,7 +58,10 @@ Rejected: those widgets are deliberately minimal today — they show only
 tide/wave/wind and don't display air temperature, sun, cloud, or
 precipitation either, despite the main app having all of them. Adding sea
 temperature/current there would be new scope for the widgets specifically,
-not a parity gap this change introduces.
+not a parity gap this change introduces. Same call as
+[0013](0013-wind-direction-added-app-only.md) made for wind direction, which
+landed on `main` while this branch was in flight: app-only, widgets
+untouched.
 
 ## Consequences
 

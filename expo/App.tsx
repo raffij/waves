@@ -178,6 +178,7 @@ function AppContent() {
   const waveHeight = waveSeries?.heightAt(referenceDate) ?? null;
   const waveTrend = waveSeries?.trend(referenceDate) ?? 'unknown';
   const windSpeed = windSeries?.speedAt(referenceDate) ?? null;
+  const windDirection = windSeries?.directionAt(referenceDate) ?? null;
   const windTrend = windSeries?.trend(referenceDate) ?? 'unknown';
   const seaTemp = seaTemperatureSeries?.tempAt(referenceDate) ?? null;
   const currentDirection = seaCurrentSeries?.directionAt(referenceDate) ?? null;
@@ -212,6 +213,7 @@ function AppContent() {
             waveHeight={waveHeight}
             waveTrend={waveTrend}
             windSpeed={windSpeed}
+            windDirection={windDirection}
             windTrend={windTrend}
             seaTemp={seaTemp}
             currentDirection={currentDirection}

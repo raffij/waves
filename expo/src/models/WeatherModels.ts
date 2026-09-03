@@ -27,6 +27,11 @@ export interface SeaTemperatureData {
 export interface WindData {
   time: string[];
   wind_speed: (number | null)[];
+  // Degrees, meteorological convention (the direction the wind is blowing
+  // FROM, clockwise from true north — 0/360 = north, 90 = east). Absent from
+  // WindData cached before this field was added, so callers treat a missing
+  // array the same as an all-null one rather than assuming it's present.
+  wind_direction?: (number | null)[];
 }
 
 export interface PrecipitationData {
