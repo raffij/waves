@@ -71,7 +71,9 @@ function Stat({
     <View style={styles.stat}>
       <View style={styles.statLabelRow}>
         <View style={styles.statIconWrap}>{icon}</View>
-        <Text style={styles.statLabel}>{label}</Text>
+        <Text style={styles.statLabel} numberOfLines={1}>
+          {label}
+        </Text>
         {trend && <TrendBadge trend={trend} colors={colors} styles={styles} />}
       </View>
       <Text style={styles.statValue}>
@@ -164,7 +166,7 @@ export function CurrentLevelCard({
         />
         <Stat
           icon={<Feather name="wind" size={13} color={colors.wind} />}
-          label={windDirection !== null ? `Wind (${compassPointFor(windDirection)})` : 'Wind'}
+          label={windDirection !== null ? `Wi (${compassPointFor(windDirection)})` : 'Wind'}
           value={windSpeed !== null ? windSpeed.toFixed(1) : null}
           unit="mph"
           trend={windTrend}
@@ -231,6 +233,7 @@ function getStyles(colors: Colors, fonts: Fonts) {
       justifyContent: 'center',
     },
     statLabel: {
+      flexShrink: 1,
       color: colors.textSecondary,
       fontSize: 11,
       fontWeight: '600',
