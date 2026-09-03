@@ -42,7 +42,7 @@ function TrendBadge({ trend, colors, styles }: { trend: Trend; colors: Colors; s
   const tint = trendColor[trend];
   return (
     <View style={styles.trendBadge}>
-      <Ionicons name={trendIcon[trend]} size={13} color={tint} />
+      <Ionicons name={trendIcon[trend]} size={11} color={tint} />
     </View>
   );
 }
@@ -72,18 +72,18 @@ function Stat({
       <View style={styles.statLabelRow}>
         <View style={styles.statIconWrap}>{icon}</View>
         <Text style={styles.statLabel}>{label}</Text>
+        {trend && <TrendBadge trend={trend} colors={colors} styles={styles} />}
       </View>
-      {value !== null ? (
-        <View style={styles.statValueRow}>
-          <Text style={styles.statValue}>
+      <Text style={styles.statValue}>
+        {value !== null ? (
+          <>
             {value}
             <Text style={styles.statUnit}>{unit}</Text>
-          </Text>
-          {trend && <TrendBadge trend={trend} colors={colors} styles={styles} />}
-        </View>
-      ) : (
-        <Text style={styles.statValue}>—</Text>
-      )}
+          </>
+        ) : (
+          '—'
+        )}
+      </Text>
     </View>
   );
 }
@@ -238,23 +238,20 @@ function getStyles(colors: Colors, fonts: Fonts) {
       letterSpacing: 0.3,
       fontFamily: fonts.mono,
     },
-    statValueRow: { flexDirection: 'row', alignItems: 'center' },
     statValue: {
       color: colors.textPrimary,
-      fontSize: 28,
+      fontSize: 24,
       fontWeight: '800',
       letterSpacing: -0.4,
       fontVariant: ['tabular-nums'],
       fontFamily: fonts.monoBold,
     },
-    statUnit: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
+    statUnit: { fontSize: 12, fontWeight: '600', color: colors.textSecondary },
     trendBadge: {
-      width: 18,
-      height: 20,
+      width: 12,
+      height: 12,
       alignItems: 'center',
       justifyContent: 'center',
-      marginLeft: 4,
-      marginBottom: 2,
     },
   });
 }
