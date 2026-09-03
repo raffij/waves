@@ -1,4 +1,4 @@
-# 0012. Wind direction is added to the app only, with a backing/veering readout
+# 0013. Wind direction is added to the app only, with a backing/veering readout
 
 - **Date:** 2026-09-03
 - **Status:** Accepted
