@@ -19,3 +19,4 @@ Numbered sequentially, oldest first. Use `TEMPLATE.md` to start a new one.
 | [0009](0009-clothing-core-hours-widened-to-8-17.md) | Clothing core hours widen from 08:00–16:00 to 08:00–17:00 | Accepted |
 | [0010](0010-replace-biome-with-oxlint-and-oxfmt.md) | Replace Biome with oxlint and oxfmt | Accepted |
 | [0011](0011-rain-clause-describes-intensity-trend.md) | The rain clause describes how a spell's intensity changes | Accepted |
+| [0012](0012-wind-direction-added-app-only.md) | Wind direction is added to the app only, with a backing/veering readout | Accepted |

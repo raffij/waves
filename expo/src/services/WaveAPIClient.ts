@@ -158,15 +158,15 @@ export class WaveAPIClient {
     }
   }
 
-  // wind_speed_10m, precipitation, temperature_2m/apparent_temperature,
-  // shortwave_radiation and cloud_cover all live on the general Forecast
-  // API, not the Marine API (the Marine API silently accepts
-  // wind_speed_10m but returns all nulls, and doesn't offer the rest at
-  // all). Fetched together in one request since they all come from the
-  // same endpoint, along with the daily sunrise/sunset the day-insights
-  // block uses to bound "the day". Unlike met.no, this supports
-  // start_date/end_date, so all of it covers the same yesterday-to-+5-days
-  // range as wave instead of forecast-only.
+  // wind_speed_10m/wind_direction_10m, precipitation,
+  // temperature_2m/apparent_temperature, shortwave_radiation and
+  // cloud_cover all live on the general Forecast API, not the Marine API
+  // (the Marine API silently accepts wind_speed_10m but returns all nulls,
+  // and doesn't offer the rest at all). Fetched together in one request
+  // since they all come from the same endpoint, along with the daily
+  // sunrise/sunset the day-insights block uses to bound "the day". Unlike
+  // met.no, this supports start_date/end_date, so all of it covers the
+  // same yesterday-to-+5-days range as wave instead of forecast-only.
   private async fetchForecastExtras(
     startDate: string,
     endDate: string,
@@ -194,7 +194,7 @@ export class WaveAPIClient {
     url.searchParams.append('end_date', endDate);
     url.searchParams.append(
       'hourly',
-      'wind_speed_10m,precipitation,temperature_2m,apparent_temperature,shortwave_radiation,cloud_cover',
+      'wind_speed_10m,wind_direction_10m,precipitation,temperature_2m,apparent_temperature,shortwave_radiation,cloud_cover',
     );
     url.searchParams.append('daily', 'sunrise,sunset');
     url.searchParams.append('wind_speed_unit', 'mph');
@@ -209,6 +209,7 @@ export class WaveAPIClient {
         hourly: {
           time: string[];
           wind_speed_10m: (number | null)[];
+          wind_direction_10m: (number | null)[];
           precipitation: (number | null)[];
           temperature_2m: (number | null)[];
           apparent_temperature: (number | null)[];
@@ -218,7 +219,11 @@ export class WaveAPIClient {
         daily?: { time: string[]; sunrise: string[]; sunset: string[] };
       };
       return {
-        wind: { time: json.hourly.time, wind_speed: json.hourly.wind_speed_10m },
+        wind: {
+          time: json.hourly.time,
+          wind_speed: json.hourly.wind_speed_10m,
+          wind_direction: json.hourly.wind_direction_10m,
+        },
         precipitation: { time: json.hourly.time, precipitation: json.hourly.precipitation },
         daylight: json.daily ? { time: json.daily.time, sunrise: json.daily.sunrise, sunset: json.daily.sunset } : null,
         temperature: {

@@ -176,6 +176,7 @@ function AppContent() {
   const waveHeight = waveSeries?.heightAt(referenceDate) ?? null;
   const waveTrend = waveSeries?.trend(referenceDate) ?? 'unknown';
   const windSpeed = windSeries?.speedAt(referenceDate) ?? null;
+  const windDirection = windSeries?.directionAt(referenceDate) ?? null;
   const windTrend = windSeries?.trend(referenceDate) ?? 'unknown';
 
   // Plain expression, not useMemo — the hooks above sit before AppContent's
@@ -207,6 +208,7 @@ function AppContent() {
             waveHeight={waveHeight}
             waveTrend={waveTrend}
             windSpeed={windSpeed}
+            windDirection={windDirection}
             windTrend={windTrend}
             fetchedAt={fetchedAt}
             dayLabel={selectedDayLabel}
