@@ -46,6 +46,7 @@ function buildSyntheticForecast() {
   const waveHeight: number[] = [];
   const windSpeed: number[] = [];
   const windDirection: number[] = [];
+  const windGusts: number[] = [];
   const precipitation: number[] = [];
   const temperature: number[] = [];
   const apparentTemperature: number[] = [];
@@ -77,6 +78,13 @@ function buildSyntheticForecast() {
       // a little per day — enough swing to exercise the day-insights
       // backing/veering phrase, not just the "from the <point>" steady case.
       windDirection.push(Math.round((215 + 200 * (h / 23) + dayOffset * 10) % 360));
+      // Gust runs a fixed margin above sustained speed each hour, sized per
+      // day so roughly half the days clear DayInsights' WIND_GUST_EXCESS_MPH
+      // threshold (gust worth naming in the sentence) and half don't (gust
+      // stays unremarkable) — exercises both branches of windClause's gust
+      // clause, and gives TideChart's gust line something to visibly diverge
+      // from the sustained-speed line on.
+      windGusts.push(windSpeed[windSpeed.length - 1] + (dayOffset % 2 === 0 ? 13 : 4));
       precipitation.push(dayOffset === 1 && h >= 8 && h <= 14 ? 2.2 : dayOffset === 0 && h >= 8 && h <= 10 ? 1.4 : 0);
 
       const diurnal = 13 + 5 * Math.sin(((h - 7) / 24) * 2 * Math.PI * 1.4) - dayOffset * 0.4;
@@ -124,7 +132,7 @@ function buildSyntheticForecast() {
   return {
     tideSeries: new TideSeries(time.map((t, i) => ({ time: t, height: height[i] }))),
     waveSeries: new WaveSeries({ time, wave_height: waveHeight }),
-    windSeries: new WindSeries({ time, wind_speed: windSpeed, wind_direction: windDirection }),
+    windSeries: new WindSeries({ time, wind_speed: windSpeed, wind_direction: windDirection, wind_gusts: windGusts }),
     precipitationSeries: new PrecipitationSeries({ time, precipitation }),
     temperatureSeries: new TemperatureSeries({ time, temperature, apparent_temperature: apparentTemperature }),
     sunBrightnessSeries: new SunBrightnessSeries({ time, shortwave_radiation: shortwaveRadiation }),

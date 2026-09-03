@@ -32,6 +32,11 @@ export interface WindData {
   // WindData cached before this field was added, so callers treat a missing
   // array the same as an all-null one rather than assuming it's present.
   wind_direction?: (number | null)[];
+  // Peak gust speed, mph — always ≥ wind_speed for the same hour. Optional
+  // for the same reason as wind_direction: absent from WindData cached
+  // before this field was added, so callers treat a missing array the same
+  // as an all-null one.
+  wind_gusts?: (number | null)[];
 }
 
 export interface PrecipitationData {

@@ -43,23 +43,27 @@ function average(values: number[]): number {
 }
 
 export class WindSeries {
-  private readonly points: Array<{ time: Date; speed: number | null; direction: number | null }>;
+  private readonly points: Array<{ time: Date; speed: number | null; direction: number | null; gust: number | null }>;
 
   constructor(data: WindData) {
     this.points = data.time.map((t, i) => ({
       time: TideClock.parseLondonWallTime(t) ?? new Date(Number.NaN),
       speed: data.wind_speed[i] ?? null,
       direction: data.wind_direction?.[i] ?? null,
+      gust: data.wind_gusts?.[i] ?? null,
     }));
   }
 
-  speedAt(date: Date): number | null {
+  // Shared by speedAt/gustAt — both are plain linear-interpolated
+  // quantities, unlike directionAt (below), which needs the shorter-arc
+  // circular treatment instead.
+  private interpolateLinear(date: Date, pick: (p: (typeof this.points)[0]) => number | null): number | null {
     const ms = date.getTime();
     let before: (typeof this.points)[0] | null = null;
     let after: (typeof this.points)[0] | null = null;
 
     for (const p of this.points) {
-      if (p.time.getTime() === ms) return p.speed;
+      if (p.time.getTime() === ms) return pick(p);
       if (p.time.getTime() < ms) before = p;
       if (p.time.getTime() > ms && !after) {
         after = p;
@@ -67,12 +71,25 @@ export class WindSeries {
       }
     }
 
-    if (!before || !after || before.speed === null || after.speed === null) {
-      return before?.speed ?? after?.speed ?? null;
+    const beforeValue = before ? pick(before) : null;
+    const afterValue = after ? pick(after) : null;
+    if (!before || !after || beforeValue === null || afterValue === null) {
+      return beforeValue ?? afterValue ?? null;
     }
 
     const ratio = (ms - before.time.getTime()) / (after.time.getTime() - before.time.getTime());
-    return before.speed + (after.speed - before.speed) * ratio;
+    return beforeValue + (afterValue - beforeValue) * ratio;
+  }
+
+  speedAt(date: Date): number | null {
+    return this.interpolateLinear(date, (p) => p.speed);
+  }
+
+  // Peak gust speed, mph — null wherever the forecast doesn't carry a gust
+  // reading (older cached data, or the field temporarily missing from the
+  // response), same fallback WindSeries already applies to direction.
+  gustAt(date: Date): number | null {
+    return this.interpolateLinear(date, (p) => p.gust);
   }
 
   // Degrees the wind is blowing from, meteorological convention (see
@@ -101,15 +118,18 @@ export class WindSeries {
     return (((before.direction + angularDelta(before.direction, after.direction) * ratio) % 360) + 360) % 360;
   }
 
-  samplesEvery(minutes: number, from: Date, to: Date): Array<{ time: Date; speed: number | null }> {
-    const samples: Array<{ time: Date; speed: number | null }> = [];
+  samplesEvery(
+    minutes: number,
+    from: Date,
+    to: Date,
+  ): Array<{ time: Date; speed: number | null; gust: number | null }> {
+    const samples: Array<{ time: Date; speed: number | null; gust: number | null }> = [];
     let current = from.getTime();
     const interval = minutes * 60 * 1000;
 
     while (current <= to.getTime()) {
       const time = new Date(current);
-      const speed = this.speedAt(time);
-      samples.push({ time, speed });
+      samples.push({ time, speed: this.speedAt(time), gust: this.gustAt(time) });
       current += interval;
     }
 
