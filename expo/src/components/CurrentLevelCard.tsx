@@ -170,9 +170,9 @@ export function CurrentLevelCard({
         />
         <Stat
           icon={<Feather name="wind" size={13} color={colors.wind} />}
-          label="Wind"
+          label={windDirection !== null ? `Wind (${compassPointFor(windDirection)})` : 'Wind'}
           value={windSpeed !== null ? windSpeed.toFixed(1) : null}
-          unit={windDirection !== null ? `mph ${compassPointFor(windDirection)}` : 'mph'}
+          unit="mph"
           trend={windTrend}
           colors={colors}
           styles={styles}
