@@ -216,8 +216,6 @@ function AppContent() {
             windDirection={windDirection}
             windTrend={windTrend}
             seaTemp={seaTemp}
-            currentDirection={currentDirection}
-            currentVelocity={currentVelocity}
             fetchedAt={fetchedAt}
             dayLabel={selectedDayLabel}
             onPressUpdated={() => selectDay(null)}
@@ -244,6 +242,8 @@ function AppContent() {
                 onScrub={setScrubTime}
                 startHour={chartHours.startHour}
                 endHour={chartHours.endHour}
+                currentDirection={currentDirection}
+                currentVelocity={currentVelocity}
               />
             </View>
           )}

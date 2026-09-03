@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useMemo, useRef, useState } from 'react';
 import { type LayoutChangeEvent, PanResponder, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Defs, Line, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
@@ -5,6 +6,7 @@ import type { Fonts } from '../fonts';
 import { useTheme } from '../hooks/useTheme';
 import type { DaylightSeries } from '../services/DaylightSeries';
 import { DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR } from '../services/DayWindow';
+import { compassPoint } from '../services/SeaCurrentSeries';
 import { TideClock } from '../services/TideClock';
 import type { TideSeries } from '../services/TideSeries';
 import type { WaveSeries } from '../services/WaveSeries';
@@ -25,6 +27,9 @@ interface Props {
   onScrub?: (time: Date | null) => void;
   startHour?: number;
   endHour?: number;
+  /** Degrees the sea current is flowing TOWARD (oceanographic convention), null when unavailable. */
+  currentDirection?: number | null;
+  currentVelocity?: number | null;
 }
 
 // Centered moving average, smoothing out point-to-point reversals before
@@ -91,6 +96,8 @@ export function TideChart({
   onScrub,
   startHour = DAY_WINDOW_START_HOUR,
   endHour = DAY_WINDOW_END_HOUR,
+  currentDirection = null,
+  currentVelocity = null,
 }: Props) {
   const { colors, fonts } = useTheme();
   const styles = useMemo(() => getStyles(colors, fonts), [colors, fonts]);
@@ -507,6 +514,23 @@ export function TideChart({
           </View>
         )}
       </View>
+      {currentDirection !== null && (
+        <View style={styles.currentRow}>
+          {/* Ionicons' "navigate" glyph points due north at 0°, so rotating it
+              by the current's own bearing (already "toward", not "from" —
+              see SeaCurrentData) points it exactly where the water is heading. */}
+          <Ionicons
+            name="navigate"
+            size={9}
+            color={colors.textSecondary}
+            style={{ transform: [{ rotate: `${currentDirection}deg` }] }}
+          />
+          <Text style={styles.currentText}>
+            Current {compassPoint(currentDirection)}
+            {currentVelocity !== null ? ` · ${currentVelocity.toFixed(1)}km/h` : ''}
+          </Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -562,6 +586,20 @@ function getStyles(colors: Colors, fonts: Fonts) {
       lineHeight: 13,
       fontWeight: '600',
       fontFamily: fonts.mono,
+    },
+    currentRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 4,
+      marginTop: 4,
+    },
+    currentText: {
+      color: colors.textSecondary,
+      fontSize: 10,
+      fontWeight: '500',
+      fontFamily: fonts.mono,
+      opacity: 0.8,
     },
   });
 }

@@ -198,8 +198,6 @@ function PreviewContent() {
             windDirection={data.windSeries.directionAt(now)}
             windTrend={data.windSeries.trend(now)}
             seaTemp={data.seaTemperatureSeries.tempAt(now)}
-            currentDirection={data.seaCurrentSeries.directionAt(now)}
-            currentVelocity={data.seaCurrentSeries.velocityAt(now)}
             fetchedAt={now}
             dayLabel={null}
             onPressUpdated={() => {
@@ -226,6 +224,8 @@ function PreviewContent() {
               onScrub={setScrubTime}
               startHour={chartHours.startHour}
               endHour={chartHours.endHour}
+              currentDirection={data.seaCurrentSeries.directionAt(now)}
+              currentVelocity={data.seaCurrentSeries.velocityAt(now)}
             />
           </View>
 
