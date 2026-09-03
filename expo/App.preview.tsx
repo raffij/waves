@@ -15,6 +15,8 @@ import { buildDayInsights } from './src/services/DayInsights';
 import { DaylightSeries } from './src/services/DaylightSeries';
 import { type ForecastWindow, hoursFor } from './src/services/DayWindow';
 import { PrecipitationSeries } from './src/services/PrecipitationSeries';
+import { SeaCurrentSeries } from './src/services/SeaCurrentSeries';
+import { SeaTemperatureSeries } from './src/services/SeaTemperatureSeries';
 import { SunBrightnessSeries } from './src/services/SunBrightnessSeries';
 import { TemperatureSeries } from './src/services/TemperatureSeries';
 import { TideClock } from './src/services/TideClock';
@@ -48,6 +50,9 @@ function buildSyntheticForecast() {
   const apparentTemperature: number[] = [];
   const shortwaveRadiation: number[] = [];
   const cloudCover: number[] = [];
+  const seaTemperature: number[] = [];
+  const oceanCurrentDirection: number[] = [];
+  const oceanCurrentVelocity: number[] = [];
   const extremes: Extreme[] = [];
   const dayKeys: string[] = [];
   const sunriseTimes: string[] = [];
@@ -82,6 +87,17 @@ function buildSyntheticForecast() {
       // bright-but-overcast hour, or a clear-but-dim one.
       const cloud = 55 - 35 * Math.sin(((h - 6) / 14) * Math.PI) + dayOffset * 6;
       cloudCover.push(Math.max(0, Math.min(100, Math.round(cloud))));
+
+      // Sea temperature drifts far more slowly than air temperature — a
+      // gentle day-to-day rise rather than a diurnal swing.
+      seaTemperature.push(Math.round((15 + dayOffset * 0.2) * 10) / 10);
+      // A tidal current: bearing sweeps a full circle roughly every 12.4h
+      // (rotating with the tide, like a real coastal current), speed varies
+      // with it so the preview shows both idle slack water and a running tide.
+      const tidalPhase = (h / 12.4) * 2 * Math.PI + dayOffset * 0.8;
+      const bearingDeg = tidalPhase * (180 / Math.PI);
+      oceanCurrentDirection.push(Math.round(((bearingDeg % 360) + 360) % 360));
+      oceanCurrentVelocity.push(Math.round(Math.abs(1.4 * Math.sin(tidalPhase)) * 10) / 10);
     }
 
     extremes.push(
@@ -109,6 +125,12 @@ function buildSyntheticForecast() {
     sunBrightnessSeries: new SunBrightnessSeries({ time, shortwave_radiation: shortwaveRadiation }),
     cloudCoverSeries: new CloudCoverSeries({ time, cloud_cover: cloudCover }),
     daylightSeries: new DaylightSeries({ time: dayKeys, sunrise: sunriseTimes, sunset: sunsetTimes }),
+    seaTemperatureSeries: new SeaTemperatureSeries({ time, sea_surface_temperature: seaTemperature }),
+    seaCurrentSeries: new SeaCurrentSeries({
+      time,
+      ocean_current_direction: oceanCurrentDirection,
+      ocean_current_velocity: oceanCurrentVelocity,
+    }),
     forecast: new TideForecast(extremes),
   };
 }
@@ -169,6 +191,9 @@ function PreviewContent() {
             waveTrend={data.waveSeries.trend(now)}
             windSpeed={data.windSeries.speedAt(now)}
             windTrend={data.windSeries.trend(now)}
+            seaTemp={data.seaTemperatureSeries.tempAt(now)}
+            currentDirection={data.seaCurrentSeries.directionAt(now)}
+            currentVelocity={data.seaCurrentSeries.velocityAt(now)}
             fetchedAt={now}
             dayLabel={null}
             onPressUpdated={() => {
@@ -241,6 +266,7 @@ function PreviewContent() {
               sunBrightnessSeries={data.sunBrightnessSeries}
               cloudCoverSeries={data.cloudCoverSeries}
               daylightSeries={data.daylightSeries}
+              seaTemperatureSeries={data.seaTemperatureSeries}
             />
           </View>
         </ScrollView>

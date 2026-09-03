@@ -95,6 +95,8 @@ function AppContent() {
     temperatureSeries,
     sunBrightnessSeries,
     cloudCoverSeries,
+    seaCurrentSeries,
+    seaTemperatureSeries,
     fetchedAt,
     isFetching,
     error,
@@ -177,6 +179,9 @@ function AppContent() {
   const waveTrend = waveSeries?.trend(referenceDate) ?? 'unknown';
   const windSpeed = windSeries?.speedAt(referenceDate) ?? null;
   const windTrend = windSeries?.trend(referenceDate) ?? 'unknown';
+  const seaTemp = seaTemperatureSeries?.tempAt(referenceDate) ?? null;
+  const currentDirection = seaCurrentSeries?.directionAt(referenceDate) ?? null;
+  const currentVelocity = seaCurrentSeries?.velocityAt(referenceDate) ?? null;
 
   // Plain expression, not useMemo — the hooks above sit before AppContent's
   // early returns and this doesn't, so it can't be a hook. Cheap anyway
@@ -208,6 +213,9 @@ function AppContent() {
             waveTrend={waveTrend}
             windSpeed={windSpeed}
             windTrend={windTrend}
+            seaTemp={seaTemp}
+            currentDirection={currentDirection}
+            currentVelocity={currentVelocity}
             fetchedAt={fetchedAt}
             dayLabel={selectedDayLabel}
             onPressUpdated={() => selectDay(null)}
@@ -287,6 +295,7 @@ function AppContent() {
               sunBrightnessSeries={sunBrightnessSeries}
               cloudCoverSeries={cloudCoverSeries}
               daylightSeries={daylightSeries}
+              seaTemperatureSeries={seaTemperatureSeries}
             />
           </View>
 

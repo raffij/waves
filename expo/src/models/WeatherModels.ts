@@ -7,6 +7,23 @@ export interface WaveData {
   wave_height: (number | null)[];
 }
 
+// Ocean current at the sea surface. Direction is in the oceanographic
+// convention Open-Meteo uses — degrees the current is flowing TOWARD — the
+// opposite sense from wind direction (which is where it's blowing FROM).
+// Velocity is km/h.
+export interface SeaCurrentData {
+  time: string[];
+  ocean_current_direction: (number | null)[];
+  ocean_current_velocity: (number | null)[];
+}
+
+// Sea surface temperature, °C — distinct from TemperatureData below, which
+// is air temperature.
+export interface SeaTemperatureData {
+  time: string[];
+  sea_surface_temperature: (number | null)[];
+}
+
 export interface WindData {
   time: string[];
   wind_speed: (number | null)[];

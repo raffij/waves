@@ -3,6 +3,8 @@ import type {
   CloudCoverData,
   DaylightData,
   PrecipitationData,
+  SeaCurrentData,
+  SeaTemperatureData,
   SunBrightnessData,
   TemperatureData,
   WaveData,
@@ -19,6 +21,8 @@ export interface WaveDataResult {
   temperature: TemperatureData | null;
   sunBrightness: SunBrightnessData | null;
   cloudCover: CloudCoverData | null;
+  seaCurrent: SeaCurrentData | null;
+  seaTemperature: SeaTemperatureData | null;
   fetchedAt: Date;
 }
 
@@ -52,18 +56,28 @@ export class WaveAPIClient {
       const cached = await AsyncStorage.getItem(this.cacheDataKey);
       if (!cached) return null;
 
-      const { data, wind, precipitation, daylight, temperature, sunBrightness, cloudCover, cachedAt } =
-        JSON.parse(cached);
+      const {
+        data,
+        wind,
+        precipitation,
+        daylight,
+        temperature,
+        sunBrightness,
+        cloudCover,
+        seaCurrent,
+        seaTemperature,
+        cachedAt,
+      } = JSON.parse(cached);
       const age = Date.now() - cachedAt;
       if (age > CACHE_MAX_AGE_MS) {
         await AsyncStorage.removeItem(this.cacheDataKey);
         return null;
       }
 
-      // `daylight`/`temperature`/`sunBrightness`/`cloudCover` are absent from
-      // entries cached before each was added — the key is deliberately not
-      // versioned, so coalesce to null and let the next fetch (or the
-      // hook's 1h stale top-up) fill it in.
+      // `daylight`/`temperature`/`sunBrightness`/`cloudCover`/`seaCurrent`/
+      // `seaTemperature` are absent from entries cached before each was
+      // added — the key is deliberately not versioned, so coalesce to null
+      // and let the next fetch (or the hook's 1h stale top-up) fill it in.
       return {
         data,
         wind: wind ?? null,
@@ -72,6 +86,8 @@ export class WaveAPIClient {
         temperature: temperature ?? null,
         sunBrightness: sunBrightness ?? null,
         cloudCover: cloudCover ?? null,
+        seaCurrent: seaCurrent ?? null,
+        seaTemperature: seaTemperature ?? null,
         fetchedAt: new Date(cachedAt),
       };
     } catch {
@@ -94,6 +110,8 @@ export class WaveAPIClient {
           temperature: result.temperature,
           sunBrightness: result.sunBrightness,
           cloudCover: result.cloudCover,
+          seaCurrent: result.seaCurrent,
+          seaTemperature: result.seaTemperature,
           cachedAt: result.fetchedAt.getTime(),
         }),
       );
@@ -133,6 +151,15 @@ export class WaveAPIClient {
       temperature,
       sunBrightness,
       cloudCover,
+      seaCurrent: {
+        time: marineJson.hourly.time,
+        ocean_current_direction: marineJson.hourly.ocean_current_direction,
+        ocean_current_velocity: marineJson.hourly.ocean_current_velocity,
+      },
+      seaTemperature: {
+        time: marineJson.hourly.time,
+        sea_surface_temperature: marineJson.hourly.sea_surface_temperature,
+      },
       fetchedAt: new Date(),
     };
   }
@@ -140,13 +167,24 @@ export class WaveAPIClient {
   private async fetchWave(
     startDate: string,
     endDate: string,
-  ): Promise<{ hourly: { time: string[]; wave_height: (number | null)[] } } | null> {
+  ): Promise<{
+    hourly: {
+      time: string[];
+      wave_height: (number | null)[];
+      ocean_current_direction: (number | null)[];
+      ocean_current_velocity: (number | null)[];
+      sea_surface_temperature: (number | null)[];
+    };
+  } | null> {
     const marineUrl = new URL('https://marine-api.open-meteo.com/v1/marine');
     marineUrl.searchParams.append('latitude', this.latitude);
     marineUrl.searchParams.append('longitude', this.longitude);
     marineUrl.searchParams.append('start_date', startDate);
     marineUrl.searchParams.append('end_date', endDate);
-    marineUrl.searchParams.append('hourly', 'wave_height');
+    marineUrl.searchParams.append(
+      'hourly',
+      'wave_height,ocean_current_direction,ocean_current_velocity,sea_surface_temperature',
+    );
     marineUrl.searchParams.append('timezone', 'Europe/London');
 
     try {

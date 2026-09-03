@@ -9,6 +9,7 @@ import { buildDayInsights } from '../services/DayInsights';
 import type { DaylightSeries } from '../services/DaylightSeries';
 import { type ForecastWindow, type Hours, hoursFor } from '../services/DayWindow';
 import type { PrecipitationSeries } from '../services/PrecipitationSeries';
+import type { SeaTemperatureSeries } from '../services/SeaTemperatureSeries';
 import type { SunBrightnessSeries } from '../services/SunBrightnessSeries';
 import type { TemperatureSeries } from '../services/TemperatureSeries';
 import { TideClock } from '../services/TideClock';
@@ -32,6 +33,7 @@ interface Props {
   sunBrightnessSeries?: SunBrightnessSeries | null;
   cloudCoverSeries?: CloudCoverSeries | null;
   daylightSeries?: DaylightSeries | null;
+  seaTemperatureSeries?: SeaTemperatureSeries | null;
 }
 
 type Series = Pick<
@@ -42,6 +44,7 @@ type Series = Pick<
   | 'sunBrightnessSeries'
   | 'cloudCoverSeries'
   | 'daylightSeries'
+  | 'seaTemperatureSeries'
 >;
 // `hours` below (rather than `window`) throughout this file, unlike the
 // public `window` prop (which takes the prop-naming convention from
@@ -106,6 +109,7 @@ function tideExtremes(day: ForecastDay, date: Date, hours: Hours): { high: numbe
 // reading that could fall outside daytime hours.
 function statsLine(day: ForecastDay, series: Series, date: Date, hours: Hours): string | null {
   const { high: tideHigh, low: tideLow } = tideExtremes(day, date, hours);
+  const sea = hourlyRange((d) => series.seaTemperatureSeries?.tempAt(d) ?? null, date, hours);
   const wind = hourlyRange((d) => series.windSeries?.speedAt(d) ?? null, date, hours);
   const sun = hourlyRange((d) => series.sunBrightnessSeries?.brightnessAt(d) ?? null, date, hours);
   const sunrise = series.daylightSeries?.sunrise(date) ?? null;
@@ -113,6 +117,7 @@ function statsLine(day: ForecastDay, series: Series, date: Date, hours: Hours): 
 
   const parts: string[] = [];
   if (tideHigh !== null && tideLow !== null) parts.push(`Tide ${tideLow.toFixed(1)}–${tideHigh.toFixed(1)}m`);
+  if (sea.low !== null && sea.high !== null) parts.push(`Sea ${Math.round(sea.low)}–${Math.round(sea.high)}°C`);
   if (wind.low !== null && wind.high !== null) parts.push(`Wind ${Math.round(wind.low)}–${Math.round(wind.high)}mph`);
   if (sun.high !== null) parts.push(`Sun up to ${Math.round(sun.high)}W/m²`);
   if (sunrise && sunset) parts.push(`Light ${TideClock.format(sunrise, HHMM)}–${TideClock.format(sunset, HHMM)}`);
@@ -221,6 +226,7 @@ export function ForecastList({
   sunBrightnessSeries,
   cloudCoverSeries,
   daylightSeries,
+  seaTemperatureSeries,
 }: Props) {
   const { colors, fonts } = useTheme();
   const styles = useMemo(() => getStyles(colors, fonts), [colors, fonts]);
@@ -231,6 +237,7 @@ export function ForecastList({
     sunBrightnessSeries,
     cloudCoverSeries,
     daylightSeries,
+    seaTemperatureSeries,
   };
   const hours = hoursFor(forecastWindow);
 
