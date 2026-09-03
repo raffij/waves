@@ -641,12 +641,12 @@ function lightClause(input: DayInsightsInput): string | null {
 
 // Top and bottom are read off the feels-like band (see TempBand) — the same
 // bands the temperature sentence already names, so "it feels mild" and
-// "wear a jumper" can never disagree. Rain overrides the top: a dry robe
-// is the only wardrobe item that's actually rainproof, so it wins whenever
-// the rain itself is heavy enough to soak through anything lighter — but on
-// a mild/warm/hot day with lighter rain, a light jacket is enough and a full
-// dry robe is overkill. Cold/cool wet days stay on the dry robe regardless
-// of intensity, same as WET_OVERRIDE_TEMP_BANDS already does for footwear.
+// "wear a jumper" can never disagree. Rain overrides the top, but which
+// wet top depends on temperature, not rain intensity: the dry robe is for
+// really cold wet days (cold/cool, same WET_OVERRIDE_TEMP_BANDS footwear
+// already uses) regardless of how hard it's raining, while a coat covers
+// every wet mild/warm/hot day — including heavy rain — since it isn't
+// freezing enough to need the full robe.
 const TOP_FOR_TEMP: Record<TempBand, string> = {
   cold: 'a jumper',
   cool: 'a jumper',
@@ -655,7 +655,7 @@ const TOP_FOR_TEMP: Record<TempBand, string> = {
   hot: 'a t-shirt',
 };
 const WET_TOP = 'a dry robe';
-const WET_LIGHT_TOP = 'a light jacket';
+const WET_LIGHT_TOP = 'a coat';
 
 const BOTTOM_FOR_TEMP: Record<TempBand, string> = {
   cold: 'trousers',
@@ -739,18 +739,14 @@ function pickForSegment(
   const darkShare = segAhead.filter((s) => !s.isLight).length / segAhead.length;
   const mostlyDark = darkShare > DARK_MAJORITY_FRACTION;
 
-  const top = !wet
-    ? TOP_FOR_TEMP[tempBand]
-    : rainBand === 'heavy' || WET_OVERRIDE_TEMP_BANDS.has(tempBand)
-      ? WET_TOP
-      : WET_LIGHT_TOP;
+  const top = !wet ? TOP_FOR_TEMP[tempBand] : WET_OVERRIDE_TEMP_BANDS.has(tempBand) ? WET_TOP : WET_LIGHT_TOP;
   const bottom = BOTTOM_FOR_TEMP[tempBand];
   const footwear =
     (wet || groundWet) && WET_OVERRIDE_TEMP_BANDS.has(tempBand) ? WET_FOOTWEAR : FOOTWEAR_FOR_TEMP[tempBand];
 
-  // An umbrella only helps alongside the light jacket, not the dry robe
-  // (already rainproof) — and only when it's calm enough to actually hold
-  // one up; a breezy or windy segment turns it inside out.
+  // An umbrella only helps alongside the coat, not the dry robe (already
+  // rainproof) — and only when it's calm enough to actually hold one up; a
+  // breezy or windy segment turns it inside out.
   const windBand = windOver(segAhead, wind);
   const calm = windBand ? bandFor(windBand.mean) === 'calm' : false;
 
