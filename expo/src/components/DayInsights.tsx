@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import type { Fonts } from '../fonts';
 import { useTheme } from '../hooks/useTheme';
-import type { DayInsightsReadout } from '../services/DayInsights';
+import type { DayInsightsReadout } from '../services/dayInsights';
 import type { Colors } from '../theme';
 
 interface Props {

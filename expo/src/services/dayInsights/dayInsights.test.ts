@@ -1,12 +1,12 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import { CloudCoverSeries } from './CloudCoverSeries';
-import { buildDayInsights, type DayInsightsInput } from './DayInsights';
-import { DaylightSeries } from './DaylightSeries';
-import { PrecipitationSeries } from './PrecipitationSeries';
-import { SunBrightnessSeries } from './SunBrightnessSeries';
-import { TemperatureSeries } from './TemperatureSeries';
-import { TideClock } from './TideClock';
-import { WindSeries } from './WindSeries';
+import { CloudCoverSeries } from '../CloudCoverSeries';
+import { DaylightSeries } from '../DaylightSeries';
+import { PrecipitationSeries } from '../PrecipitationSeries';
+import { SunBrightnessSeries } from '../SunBrightnessSeries';
+import { TemperatureSeries } from '../TemperatureSeries';
+import { TideClock } from '../TideClock';
+import { WindSeries } from '../WindSeries';
+import { buildDayInsights, type DayInsightsInput } from './index';
 
 // Characterisation ("golden") tests: they pin the exact sentence
 // buildDayInsights produces for a spread of inputs, so a refactor that is

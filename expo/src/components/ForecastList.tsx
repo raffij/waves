@@ -5,7 +5,7 @@ import type { Fonts } from '../fonts';
 import { useTheme } from '../hooks/useTheme';
 import type { CloudCoverSeries } from '../services/CloudCoverSeries';
 import { type DayCondition, dayCondition } from '../services/DayCondition';
-import { buildDayInsights } from '../services/DayInsights';
+import { buildDayInsights } from '../services/dayInsights';
 import type { DaylightSeries } from '../services/DaylightSeries';
 import { type ForecastWindow, type Hours, hoursFor } from '../services/DayWindow';
 import type { PrecipitationSeries } from '../services/PrecipitationSeries';
