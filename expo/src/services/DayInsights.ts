@@ -831,10 +831,11 @@ function restClothingSlots(slots: Slot[]): Slot[] {
 
 // One segment's pick. `rainBand`/`groundWet` are read off the whole
 // remaining day (see clothingAdvice) rather than this segment alone —
-// decision 0003 already treats any rain still ahead as reason enough to
-// dress for rain for the rest of the day, not just the hours it actually
-// falls. Temperature band, dark share, and wind are read per segment, since
-// those genuinely differ between the middle of the day and its edges.
+// decision 2026-09-01-clothing-advice-matches-actual-wardrobe already
+// treats any rain still ahead as reason enough to dress for rain for the
+// rest of the day, not just the hours it actually falls. Temperature band,
+// dark share, and wind are read per segment, since those genuinely differ
+// between the middle of the day and its edges.
 function pickForSegment(
   segAhead: Slot[],
   rainBand: RainBand,

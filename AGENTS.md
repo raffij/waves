@@ -70,9 +70,12 @@ tradeoff like the one this repo is built around — gets a record in
 `docs/decisions/`, not just a PR description. PR descriptions rot out of
 search and don't survive a squash-merge; the log is the durable "why."
 
-- One file per decision: `docs/decisions/NNNN-title.md`, numbered
-  sequentially. Copy `docs/decisions/TEMPLATE.md` to start one, and add a
-  row to `docs/decisions/README.md`.
+- One file per decision: `docs/decisions/YYYY-MM-DD-title.md`, dated so the
+  log stays ordered chronologically. No sequence counter — same-day
+  decisions have no defined order between them, so if that ordering matters
+  say which came first in the record's own text. Copy
+  `docs/decisions/TEMPLATE.md` to start one, and add a row to
+  `docs/decisions/README.md`.
 - Write it when you make the decision, not after — capture the alternatives
   you rejected and why while you still remember them.
 - A decision that changes what a diagram in `docs/architecture/` shows

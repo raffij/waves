@@ -1,4 +1,4 @@
-# 0013. Wind direction is added to the app only, with a backing/veering readout
+# 2026-09-03. Wind direction is added to the app only, with a backing/veering readout
 
 - **Date:** 2026-09-03
 - **Status:** Accepted
@@ -8,7 +8,7 @@
 The user asked for wind direction alongside the existing wind speed, and
 for the day-insights readout to say how it changes across the day, the
 same way the readout already covers wind speed's morning/afternoon shape
-(the `windClause`/`windShape` machinery) and, as of decision 0011, how a
+(the `windClause`/`windShape` machinery) and, as of decision [2026-09-03](2026-09-03-rain-clause-describes-intensity-trend.md), how a
 rain spell's intensity changes across its span.
 
 Open-Meteo's Forecast API already carries `wind_direction_10m` on the same

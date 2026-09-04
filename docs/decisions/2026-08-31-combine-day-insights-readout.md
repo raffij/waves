@@ -1,4 +1,4 @@
-# 0002. Combine the day-insights readout
+# 2026-08-31. Combine the day-insights readout
 
 - **Date:** 2026-08-31
 - **Status:** Accepted

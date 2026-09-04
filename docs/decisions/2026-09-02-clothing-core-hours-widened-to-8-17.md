@@ -1,11 +1,11 @@
-# 0009. Clothing core hours widen from 08:00–16:00 to 08:00–17:00
+# 2026-09-02. Clothing core hours widen from 08:00–16:00 to 08:00–17:00
 
 - **Date:** 2026-09-02
 - **Status:** Accepted
 
 ## Context
 
-Decision [0007](0007-clothing-advice-split-by-time-of-day.md) split the
+Decision [2026-09-02](2026-09-02-clothing-advice-split-by-time-of-day.md) split the
 clothing call into a core segment and the rest of the day, picking
 08:00–16:00 for the core on the reading of "8 and 4" as an 8-to-4 workday.
 Seeing it against a real forecast, the user asked to "condense the main
@@ -16,7 +16,7 @@ boundary falls in the evening.
 
 `CLOTHING_CORE_END_HOUR` moves from 16 to 17; `CLOTHING_CORE_START_HOUR`
 (8) is unchanged. This only shifts the segment boundary — the split/collapse
-logic, dark-share and wind reads, and everything else in decision 0007
+logic, dark-share and wind reads, and everything else in decision [2026-09-02](2026-09-02-clothing-advice-split-by-time-of-day.md)
 carries over unchanged.
 
 ## Consequences

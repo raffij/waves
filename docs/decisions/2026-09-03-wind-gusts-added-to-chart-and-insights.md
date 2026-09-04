@@ -1,4 +1,4 @@
-# 0015. Wind gusts are added to the tide chart and the day-insights sentence
+# 2026-09-03. Wind gusts are added to the tide chart and the day-insights sentence
 
 - **Date:** 2026-09-03
 - **Status:** Accepted
@@ -11,7 +11,7 @@ information beyond the sustained wind speed already shown.
 
 Open-Meteo's Forecast API already carries `wind_gusts_10m` on the same
 `api.open-meteo.com/v1/forecast` endpoint the app fetches `wind_speed_10m`
-and `wind_direction_10m` from — the same situation decision 0013 (wind
+and `wind_direction_10m` from — the same situation decision [2026-09-03](2026-09-03-wind-direction-added-app-only.md) (wind
 direction) found: no new upstream, just a new field on an existing fetch.
 
 Considered and rejected:
@@ -40,7 +40,7 @@ Considered and rejected:
 - **Adding gust to `CurrentLevelCard`'s Wind stat or the three Swift
   clients.** Out of scope for what was asked (the chart and the day-insights
   sentence); `expo/` is where every past forecast feature has landed first
-  (see 0013's identical call), and the stat card has no spare column for a
+  (see [2026-09-03](2026-09-03-wind-direction-added-app-only.md)'s identical call), and the stat card has no spare column for a
   fifth reading without redesigning it.
 
 ## Decision

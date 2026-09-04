@@ -1,11 +1,11 @@
-# 0012. Heavy rain on a mild/warm/hot day gets a coat, not a dry robe
+# 2026-09-03. Heavy rain on a mild/warm/hot day gets a coat, not a dry robe
 
 - **Date:** 2026-09-03
 - **Status:** Accepted
 
 ## Context
 
-Decision [0008](0008-mild-wet-days-get-a-light-jacket-and-umbrella.md) made
+Decision [2026-09-02](2026-09-02-mild-wet-days-get-a-light-jacket-and-umbrella.md) made
 the wet-weather top depend on rain intensity as well as temperature: a dry
 robe for `heavy` rain regardless of temperature band, a light jacket for
 lighter rain on `mild`/`warm`/`hot` days. Against a real forecast (mild,
@@ -27,7 +27,7 @@ Drop the `rainBand === 'heavy'` clause from the wet-top pick in
 `mild`/`warm`/`hot` — with `WET_LIGHT_TOP` itself renamed from `'a light
 jacket'` to `'a coat'`, since it now also covers heavy rain and "light
 jacket" undersold what it needs to stand up to. The umbrella extra note
-(0008) is unchanged: it still only pairs with `WET_LIGHT_TOP`, gated on a
+([2026-09-02](2026-09-02-mild-wet-days-get-a-light-jacket-and-umbrella.md)) is unchanged: it still only pairs with `WET_LIGHT_TOP`, gated on a
 calm segment.
 
 An alternative — keeping the light-jacket/coat split as two separate items

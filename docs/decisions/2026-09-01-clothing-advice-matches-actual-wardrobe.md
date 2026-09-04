@@ -1,4 +1,4 @@
-# 0003. Clothing advice matches the user's actual wardrobe
+# 2026-09-01. Clothing advice matches the user's actual wardrobe
 
 - **Date:** 2026-09-01
 - **Status:** Accepted
