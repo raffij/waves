@@ -26,9 +26,13 @@ and no component imports. It runs under Node directly.
 
 Add **Vitest** as the test runner, scoped to the service layer.
 
-- `vitest` as a dev dependency; `npm test` → `vitest run`, `npm run
-  test:watch` → `vitest`. CI (`ci.yml`) gains a `Test` step alongside
-  `Lint` and `Typecheck`.
+- `vitest` as a dev dependency, pinned to the **3.x** line (`^3.2.7`).
+  Vitest 5 requires Node `>=22`, but `ci.yml` and `deploy-web.yml` both run
+  Node 20 (`actions/setup-node` with `node-version: 20`); Vitest 3 still
+  supports `^20`. Moving the whole build off Node 20 is a bigger,
+  separate change — when it happens, bumping Vitest with it is a one-liner.
+- `npm test` → `vitest run`, `npm run test:watch` → `vitest`. CI
+  (`ci.yml`) gains a `Test` step alongside `Lint` and `Typecheck`.
 - `vitest.config.mts` sets `environment: 'node'` and restricts `include`
   to `src/services/**/*.test.ts` and `src/models/**/*.test.ts`, so Vitest
   never loads a component file that imports `'react-native'`. The config
@@ -55,7 +59,9 @@ Add **Vitest** as the test runner, scoped to the service layer.
 
 ## Consequences
 
-`npm ci` now pulls Vitest's tree (~25 packages). CI gains a fourth check.
+`npm ci` now pulls Vitest's tree — ~90 packages, most of them `vite` /
+`esbuild` / `rollup` platform binaries — and the lockfile grew
+accordingly. CI gains a fourth check.
 There's a place for service-layer unit tests now, and the norm that a
 tricky pure function gets one. Component and hook testing is still
 unaddressed — a deliberate scope limit, not an oversight.
