@@ -77,8 +77,8 @@ npm run test:watch # vitest, watch mode
 
 CI runs all of these on every PR. Vitest only covers the plain-TypeScript
 service layer (`src/services/`, `src/models/`) — no React Native runtime,
-so no jest-expo preset. `src/services/DayInsights.test.ts` is a
-characterisation suite: fixed inputs pinned to their exact readout
+so no jest-expo preset. `src/services/dayInsights/dayInsights.test.ts` is
+a characterisation suite: fixed inputs pinned to their exact readout
 sentence via inline snapshots, regenerated with `npx vitest run -u`.
 
 ## Project layout
@@ -121,7 +121,10 @@ src/
                             insights judge the day over
     DayCondition.ts         one glyph-worthy condition (rain/sunny/hazy/
                             overcast) per day, for the forecast list's tiles
-    DayInsights.ts          pure buildDayInsights() + its tuning constants
+    dayInsights/            pure buildDayInsights(); one module per weather
+                            domain (wind/rain/sun/feels/light/clothing),
+                            each with its own tuning constants, assembled
+                            by readout.ts — see index.ts
     TideClock.ts            all Europe/London date parsing / formatting
   models/                   plain data shapes, no behaviour
     Location.ts             the location list + selected-location type
