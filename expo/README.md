@@ -32,7 +32,7 @@ web build is live at **<https://raffij.github.io/waves/>**.
 
 ## Prerequisites
 
-- **Node 20** and npm.
+- **Node 24** (current LTS) and npm. Vitest 5 needs Node 22+; CI runs 24.
 - A **[TideCheck](https://tidecheck.com) API key** (free tier: 50 requests/day).
   You paste it into the app on first launch; it's kept in
   `expo-secure-store` (Keychain / Keystore), falling back to `AsyncStorage`
