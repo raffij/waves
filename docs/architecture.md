@@ -14,6 +14,7 @@ the same shape.
 - [What's identical, what's duplicated](#whats-identical-whats-duplicated)
 - [Cold-start request lifecycle](#cold-start-request-lifecycle)
 - [Inside the Expo app](#inside-the-expo-app)
+- [How the day-insights readout is generated](#how-the-day-insights-readout-is-generated)
 - [The two widgets](#the-two-widgets)
 - [Notes](#notes)
 
@@ -95,6 +96,42 @@ fetch, cache-first resilience, and the app→widget hand-off — is in
 [`docs/architecture/webapp.architecture.html`](architecture/webapp.architecture.html)
 (open it locally; the typed source is
 [`webapp.architecture.json`](architecture/webapp.architecture.json)).
+
+## How the day-insights readout is generated
+
+The "so what" line above the charts — one deliberately wordy paragraph
+covering the day's wind, rain, sun, feel, light and what to wear — is built
+by `buildDayInsights()`, a pure pipeline from six nullable weather series to
+one string. This zooms into that path: the Open-Meteo Forecast fetch and its
+caches, the typed `Series` wrappers, the `DayInsightsInput` that `App.tsx`
+and `ForecastList.tsx` assemble, and the `expo/src/services/dayInsights/`
+modules themselves — the shared 06:00–20:00 window, the per-domain
+analyser/phrase-builder pairs, the clothing call, and the `readout.ts`
+assembler — plus the design decisions behind each.
+
+<img src="insights.png" width="900" alt="How the Waves day-insights readout is generated: the Open-Meteo Forecast API (no key) is fetched by WaveAPIClient, cached in AsyncStorage for 6h and layered with a TanStack Query stale top-up in useForecastData, then wrapped in typed Series objects; App.tsx and ForecastList.tsx assemble a DayInsightsInput that index.ts/readout.ts turns into one summary paragraph by reading a shared 06:00-20:00 window and per-domain wind/rain/sun/feels/light analysers plus a clothing call; DayInsights.tsx renders the summary and DayCondition.ts reuses the same sun and rain thresholds for its per-day glyph." />
+
+An interactive version — guided views for the fetch-to-Series path, building
+the input, the one shared window, the domain analysers, and who consumes the
+readout — is in
+[`docs/architecture/insights.architecture.html`](architecture/insights.architecture.html)
+(open it locally; the typed source is
+[`insights.architecture.json`](architecture/insights.architecture.json)).
+
+### The calculations, as IF → THEN rules
+
+Zooming in once more: what each domain module actually does with its numbers.
+Every one of `wind.ts` / `rain.ts` / `sun.ts` / `feels.ts` / `clothing.ts` runs
+the same three-step recipe — IF the reading crosses a band, AND IF a
+refinement applies, THEN emit a phrase — with the real threshold constants
+from that module's own tuning knobs, not a paraphrase of them.
+
+<img src="insights-calculations.png" width="900" alt="The day-insights calculations as IF/THEN rules, one lane per domain module. wind.ts: mean mph bands to calm/breezy/windy (under 12, 12-24, 24+), a 45-degree direction shift or a 10mph gust excess gets named, then windClause() emits speed and direction as one clause. rain.ts: peak mm per wet-hour spell bands to dry/drizzle/showery/heavy (up to 0.2, 0.5, 2, 2+), a spell of 4 hours or more compares its first and last third for a building/easing trend, then rainClause() emits timing, coverage and the trend. sun.ts: brightness in W/m2 bands to overcast/hazy/sunny/strong (under 120, 350, 450, 450+), cloud cover at 75%+ or under 25% can only push the band toward whichever reads cloudier, then sunTrendClause() emits morning vs afternoon in one line. feels.ts: mean feels-like Celsius bands to cold/cool/mild/warm/hot (under 10, 14, 19, 24), an AM-to-PM swing of 2 degrees or more gets named as warming or cooling, then feelsPhrase() emits the band, range and any trend. clothing.ts: triggered by feels' TempBand and rain's band, never wind, it picks top/bottom/footwear by temperature, overrides for rain still ahead, then clothingSentence() emits one line or two if the core-hours and rest-of-day segments differ." />
+
+An interactive version — guided views for each domain's own recipe — is in
+[`docs/architecture/insights-calculations.workflow.html`](architecture/insights-calculations.workflow.html)
+(open it locally; the typed source is
+[`insights-calculations.workflow.json`](architecture/insights-calculations.workflow.json)).
 
 ## The two widgets
 

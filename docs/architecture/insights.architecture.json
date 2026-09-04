@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "How the day-insights readout is generated",
+    "output": "insights.architecture.html",
+    "quality_profile": "showcase",
+    "viewBox": [1300, 740],
+    "views": [
+      { "id": "fetch-to-series", "label": "Fetch to Series", "focus": ["forecastAPI", "waveClient", "forecastData", "series"], "note": "Open-Meteo Forecast (no key) -> WaveAPIClient's 6h AsyncStorage cache -> TanStack Query -> typed Series wrappers." },
+      { "id": "build-input", "label": "Building the input", "focus": ["series", "inputAssembly", "readout"], "note": "App.tsx and ForecastList.tsx bundle six nullable series plus a reference Date: 'now' on the live screen, the day itself in the list." },
+      { "id": "shared-window", "label": "The shared day window", "focus": ["readout", "window", "domains", "clothing"], "note": "Every domain reads the day through window.ts's 06:00-20:00 slots and one AM/PM split, so sentence, clothing and bars never disagree." },
+      { "id": "domain-analysers", "label": "Domain analysers", "focus": ["readout", "domains", "clothing"], "note": "wind/rain/sun/feels/light each pair an analyser with a phrase builder; clothing sits downstream of feels/wind/rain." },
+      { "id": "consumers", "label": "Who consumes it", "focus": ["readout", "dayInsightsUI", "dayCondition"], "note": "DayInsights.tsx renders the summary string; DayCondition.ts reuses the re-exported sun/rain thresholds for the day-tile glyph." }
+    ]
+  },
+  "components": [
+    { "id": "forecastAPI", "type": "external", "label": "Open-Meteo Forecast API", "sublabel": "/v1/forecast", "tag": "no API key", "pos": [50, 44], "size": [215, 86] },
+    { "id": "waveClient", "type": "backend", "label": "WaveAPIClient", "sublabel": "marine + forecast fetched apart", "tag": "AsyncStorage 6h - stale-on-fail", "pos": [370, 44], "size": [215, 86] },
+    { "id": "forecastData", "type": "backend", "label": "useForecastData", "sublabel": "TanStack Query + combine", "tag": "1h stale top-up", "pos": [690, 44], "size": [215, 86] },
+    { "id": "series", "type": "backend", "label": "Typed Series wrappers", "sublabel": "Wind Rain Temp Sun Cloud Daylight", "tag": "null-safe sample-at", "pos": [1010, 44], "size": [215, 86] },
+
+    { "id": "inputAssembly", "type": "frontend", "label": "DayInsightsInput assembly", "sublabel": "App.tsx + ForecastList.tsx", "tag": "reference = now | that day", "pos": [420, 190], "size": [255, 92] },
+    { "id": "readout", "type": "backend", "label": "index.ts + readout.ts", "sublabel": "buildDayInsights entry -> buildReadout assembler", "tag": "one paragraph, each signal once", "pos": [420, 336], "size": [255, 120] },
+    { "id": "dayCondition", "type": "backend", "label": "DayCondition.ts", "sublabel": "per-day glyph: rain / sunny / hazy / overcast", "tag": "reuses shared thresholds", "pos": [50, 348], "size": [250, 108] },
+    { "id": "dayInsightsUI", "type": "frontend", "label": "DayInsights.tsx", "sublabel": "renders summary above the charts", "pos": [420, 510], "size": [255, 92] },
+
+    { "id": "window", "type": "backend", "label": "window.ts + DayWindow", "sublabel": "06:00-20:00 slots - AM/PM split", "tag": "tense: past / today / future - remaining hours", "pos": [820, 190], "size": [265, 100] },
+    { "id": "domains", "type": "backend", "label": "Domain analysers + phrase builders", "sublabel": "wind - rain - sun - feels - light", "tag": "tuning constants per module", "pos": [820, 336], "size": [265, 114] },
+    { "id": "clothing", "type": "backend", "label": "clothing.ts", "sublabel": "top / bottom / footwear from feels-like band", "tag": "core 08-17 vs rest-of-day - rain overrides", "pos": [820, 496], "size": [265, 100] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "expo/src - fetch & cache", "wraps": ["waveClient", "forecastData", "series"] },
+    { "kind": "region", "label": "expo/src/services/dayInsights/ - one module per weather domain, pinned by a characterisation test suite", "wraps": ["window", "domains", "clothing"] }
+  ],
+  "connections": [
+    { "id": "api-client", "from": "forecastAPI", "to": "waveClient", "label": "hourly + daily", "variant": "emphasis" },
+    { "id": "client-query", "from": "waveClient", "to": "forecastData", "label": "cached result" },
+    { "id": "query-series", "from": "forecastData", "to": "series", "label": "wrap in Series" },
+    { "id": "series-input", "from": "series", "to": "inputAssembly", "label": "6 series + reference", "fromSide": "bottom", "toSide": "right" },
+    { "id": "input-readout", "from": "inputAssembly", "to": "readout", "label": "buildDayInsights()", "variant": "emphasis", "fromSide": "bottom", "toSide": "top", "labelDy": 24 },
+
+    { "id": "readout-window", "from": "readout", "to": "window", "label": "slots + tense", "fromSide": "right", "toSide": "left", "labelDy": -16 },
+    { "id": "readout-domains", "from": "readout", "to": "domains", "fromSide": "right", "toSide": "left" },
+    { "id": "readout-clothing", "from": "readout", "to": "clothing", "label": "clothingAdvice()", "fromSide": "right", "toSide": "left", "labelDy": 16 },
+    { "id": "domains-window", "from": "domains", "to": "window", "label": "AM/PM slots", "fromSide": "top", "toSide": "bottom" },
+    { "id": "clothing-domains", "from": "clothing", "to": "domains", "label": "reuse bands", "fromSide": "top", "toSide": "bottom" },
+
+    { "id": "readout-ui", "from": "readout", "to": "dayInsightsUI", "label": "{ summary }", "variant": "emphasis", "fromSide": "bottom", "toSide": "top", "labelDy": 24 },
+    { "id": "readout-daycondition", "from": "readout", "to": "dayCondition", "label": "shared thresholds", "variant": "dashed", "fromSide": "left", "toSide": "right", "labelDx": -34 }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "Fetch & cache", "items": ["Open-Meteo Forecast needs no key; WaveAPIClient fetches it apart from the Marine call, so a forecast outage never takes wave data down", "6h AsyncStorage cache with stale-on-failure; useForecastData adds a 1h TanStack Query stale top-up and hides wave errors from the tide UI"] },
+    { "dot": "violet", "title": "One shared window, one paragraph", "items": ["window.ts fixes the day at 06:00-20:00 with one AM/PM split; every domain, the clothing call and the chart bars read those same slots", "On today, summary and clothing narrow to now -> end of window; past and future days are read whole", "2026-08-31 / 2026-09-04: one wordy summary (not summary + outlook); the 1,000-line file split one module per domain, pinned by a characterisation suite"] },
+    { "dot": "amber", "title": "Clothing, rain detail & reuse", "items": ["2026-09-01: picks match the real wardrobe, keyed off the feels-like band; rain overrides top and footwear", "2026-09-02: separate core-hours (08-17) and rest-of-day picks; 2026-09-03: the rain clause names how intensity builds or eases", "DayCondition.ts's glyph reuses sunBandFor and the mm thresholds from index.ts, so icon and sentence band alike"] }
+  ]
+}
