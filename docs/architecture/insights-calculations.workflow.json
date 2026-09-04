@@ -1,0 +1,331 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "The day-insights calculations, as IF -> THEN rules",
+    "subtitle": "Each lane reads as one recipe: IF -> AND IF -> AND IF -> THEN, left to right.",
+    "output": "insights-calculations.workflow.html",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "wind",
+        "label": "Wind",
+        "focus": [
+          "w0",
+          "w1",
+          "w2"
+        ],
+        "note": "mean mph -> calm/breezy/windy -> direction & gust rules -> windClause()."
+      },
+      {
+        "id": "rain",
+        "label": "Rain",
+        "focus": [
+          "r0",
+          "r1",
+          "r2"
+        ],
+        "note": "wet hours already grouped into spells, banded by peak mm -> long spells get a trend rule -> rainClause()."
+      },
+      {
+        "id": "sun",
+        "label": "Sun",
+        "focus": [
+          "s0",
+          "s1",
+          "s2"
+        ],
+        "note": "brightness bands the hour; cloud cover can only demote it toward overcast -> sunTrendClause()."
+      },
+      {
+        "id": "feels",
+        "label": "Feels-like",
+        "focus": [
+          "f0",
+          "f1",
+          "f2"
+        ],
+        "note": "mean C bands cold..hot; an AM->PM swing over 2C triggers a warming/cooling rule -> feelsPhrase()."
+      },
+      {
+        "id": "clothing",
+        "label": "Clothing",
+        "focus": [
+          "f0",
+          "r0",
+          "c0",
+          "c1",
+          "c2"
+        ],
+        "note": "triggered by feels' TempBand and rain's band (never wind): a lookup, a rain rule, one sentence or two."
+      }
+    ]
+  },
+  "lanes": [
+    {
+      "id": "wind",
+      "label": "wind.ts"
+    },
+    {
+      "id": "rain",
+      "label": "rain.ts"
+    },
+    {
+      "id": "sun",
+      "label": "sun.ts"
+    },
+    {
+      "id": "feels",
+      "label": "feels.ts"
+    },
+    {
+      "id": "clothing",
+      "label": "clothing.ts"
+    }
+  ],
+  "phases": [
+    {
+      "id": "band",
+      "label": "IF: crosses a band",
+      "fromCol": 0,
+      "toCol": 0
+    },
+    {
+      "id": "refine",
+      "label": "AND IF: refinement applies",
+      "fromCol": 1,
+      "toCol": 1
+    },
+    {
+      "id": "action",
+      "label": "THEN: emit the phrase",
+      "fromCol": 2,
+      "toCol": 2
+    }
+  ],
+  "nodes": [
+    {
+      "id": "w0",
+      "lane": "wind",
+      "col": 0,
+      "type": "backend",
+      "label": "mean <12/12-24/>=24 mph",
+      "sublabel": "-> calm/breezy/windy, AM & PM apart",
+      "width": 185
+    },
+    {
+      "id": "w1",
+      "lane": "wind",
+      "col": 1,
+      "type": "backend",
+      "label": "\u0394dir>=45\u00b0 or gust\u0394>=10mph",
+      "sublabel": "-> name backing/veering, and/or the gust",
+      "width": 195
+    },
+    {
+      "id": "w2",
+      "lane": "wind",
+      "col": 2,
+      "type": "backend",
+      "label": "windClause()",
+      "sublabel": "-> speed + direction as one clause",
+      "width": 150
+    },
+    {
+      "id": "r0",
+      "lane": "rain",
+      "col": 0,
+      "type": "backend",
+      "label": "peak <=0.2/<0.5/<2/>=2 mm",
+      "sublabel": "-> dry/drizzle/showery/heavy, per spell",
+      "width": 195
+    },
+    {
+      "id": "r1",
+      "lane": "rain",
+      "col": 1,
+      "type": "backend",
+      "label": "a spell runs >=4h",
+      "sublabel": "-> compare first/last third -> building/easing",
+      "width": 195
+    },
+    {
+      "id": "r2",
+      "lane": "rain",
+      "col": 2,
+      "type": "backend",
+      "label": "rainClause()",
+      "sublabel": "-> when, how hard, and its trend",
+      "width": 145
+    },
+    {
+      "id": "s0",
+      "lane": "sun",
+      "col": 0,
+      "type": "backend",
+      "label": "W/m2 <120/<350/<450/>=450",
+      "sublabel": "-> overcast/hazy/sunny/strong",
+      "width": 195
+    },
+    {
+      "id": "s1",
+      "lane": "sun",
+      "col": 1,
+      "type": "backend",
+      "label": "cloud >=75%/<25%",
+      "sublabel": "-> overcast/sunny, else hazy - cloudier wins",
+      "width": 185
+    },
+    {
+      "id": "s2",
+      "lane": "sun",
+      "col": 2,
+      "type": "backend",
+      "label": "sunTrendClause()",
+      "sublabel": "-> morning vs afternoon, in one line",
+      "width": 155
+    },
+    {
+      "id": "f0",
+      "lane": "feels",
+      "col": 0,
+      "type": "backend",
+      "label": "mean C <10/14/19/24",
+      "sublabel": "-> cold/cool/mild/warm/hot",
+      "width": 155
+    },
+    {
+      "id": "f1",
+      "lane": "feels",
+      "col": 1,
+      "type": "backend",
+      "label": "AM to PM swing >=2C",
+      "sublabel": "-> name warming/cooling, else \"little change\"",
+      "width": 190
+    },
+    {
+      "id": "f2",
+      "lane": "feels",
+      "col": 2,
+      "type": "backend",
+      "label": "feelsPhrase()",
+      "sublabel": "-> band + range + any AM/PM trend",
+      "width": 145
+    },
+    {
+      "id": "c0",
+      "lane": "clothing",
+      "col": 0,
+      "type": "backend",
+      "label": "TempBand (from feels)",
+      "sublabel": "-> pick top/bottom/footwear, never wind",
+      "width": 170
+    },
+    {
+      "id": "c1",
+      "lane": "clothing",
+      "col": 1,
+      "type": "backend",
+      "label": "rain is still ahead",
+      "sublabel": "-> cold/cool: dry robe+boots. mild+: coat",
+      "width": 175
+    },
+    {
+      "id": "c2",
+      "lane": "clothing",
+      "col": 2,
+      "type": "backend",
+      "label": "clothingSentence()",
+      "sublabel": "-> one line, or two if segments differ",
+      "width": 165
+    }
+  ],
+  "edges": [
+    {
+      "id": "w0-w1",
+      "from": "w0",
+      "to": "w1",
+      "role": "main"
+    },
+    {
+      "id": "w1-w2",
+      "from": "w1",
+      "to": "w2",
+      "role": "main"
+    },
+    {
+      "id": "r0-r1",
+      "from": "r0",
+      "to": "r1",
+      "role": "main"
+    },
+    {
+      "id": "r1-r2",
+      "from": "r1",
+      "to": "r2",
+      "role": "main"
+    },
+    {
+      "id": "s0-s1",
+      "from": "s0",
+      "to": "s1",
+      "role": "main"
+    },
+    {
+      "id": "s1-s2",
+      "from": "s1",
+      "to": "s2",
+      "role": "main"
+    },
+    {
+      "id": "f0-f1",
+      "from": "f0",
+      "to": "f1",
+      "role": "main"
+    },
+    {
+      "id": "f1-f2",
+      "from": "f1",
+      "to": "f2",
+      "role": "main"
+    },
+    {
+      "id": "c0-c1",
+      "from": "c0",
+      "to": "c1",
+      "role": "main"
+    },
+    {
+      "id": "c1-c2",
+      "from": "c1",
+      "to": "c2",
+      "role": "main"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Read each lane as one IFTTT recipe",
+      "items": [
+        "Col 0 is the IF (the reading crosses a band), col 1 is an AND IF (a refinement applies), col 2 is the THEN (a finished phrase)",
+        "The thresholds live at the top of each domain's own module, in the same units its phrase uses - nothing is hand-waved into a magic word"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "Real numbers, tuned by feel",
+      "items": [
+        "SUN_BAND_STRONG_WM2 was tuned down from 600 to 450 W/m2: a clear 500 W/m2 sky already reads as genuinely intense in practice, not merely \"sunny\"",
+        "The 45deg direction-shift and 10mph gust-excess rules exist so a few degrees of wander or an ordinary gust can't manufacture a signal out of noise - rain's trend rule follows the same idea"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Clothing triggers off bands, not raw numbers",
+      "items": [
+        "clothing.ts never reads mph or mm directly - it triggers off the same TempBand the feels sentence already names, plus a rain/dry flag, so \"it feels mild\" and \"wear a jumper\" can never disagree",
+        "Wind was dropped from the clothing rule entirely (2026-09-01): the real wardrobe has no wind-specific item, so there is nothing for a wind reading to trigger"
+      ]
+    }
+  ]
+}
