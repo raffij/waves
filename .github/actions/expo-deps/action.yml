@@ -1,0 +1,31 @@
+name: Set up Expo dependencies
+description: >
+  Install Node, restore the npm download cache, and restore expo/node_modules
+  keyed on the lockfile. On an exact node_modules cache hit `npm ci` is skipped
+  entirely; otherwise it runs, still warmed by the ~/.npm cache.
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      id: setup-node
+      with:
+        node-version: 24
+        cache: npm
+        cache-dependency-path: expo/package-lock.json
+
+    - name: Restore node_modules
+      id: node-modules
+      uses: actions/cache@v4
+      with:
+        path: expo/node_modules
+        # No restore-keys: a node_modules tree from a different lockfile is
+        # exactly the state `npm ci` exists to avoid, so fall back to a full
+        # install rather than a partial-match restore.
+        key: expo-node-modules-${{ runner.os }}-node${{ steps.setup-node.outputs.node-version }}-${{ hashFiles('expo/package-lock.json') }}
+
+    - name: Install dependencies
+      if: steps.node-modules.outputs.cache-hit != 'true'
+      working-directory: expo
+      shell: bash
+      run: npm ci
