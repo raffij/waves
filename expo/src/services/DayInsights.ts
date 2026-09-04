@@ -770,17 +770,18 @@ const WET_LIGHT_TOP = 'a coat';
 
 const BOTTOM_FOR_TEMP: Record<TempBand, string> = {
   cold: 'trousers',
-  cool: 'trousers',
+  cool: 'shorts',
   mild: 'shorts',
   warm: 'shorts',
   hot: 'shorts',
 };
 
-// Footwear default by temperature: cold/cool falls back to camper shoes,
-// mild or above takes sandals, no socks.
+// Footwear default by temperature: cold falls back to camper shoes, cool
+// takes sandals with socks (warm enough for shorts, not warm enough for bare
+// feet), mild or above takes bare sandals, no socks.
 const FOOTWEAR_FOR_TEMP: Record<TempBand, string> = {
   cold: 'camper shoes',
-  cool: 'camper shoes',
+  cool: 'sandals with socks',
   mild: 'sandals',
   warm: 'sandals',
   hot: 'sandals',
@@ -790,11 +791,11 @@ const WET_FOOTWEAR = 'walking boots';
 // The temp bands where wet weather gets the full cold-weather treatment
 // (walking boots for footwear; a dry robe for top, regardless of rain
 // intensity — see TOP_FOR_TEMP) rather than the lighter mild/warm/hot picks.
-// Footwear: rain overrides it only when it's cold/cool enough that sandals
-// were already off the table (camper shoes, not waterproof, get swapped for
-// boots) — mild or above stays on sandals even when wet, since bare sandals
-// are meant to get wet and dry fast, unlike walking boots and socks, which
-// soak through and stay that way.
+// Footwear: rain overrides it only when it's cold/cool enough that the dry
+// default (camper shoes, or cool's sandals-with-socks) isn't up to standing
+// water — mild or above stays on bare sandals even when wet, since those are
+// meant to get wet and dry fast, unlike walking boots and socks, which soak
+// through and stay that way.
 const WET_OVERRIDE_TEMP_BANDS = new Set<TempBand>(['cold', 'cool']);
 
 interface ClothingPick {

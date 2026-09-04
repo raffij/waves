@@ -23,3 +23,4 @@ Numbered sequentially, oldest first. Use `TEMPLATE.md` to start a new one.
 | [0013](0013-wind-direction-added-app-only.md) | Wind direction is added to the app only, with a backing/veering readout | Accepted |
 | [0014](0014-sea-current-and-sea-temperature-from-marine-api.md) | Surface sea current direction and sea surface temperature from Open-Meteo Marine | Accepted |
 | [0015](0015-wind-gusts-added-to-chart-and-insights.md) | Wind gusts are added to the tide chart and the day-insights sentence | Accepted |
+| [0016](0016-cool-band-treated-as-shorts-and-socked-sandals-weather.md) | The cool band is treated as shorts-and-socked-sandals weather | Accepted |
