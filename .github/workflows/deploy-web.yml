@@ -23,15 +23,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: npm
-          cache-dependency-path: expo/package-lock.json
-
-      - name: Install dependencies
-        working-directory: expo
-        run: npm ci
+      - uses: ./.github/actions/expo-deps
 
       - name: Export static web build
         working-directory: expo
