@@ -1,11 +1,11 @@
-# 0006. Sandals win over walking boots when it's mild and wet
+# 2026-09-02. Sandals win over walking boots when it's mild and wet
 
 - **Date:** 2026-09-02
 - **Status:** Accepted
 
 ## Context
 
-Decision [0003](0003-clothing-advice-matches-actual-wardrobe.md) made any
+Decision [2026-09-01](2026-09-01-clothing-advice-matches-actual-wardrobe.md) made any
 wet rain band (from the live forecast or leftover ground-wet) force walking
 boots outright, regardless of temperature — the reasoning being that none of
 the dry-weather footwear is waterproof. In practice, on a mild-or-warmer wet

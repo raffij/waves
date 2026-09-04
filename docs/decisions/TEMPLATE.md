@@ -1,7 +1,7 @@
-# NNNN. Title (short, active voice)
+# YYYY-MM-DD. Title (short, active voice)
 
 - **Date:** YYYY-MM-DD
-- **Status:** Proposed | Accepted | Superseded by [NNNN](NNNN-title.md)
+- **Status:** Proposed | Accepted | Superseded by [YYYY-MM-DD](YYYY-MM-DD-title.md)
 
 ## Context
 

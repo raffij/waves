@@ -1,4 +1,4 @@
-# 0011. The rain clause describes how a spell's intensity changes
+# 2026-09-03. The rain clause describes how a spell's intensity changes
 
 - **Date:** 2026-09-03
 - **Status:** Accepted
@@ -15,10 +15,10 @@ about how the rain pattern changes over the period."
 
 Considered and rejected:
 - **Listing per-hour intensity** — too granular for a one-line summary and
-  would fight the existing "one flowing sentence" shape (decision 0002).
+  would fight the existing "one flowing sentence" shape (decision [2026-08-31](2026-08-31-combine-day-insights-readout.md)).
 - **A separate trend field alongside the sentence** — the readout is
   already one summary string by design; adding a field the caller has to
-  splice in itself repeats the mistake decision 0002 undid.
+  splice in itself repeats the mistake decision [2026-08-31](2026-08-31-combine-day-insights-readout.md) undid.
 - **Reusing `rainCoverage`'s "through the afternoon" placement phrase for
   intensity too** — placement and intensity are different axes of the same
   spell and can change independently (a spell can sit "through the

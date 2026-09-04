@@ -1,11 +1,11 @@
-# 0016. The cool band is treated as shorts-and-socked-sandals weather
+# 2026-09-04. The cool band is treated as shorts-and-socked-sandals weather
 
 - **Date:** 2026-09-04
 - **Status:** Accepted
 
 ## Context
 
-Decision [0004](0004-mild-band-treated-as-shorts-weather.md) moved the
+Decision [2026-09-01](2026-09-01-mild-band-treated-as-shorts-weather.md) moved the
 `mild` feels-like band (14–19°C) onto shorts and bare sandals, leaving
 `cool` (10–14°C) on the original cold-weather pairing: trousers and camper
 shoes, with `cold` and `hot` untouched at either end. On a day reading in
@@ -20,7 +20,7 @@ Move `cool` from the trousers/camper-shoes side of `BOTTOM_FOR_TEMP` and
 `FOOTWEAR_FOR_TEMP` onto shorts, joining `mild`/`warm`/`hot`, and give it a
 distinct footwear value rather than sharing `mild`'s bare sandals:
 `FOOTWEAR_FOR_TEMP.cool` becomes `'sandals with socks'` (reintroducing the
-value decision 0004 dropped as unused once `mild` moved off it).
+value decision [2026-09-01](2026-09-01-mild-band-treated-as-shorts-weather.md) dropped as unused once `mild` moved off it).
 `BOTTOM_FOR_TEMP.cool` becomes `'shorts'` (was `'trousers'`). `TOP_FOR_TEMP.cool`
 is untouched — still `'a jumper'`, matching what the user actually reported
 wearing — and `cold` keeps trousers/camper shoes unchanged.
@@ -38,7 +38,7 @@ to calibrate against, the same way each prior clothing decision in this log
 was driven by a real forecast rather than a guess.
 
 An alternative — retuning `TEMP_BAND_COOL_C`/`TEMP_BAND_MILD_C` so today's
-reading landed in `mild` instead — was rejected for the same reason 0004
+reading landed in `mild` instead — was rejected for the same reason [2026-09-01](2026-09-01-mild-band-treated-as-shorts-weather.md)
 rejected it: it would also change the temperature *sentence* ("it feels
 cool" → "it feels mild"), misdescribing the actual temperature just to
 reach a clothing pick. It would also have merged `cool` into `mild`'s bare

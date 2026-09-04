@@ -1,4 +1,4 @@
-# 0001. Adopt a decision log
+# 2026-08-31. Adopt a decision log
 
 - **Date:** 2026-08-31
 - **Status:** Accepted

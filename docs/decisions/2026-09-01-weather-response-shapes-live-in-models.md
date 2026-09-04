@@ -1,4 +1,4 @@
-# 0005. Weather response shapes live in `models/`, not in `WaveAPIClient.ts`
+# 2026-09-01. Weather response shapes live in `models/`, not in `WaveAPIClient.ts`
 
 - **Date:** 2026-09-01
 - **Status:** Accepted

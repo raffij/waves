@@ -1,13 +1,13 @@
-# 0007. Clothing advice splits into a core-hours pick and a rest-of-day pick
+# 2026-09-02. Clothing advice splits into a core-hours pick and a rest-of-day pick
 
 - **Date:** 2026-09-02
 - **Status:** Accepted
 
 ## Context
 
-The clothing call (decisions [0003](0003-clothing-advice-matches-actual-wardrobe.md),
-[0004](0004-mild-band-treated-as-shorts-weather.md),
-[0006](0006-sandals-win-over-boots-when-mild-and-wet.md)) picked one outfit
+The clothing call (decisions [2026-09-01](2026-09-01-clothing-advice-matches-actual-wardrobe.md),
+[2026-09-01](2026-09-01-mild-band-treated-as-shorts-weather.md),
+[2026-09-02](2026-09-02-sandals-win-over-boots-when-mild-and-wet.md)) picked one outfit
 for the whole remaining day window (06:00–20:00), keyed off the mean
 feels-like temperature across it. On a day with a big morning/evening-to-
 midday swing — cool at the edges, warm through the middle — that single mean
@@ -25,7 +25,7 @@ day window — each read off its own mean feels-like temperature and its own
 share of dark hours, so a segment near sunrise/sunset can independently earn
 an "after dark" note the midday segment wouldn't. Rain (`wet`/`groundWet`)
 stays a single flag for the whole remaining day rather than being read per
-segment: decision 0003 already treats any rain still ahead in the window as
+segment: decision [2026-09-01](2026-09-01-clothing-advice-matches-actual-wardrobe.md) already treats any rain still ahead in the window as
 reason to dress for rain regardless of exactly which hour it falls in, and
 extending that same "better dressed for it than not" reasoning to segments
 avoids tracking which segment a rain spell actually overlaps.
@@ -43,7 +43,7 @@ used unqualified, same as before this change.
 An alternative — keeping rain/ground-wet as a per-segment read too, using
 each segment's own precipitation peak — was rejected as unnecessary
 complexity: the wardrobe's rain override is already a whole-day, cautious
-call by design (0003), and splitting it further would mean re-deriving
+call by design ([2026-09-01](2026-09-01-clothing-advice-matches-actual-wardrobe.md)), and splitting it further would mean re-deriving
 which segment a spell overlaps without changing the actual advice in the
 common case (rain in the morning still means boots are better than camper
 shoes come afternoon, since ground stays wet).

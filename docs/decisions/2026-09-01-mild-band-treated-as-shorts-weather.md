@@ -1,11 +1,11 @@
-# 0004. The mild feels-like band is treated as shorts weather
+# 2026-09-01. The mild feels-like band is treated as shorts weather
 
 - **Date:** 2026-09-01
 - **Status:** Accepted
 
 ## Context
 
-Decision [0003](0003-clothing-advice-matches-actual-wardrobe.md), recorded
+Decision [2026-09-01](2026-09-01-clothing-advice-matches-actual-wardrobe.md), recorded
 earlier today, keyed the clothing tables off the existing feels-like
 `TempBand` and put the `mild` band (14–19°C) in trousers with sandals-and-
 socks, alongside `cold`/`cool`. In practice the user wears shorts and bare
@@ -32,7 +32,7 @@ falls into `warm` instead — was rejected because it would also shift the
 temperature *sentence* ("it feels mild" → "it feels warm"), misdescribing
 the actual temperature just to change the clothing pick. The clothing
 tables and the temperature wording read off the same band by design (see
-0003), so retuning the band moves both; overriding the two `_FOR_TEMP`
+[2026-09-01](2026-09-01-clothing-advice-matches-actual-wardrobe.md)), so retuning the band moves both; overriding the two `_FOR_TEMP`
 entries directly moves only the one thing that needed to change.
 
 ## Consequences

@@ -1,4 +1,4 @@
-# 0010. Replace Biome with oxlint and oxfmt
+# 2026-09-02. Replace Biome with oxlint and oxfmt
 
 - **Date:** 2026-09-02
 - **Status:** Accepted
