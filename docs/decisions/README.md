@@ -28,3 +28,5 @@ if it matters, the record's own text says which came first. Use
 | [2026-09-03](2026-09-03-wind-gusts-added-to-chart-and-insights.md) | Wind gusts are added to the tide chart and the day-insights sentence | Accepted |
 | [2026-09-04](2026-09-04-cool-band-treated-as-shorts-and-socked-sandals-weather.md) | The cool band is treated as shorts-and-socked-sandals weather | Accepted |
 | [2026-09-04](2026-09-04-decision-log-filenames-are-date-and-title-only.md) | Decision-log filenames are date and title only, no counter | Accepted |
+| [2026-09-04](2026-09-04-adopt-vitest-for-the-service-layer.md) | Adopt Vitest for the service layer | Accepted |
+| [2026-09-04](2026-09-04-day-insights-split-by-weather-domain.md) | Day-insights logic splits into one module per weather domain | Accepted |
