@@ -33,7 +33,7 @@ import { useForecastData } from './src/hooks/useForecastData';
 import { useLocation } from './src/hooks/useLocation';
 import { type ThemeName, ThemeProvider, useTheme } from './src/hooks/useTheme';
 import { useWidgetSync } from './src/hooks/useWidgetSync';
-import { buildDayInsights } from './src/services/DayInsights';
+import { buildDayInsights } from './src/services/dayInsights';
 import { type ForecastWindow, hoursFor } from './src/services/DayWindow';
 import { TideClock } from './src/services/TideClock';
 import type { Colors } from './src/theme';

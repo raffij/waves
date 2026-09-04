@@ -10,7 +10,9 @@
     "web": "expo start --web",
     "preview": "EXPO_PUBLIC_PREVIEW=1 expo start --web",
     "lint": "oxlint . && oxfmt --check .",
-    "lint:fix": "oxlint . --fix && oxfmt ."
+    "lint:fix": "oxlint . --fix && oxfmt .",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@expo-google-fonts/anton": "^0.4.2",
@@ -35,6 +37,7 @@
     "@types/react": "~19.2.2",
     "oxfmt": "^0.66.0",
     "oxlint": "^1.81.0",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "vitest": "^3.2.7"
   }
 }

@@ -32,6 +32,10 @@ jobs:
         working-directory: expo
         run: npx tsc --noEmit
 
+      - name: Test
+        working-directory: expo
+        run: npm test
+
   automerge:
     name: Auto-merge
     needs: checks

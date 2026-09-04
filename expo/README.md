@@ -65,15 +65,21 @@ data built from simple formulas rather than a live fetch. Useful for
 eyeballing a UI change across all three themes without a TideCheck key or
 network access to TideCheck/Open-Meteo.
 
-### Lint & typecheck
+### Lint, typecheck & test
 
 ```bash
 npm run lint       # oxlint + oxfmt --check
 npm run lint:fix   # oxlint --fix + oxfmt, with fixes
 npx tsc --noEmit   # types
+npm test           # vitest run (service-layer unit tests)
+npm run test:watch # vitest, watch mode
 ```
 
-CI runs the first and third on every PR.
+CI runs all of these on every PR. Vitest only covers the plain-TypeScript
+service layer (`src/services/`, `src/models/`) — no React Native runtime,
+so no jest-expo preset. `src/services/dayInsights/dayInsights.test.ts` is
+a characterisation suite: fixed inputs pinned to their exact readout
+sentence via inline snapshots, regenerated with `npx vitest run -u`.
 
 ## Project layout
 
@@ -115,7 +121,10 @@ src/
                             insights judge the day over
     DayCondition.ts         one glyph-worthy condition (rain/sunny/hazy/
                             overcast) per day, for the forecast list's tiles
-    DayInsights.ts          pure buildDayInsights() + its tuning constants
+    dayInsights/            pure buildDayInsights(); one module per weather
+                            domain (wind/rain/sun/feels/light/clothing),
+                            each with its own tuning constants, assembled
+                            by readout.ts — see index.ts
     TideClock.ts            all Europe/London date parsing / formatting
   models/                   plain data shapes, no behaviour
     Location.ts             the location list + selected-location type

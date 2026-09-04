@@ -1,5 +1,5 @@
 import type { CloudCoverSeries } from './CloudCoverSeries';
-import { HEAVY_PEAK_MM, type SunBand, sunBandFor, WET_HOUR_MM } from './DayInsights';
+import { HEAVY_PEAK_MM, type SunBand, sunBandFor, WET_HOUR_MM } from './dayInsights';
 import { DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR } from './DayWindow';
 import type { PrecipitationSeries } from './PrecipitationSeries';
 import type { SunBrightnessSeries } from './SunBrightnessSeries';

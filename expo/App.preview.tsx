@@ -11,7 +11,7 @@ import { ThemeProvider, useTheme } from './src/hooks/useTheme';
 import { DEFAULT_LOCATION } from './src/models/Location';
 import type { Extreme } from './src/models/TideModels';
 import { CloudCoverSeries } from './src/services/CloudCoverSeries';
-import { buildDayInsights } from './src/services/DayInsights';
+import { buildDayInsights } from './src/services/dayInsights';
 import { DaylightSeries } from './src/services/DaylightSeries';
 import { type ForecastWindow, hoursFor } from './src/services/DayWindow';
 import { PrecipitationSeries } from './src/services/PrecipitationSeries';
