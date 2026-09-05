@@ -32,3 +32,4 @@ if it matters, the record's own text says which came first. Use
 | [2026-09-04](2026-09-04-day-insights-split-by-weather-domain.md) | Day-insights logic splits into one module per weather domain | Accepted |
 | [2026-09-04](2026-09-04-cache-node-modules-in-ci.md) | Cache `expo/node_modules` across CI and deploy via a shared composite action | Accepted |
 | [2026-09-05](2026-09-05-swim-card-generator.md) | Add a standalone CLI generator for a shareable swim-report card | Accepted |
+| [2026-09-05](2026-09-05-beach-water-quality-flags.md) | Swim-card beach flags use the Environment Agency's bathing-water data, as a best-effort unverified integration | Accepted |

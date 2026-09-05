@@ -38,18 +38,20 @@ renders a PNG card:
   with any other. Unlike the four existing clients it has no cache and no
   persisted key store: it's a one-shot script that fetches once and exits,
   so there's nothing worth caching.
-- **Per-beach flag data is dropped, not fabricated.** The mockup's "2
+- ~~**Per-beach flag data is dropped, not fabricated.** The mockup's "2
   beaches flagged" badge and color-coded pins imply real water-quality
   monitoring per beach; nothing in this app (or its two upstreams) reports
   that. Rather than inventing plausible-looking but fake safety statuses,
   the coastline illustration keeps the real place names (Bexhill, Glyne
   Gap, Bulverhythe, St Leonards, Pelham, Rock-a-Nore, Fairlight) as plain
   decorative markers with no flag/color meaning, and the top-right badge
-  shows a real reading instead — the sea-state label (flat/gentle/bouncy/
-  rough) computed from live wave height. Considered keeping the flag UI
-  with all beaches shown "clear" by default: rejected, since a
-  hardcoded-green safety indicator is worse than no indicator — it reads
-  as a real, checked status when nothing was checked.
+  shows a real reading instead.~~ **Superseded same-day** by
+  [2026-09-05](2026-09-05-beach-water-quality-flags.md): the user clarified
+  the flags are meant to reflect real per-beach water-quality status,
+  computed from water companies' storm-outflow data — this was wrong to
+  assume away. The sea-state badge/pins this bullet describes were replaced
+  by a real (best-effort, unverified) per-beach flag integration; the
+  sea-state reading it introduced stayed, moved onto the "SEA" stat box.
 - **`@napi-rs/canvas` over a headless-browser render.** Considered
   Playwright/Puppeteer + an HTML/CSS template (screenshot it), which would
   let the design be written in familiar CSS. Rejected: it means a Chromium

@@ -44,23 +44,39 @@ chose (created if it doesn't exist).
 | `--sample` | Render with realistic sample data instead of fetching live conditions. |
 | `--help`, `-h` | Show usage. |
 
-## What's real data and what's decorative
+## What's real data and what's unverified
 
 The tide state/times, sea temperature, wave height, wind, air temperature,
 sky condition and sunset are all live readings for Hastings Pier (or, with
 `--sample`, a synthetic-but-realistic stand-in for the same shape of data).
 
-The illustrated coastline strip with named beach markers (Bexhill, Glyne
-Gap, Bulverhythe, St Leonards, Pelham, Rock-a-Nore, Fairlight) is
-**decorative only** — real place names along that stretch of coast, but the
-app has no per-beach water-quality/safety data source, so it deliberately
-carries no flag icons or "beaches flagged" count. See
-`docs/decisions/2026-09-05-swim-card-generator.md` for why.
+The illustrated coastline strip's beach flags (Bexhill, Glyne Gap,
+Bulverhythe, St Leonards, Pelham, Rock-a-Nore, Fairlight) are meant to
+reflect real water quality, computed from the water companies' storm-outflow
+data — but **`src/beachQuality.mjs`'s integration against the Environment
+Agency's Bathing Water Quality open data is unverified**: this was built
+without live access to `environment.data.gov.uk` to confirm the request
+shape or response fields, from training knowledge of how the EA's other
+Linked Data APIs work, not from tested docs. Run it for real and see what
+comes back — if the query shape is wrong, every beach will read
+**"unknown"** (a dashed gray pin), which is the deliberately safe failure
+mode: this tool never guesses a beach "clear" when the lookup didn't
+actually work. See
+`docs/decisions/2026-09-05-beach-water-quality-flags.md` for the full
+reasoning, what was considered and rejected, and what's still open
+(the EA's *seasonal classification* is what's wired up today, not the
+finer-grained live storm-overflow discharge events the flags are meant to
+reflect — Southern Water's Rivers and Seas Watch or the Water UK storm-
+overflow hub would be a closer match once one of their exact endpoints can
+be confirmed).
 
 ## How it's built
 
 - `src/tideClient.mjs` / `src/weatherClient.mjs` — one-shot fetches against
   TideCheck and Open-Meteo (no cache; this script doesn't stay running).
+- `src/beachQuality.mjs` — per-beach water-quality flags from the
+  Environment Agency's open data, fetched independently of tide/weather.
+  **Unverified** — see the section above.
 - `src/series.mjs` / `src/tideClock.mjs` — small standalone interpolation
   and London-time helpers (a fresh implementation, not imported from
   `expo/`, per this repo's no-shared-code-between-clients convention).
