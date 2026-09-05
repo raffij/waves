@@ -4,7 +4,7 @@ import Svg, { Line, Rect } from 'react-native-svg';
 import type { Fonts } from '../fonts';
 import { useTheme } from '../hooks/useTheme';
 import type { DaylightSeries } from '../services/DaylightSeries';
-import { DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR } from '../services/DayWindow';
+import { DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR, hourTicksFor } from '../services/DayWindow';
 import type { PrecipitationSeries } from '../services/PrecipitationSeries';
 import { TideClock } from '../services/TideClock';
 import type { Colors } from '../theme';
@@ -212,7 +212,7 @@ export function PrecipitationChart({
   const activeMm = activeBarIndex >= 0 ? (bars[activeBarIndex].mm ?? 0) : null;
   const activeX = PADDING_X + ((activeTime.getTime() - start.getTime()) / totalMs) * plotWidth;
 
-  const hourTicks = [startHour, Math.round((startHour + endHour) / 2), endHour];
+  const hourTicks = hourTicksFor({ startHour, endHour });
 
   return (
     <View onLayout={onLayout}>
