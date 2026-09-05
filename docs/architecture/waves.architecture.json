@@ -57,7 +57,7 @@
     { "id": "expo-tide", "from": "expoClient", "to": "tideAPI", "label": "X-API-Key · 8s timeout", "variant": "emphasis", "fromSide": "right", "toSide": "left" },
     { "id": "expo-marine", "from": "expoClient", "to": "marineAPI", "label": "hourly=wave_height", "fromSide": "right", "toSide": "left", "labelSegment": 0, "labelDy": -14 },
     { "id": "expo-forecast", "from": "expoClient", "to": "forecastAPI", "label": "wind_speed_10m,precipitation", "fromSide": "right", "toSide": "left" },
-    { "id": "expo-water-quality", "from": "expoClient", "to": "eaBathingWaterAPI", "label": "lat/long/dist · unverified", "fromSide": "bottom", "toSide": "left", "labelAt": [400, 478] },
+    { "id": "expo-water-quality", "from": "expoClient", "to": "eaBathingWaterAPI", "label": "OSGB36 easting/northing bbox", "fromSide": "bottom", "toSide": "left", "labelAt": [400, 530] },
 
     { "id": "widget-tide", "from": "widgetClient", "to": "tideAPI", "label": "X-API-Key · 8s timeout", "variant": "emphasis", "fromSide": "left", "toSide": "right" },
     { "id": "widget-marine", "from": "widgetClient", "to": "marineAPI", "label": "hourly=wave_height", "fromSide": "left", "toSide": "right", "labelSegment": 0, "labelDy": -14 },

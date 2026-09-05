@@ -1,24 +1,41 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { wgs84ToOsGridRef } from './OsGridRef';
 
 // Bathing-water pollution status for the selected location, driven by the
 // Environment Agency's Bathing Water Quality open data
-// (environment.data.gov.uk) — the same source and query shape
-// tools/swim-card/src/beachQuality.mjs uses for its per-beach flags.
+// (environment.data.gov.uk/bwq, branded "Swimfo") — the same source and
+// endpoint tools/swim-card/src/beachQuality.mjs uses for its per-beach
+// flags.
 //
-// ⚠️ UNVERIFIED INTEGRATION, same caveat as beachQuality.mjs: this was built
-// from training knowledge of environment.data.gov.uk's other Linked Data
-// APIs (e.g. flood-monitoring) querying by lat/long/dist, not from confirmed
-// bathing-water API docs, and hasn't been run against the real service. Run
-// this for real and fix whatever's wrong: the query URL, the field names
-// read out of the response, or the classification -> status mapping.
+// ⚠️ PARTIALLY VERIFIED, still not run against the real service. This
+// session's outbound access to environment.data.gov.uk is blocked, but
+// WebSearch (unlike WebFetch) isn't, and confirmed real API documentation:
+// - The base endpoint and JSON format
+//   (environment.data.gov.uk/doc/bathing-water.json) are correct.
+// - The geographic filter is NOT lat/long/dist (that was a guess ported
+//   from the flood-monitoring API's query shape, and wrong) — the real API
+//   filters by min-/max-samplingPoint.easting/.northing, OSGB36 British
+//   National Grid coordinates, not WGS84 lat/long. OsGridRef.ts converts
+//   the location's lat/long to easting/northing and queries a bounding box
+//   around it, same 2km-radius intent as the original (wrong) `dist` guess.
+// - The exact response field names for a site's current classification
+//   (guessed below as `latestComplianceAssessment.complianceClassification`
+//   plus the older `currentClassification.classification` guess, tried in
+//   order) are still unconfirmed — search results mentioned
+//   `latestComplianceAssessment...name` in passing but never showed a full
+//   example response body to check the `label` vs `name` field. Still
+//   never resolves to 'clear' on anything unrecognised, so a wrong guess
+//   here costs an icon, not a false safety claim.
 //
-// Nothing here ever reports "clear" on a guess: any request failure, an
-// unrecognised response shape, or no bathing water found near the
-// location's coordinates all resolve to 'unknown', never 'clear' — a wrong
-// "unknown" costs the card an icon; a wrong "clear" is a false safety claim.
+// See docs/decisions/2026-09-05-bathing-water-lookup-uses-os-grid-not-latlong.md
+// for what changed and why, and run this for real to fix whatever's still
+// wrong.
 
 const EA_BATHING_WATER_BASE = 'https://environment.data.gov.uk/doc/bathing-water.json';
-const SEARCH_RADIUS_KM = 2;
+// Matches the original (wrong) `dist=2` guess's intent: a ~2km-radius
+// search around the location, expressed as a bounding-box half-width in
+// metres since the real API takes an easting/northing box, not a radius.
+const SEARCH_RADIUS_METRES = 2000;
 const FETCH_TIMEOUT_MS = 8000;
 
 // Matches WaveAPIClient's cache window — a short-term pollution risk
@@ -110,10 +127,13 @@ export class WaterQualityClient {
   }
 
   private async fetch(): Promise<WaterQualityResult> {
+    const { easting, northing } = wgs84ToOsGridRef(Number(this.latitude), Number(this.longitude));
+
     const url = new URL(EA_BATHING_WATER_BASE);
-    url.searchParams.set('lat', this.latitude);
-    url.searchParams.set('long', this.longitude);
-    url.searchParams.set('dist', String(SEARCH_RADIUS_KM));
+    url.searchParams.set('min-samplingPoint.easting', String(Math.round(easting - SEARCH_RADIUS_METRES)));
+    url.searchParams.set('max-samplingPoint.easting', String(Math.round(easting + SEARCH_RADIUS_METRES)));
+    url.searchParams.set('min-samplingPoint.northing', String(Math.round(northing - SEARCH_RADIUS_METRES)));
+    url.searchParams.set('max-samplingPoint.northing', String(Math.round(northing + SEARCH_RADIUS_METRES)));
     url.searchParams.set('_view', 'default');
     url.searchParams.set('_pageSize', '1');
 
@@ -125,9 +145,18 @@ export class WaterQualityClient {
 
       const body = await response.json();
       const item = body?.items?.[0] ?? body?.result?.items?.[0] ?? null;
-      const classificationRaw = item?.currentClassification?.classification?.label ?? item?.classification ?? null;
+      // Tried in order, most-likely-real first: none of these field names
+      // have been confirmed against a real response body (see header
+      // comment) — this stays a guess-chain the same way the pre-fix
+      // lat/long/dist query was, just a better-informed one.
+      const classificationRaw =
+        item?.latestComplianceAssessment?.complianceClassification?.name ??
+        item?.latestComplianceAssessment?.complianceClassification?.label ??
+        item?.currentClassification?.classification?.label ??
+        item?.classification ??
+        null;
       const classification = typeof classificationRaw === 'string' ? classificationRaw.toLowerCase() : null;
-      const siteName = typeof item?.label === 'string' ? item.label : null;
+      const siteName = typeof item?.label === 'string' ? item.label : (item?.name ?? null);
 
       return {
         status: this.classificationToStatus(classification),

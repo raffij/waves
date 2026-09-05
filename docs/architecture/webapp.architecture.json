@@ -59,7 +59,7 @@
     { "id": "tide-api", "from": "tideClient", "to": "tideAPI", "label": "X-API-Key · 8s timeout", "variant": "emphasis" },
     { "id": "wave-marine", "from": "waveClient", "to": "marineAPI", "label": "hourly=wave_height" },
     { "id": "wave-forecast", "from": "waveClient", "to": "forecastAPI", "label": "wind, precip, temp, sun" },
-    { "id": "waterquality-api", "from": "waterQualityClient", "to": "eaBathingWaterAPI", "label": "lat/long/dist · unverified" },
+    { "id": "waterquality-api", "from": "waterQualityClient", "to": "eaBathingWaterAPI", "label": "OSGB36 easting/northing bbox" },
 
     { "id": "series-ui", "from": "seriesInsights", "to": "uiComponents", "label": "current values, trends, day insights" }
   ],

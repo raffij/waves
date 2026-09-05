@@ -72,14 +72,18 @@ What happens between opening the Expo app and seeing numbers on screen:
    outage can't take down the other — the Forecast API for wind and
    precipitation together.
 4a. **Water-quality client checks the EA's bathing-water classification.**
-   `WaterQualityClient` queries `environment.data.gov.uk` by the selected
-   location's lat/long; a request failure or unrecognised response degrades
-   to `'unknown'` rather than ever guessing `'clear'` — same rule
-   `tools/swim-card/src/beachQuality.mjs` uses for its per-beach flags. This
-   is an unverified integration (see
-   [`2026-09-05-beach-water-quality-flags.md`](decisions/2026-09-05-beach-water-quality-flags.md)):
-   the exact request/response shape hasn't been confirmed against the live
-   API.
+   `WaterQualityClient` converts the selected location's lat/long to an
+   OSGB36 National Grid easting/northing (`OsGridRef.ts` — the coordinate
+   system `environment.data.gov.uk` actually filters by, not lat/long/dist)
+   and queries a ~2km bounding box around it; a request failure or
+   unrecognised response degrades to `'unknown'` rather than ever guessing
+   `'clear'` — same rule `tools/swim-card/src/beachQuality.mjs` uses for its
+   per-beach flags. This is a partially-verified integration (see
+   [`2026-09-05-beach-water-quality-flags.md`](decisions/2026-09-05-beach-water-quality-flags.md)
+   and
+   [`2026-09-05-bathing-water-lookup-uses-os-grid-not-latlong.md`](decisions/2026-09-05-bathing-water-lookup-uses-os-grid-not-latlong.md)):
+   the response's exact field names still haven't been confirmed against
+   the live API.
 5. **Results become interpolating series.** Raw points turn into
    `TideSeries` / `WaveSeries` / `WindSeries` / `PrecipitationSeries`, which
    answer "value right now" and "trend" by linear interpolation between the
