@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 import { wgs84ToOsGridRef } from './OsGridRef';
 
 // Bathing-water pollution status for the selected location, driven by the
@@ -30,6 +31,15 @@ import { wgs84ToOsGridRef } from './OsGridRef';
 // See docs/decisions/2026-09-05-bathing-water-lookup-uses-os-grid-not-latlong.md
 // for what changed and why, and run this for real to fix whatever's still
 // wrong.
+//
+// One thing IS now confirmed, the hard way: environment.data.gov.uk sends
+// no CORS headers, so a browser blocks reading the response outright — the
+// web build's `fetch()` fails every time, not just on a bad request. On
+// iOS/Android this doesn't apply (CORS is a browser-only mechanism; native
+// fetch isn't subject to it), so the request there behaves however the
+// still-unverified query/field-name guesses above leave it. `fetch()`
+// below skips the network call entirely on web rather than attempting one
+// guaranteed to fail — see docs/decisions/2026-09-05-skip-water-quality-fetch-on-web-cors.md.
 
 const EA_BATHING_WATER_BASE = 'https://environment.data.gov.uk/doc/bathing-water.json';
 // Matches the original (wrong) `dist=2` guess's intent: a ~2km-radius
@@ -127,6 +137,12 @@ export class WaterQualityClient {
   }
 
   private async fetch(): Promise<WaterQualityResult> {
+    // environment.data.gov.uk sends no CORS headers — a browser fetch here
+    // always fails, so there's nothing to gain (and a console error and a
+    // wasted round-trip to lose) by attempting one. See this file's header
+    // comment.
+    if (Platform.OS === 'web') return this.unknownResult();
+
     const { easting, northing } = wgs84ToOsGridRef(Number(this.latitude), Number(this.longitude));
 
     const url = new URL(EA_BATHING_WATER_BASE);
