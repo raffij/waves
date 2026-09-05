@@ -1,0 +1,21 @@
+{
+  "name": "swim-card-generator",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Standalone CLI that renders a shareable 'swim report' card (tide, sea temperature, wind, sunset) for Hastings Pier to a PNG file in a folder you choose.",
+  "type": "module",
+  "bin": {
+    "swim-card": "./src/cli.mjs"
+  },
+  "scripts": {
+    "generate": "node ./src/cli.mjs"
+  },
+  "dependencies": {
+    "@fontsource/baloo-2": "^5.3.0",
+    "@fontsource/nunito": "^5.3.0",
+    "@napi-rs/canvas": "^1.0.8"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

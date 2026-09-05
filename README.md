@@ -50,6 +50,8 @@ docs/
   architecture.md              how the four clients fit together, what's duplicated
   architecture/                typed Archify source + interactive HTML diagrams
   decisions/                   architecture decision log (one file per decision)
+tools/
+  swim-card/                   CLI: generates a shareable swim-report PNG card
 intent/                        AI-native SDLC artifacts (intent → spec → plan)
 ```
 
@@ -69,6 +71,10 @@ Pick the client you want — each is self-contained:
 - **macOS desktop widget**: generate the Xcode project with XcodeGen, build
   the settings app once, drag the widget onto the desktop. See
   [`mac-widget/DesktopWidget/README.md`](mac-widget/DesktopWidget/README.md).
+- **Swim-card generator** (one-shot CLI, not a live client): `cd
+  tools/swim-card && npm install`, then generate a shareable PNG report
+  card into a folder you choose. See
+  [`tools/swim-card/README.md`](tools/swim-card/README.md).
 
 ## Design
 
