@@ -5,7 +5,7 @@ import type { Fonts } from '../fonts';
 import { useTheme } from '../hooks/useTheme';
 import type { CloudCoverSeries } from '../services/CloudCoverSeries';
 import type { DaylightSeries } from '../services/DaylightSeries';
-import { DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR } from '../services/DayWindow';
+import { DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR, hourTicksFor } from '../services/DayWindow';
 import type { SunBrightnessSeries } from '../services/SunBrightnessSeries';
 import type { TemperatureSeries } from '../services/TemperatureSeries';
 import { TideClock } from '../services/TideClock';
@@ -277,7 +277,7 @@ export function TemperatureChart({
   const activeTemp = series.tempAt(activeTime);
   const activePoint = activeFeelsLike !== null ? { x: toX(activeTime), y: toTempY(activeFeelsLike) } : null;
 
-  const hourTicks = [startHour, Math.round((startHour + endHour) / 2), endHour];
+  const hourTicks = hourTicksFor({ startHour, endHour });
 
   return (
     <View onLayout={onLayout}>

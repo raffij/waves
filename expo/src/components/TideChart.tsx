@@ -5,7 +5,7 @@ import Svg, { Circle, Defs, Line, LinearGradient, Path, Rect, Stop } from 'react
 import type { Fonts } from '../fonts';
 import { useTheme } from '../hooks/useTheme';
 import type { DaylightSeries } from '../services/DaylightSeries';
-import { DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR } from '../services/DayWindow';
+import { DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR, hourTicksFor } from '../services/DayWindow';
 import { compassPoint } from '../services/SeaCurrentSeries';
 import { TideClock } from '../services/TideClock';
 import type { TideSeries } from '../services/TideSeries';
@@ -372,7 +372,7 @@ export function TideChart({
   const activeGust = windSeries?.gustAt(activeTime) ?? null;
   const activeTidePoint = activeTideHeight !== null ? toTideXY(activeTime, activeTideHeight) : null;
 
-  const hourTicks = [startHour, Math.round((startHour + endHour) / 2), endHour];
+  const hourTicks = hourTicksFor({ startHour, endHour });
 
   return (
     <View onLayout={onLayout}>

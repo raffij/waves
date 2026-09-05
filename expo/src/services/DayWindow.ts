@@ -30,3 +30,17 @@ const DAYTIME_HOURS: Hours = { startHour: DAY_WINDOW_START_HOUR, endHour: DAY_WI
 export function hoursFor(forecastWindow: ForecastWindow): Hours {
   return forecastWindow === 'daytime' ? DAYTIME_HOURS : WHOLE_DAY_HOURS;
 }
+
+// Hour-axis tick labels for a chart. Daytime's narrower window (14h) ticks
+// every 3 hours; wholeDay's 24h span ticks every 6 — matching cadence to
+// span so neither window crowds the axis with more labels than it can
+// space out cleanly. Shared by every chart with an hour axis (TideChart,
+// TemperatureChart, PrecipitationChart) so they stay consistent.
+export function hourTicksFor(hours: Hours): number[] {
+  const interval = hours.endHour - hours.startHour > DAY_WINDOW_END_HOUR - DAY_WINDOW_START_HOUR ? 6 : 3;
+  const ticks: number[] = [];
+  for (let h = hours.startHour; h <= hours.endHour; h += interval) {
+    ticks.push(h);
+  }
+  return ticks;
+}
