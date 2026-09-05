@@ -12,7 +12,7 @@ export interface Fonts {
 // look; kept as the app's typography everywhere since it reads more
 // clearly than the system font it replaced.
 export const appFonts: Fonts = {
-  display: 'Anton_400Regular',
+  display: 'BebasNeue_400Regular',
   mono: 'JetBrainsMono_400Regular',
   monoBold: 'JetBrainsMono_700Bold',
 };
