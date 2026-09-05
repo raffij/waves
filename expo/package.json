@@ -15,7 +15,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@expo-google-fonts/anton": "^0.4.2",
+    "@expo-google-fonts/bebas-neue": "^0.4.1",
     "@expo-google-fonts/jetbrains-mono": "^0.4.1",
     "@expo/metro-runtime": "~57.0.10",
     "@expo/vector-icons": "^15.0.2",

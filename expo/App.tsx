@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Anton_400Regular, useFonts as useAntonFonts } from '@expo-google-fonts/anton';
+import { BebasNeue_400Regular, useFonts as useBebasNeueFonts } from '@expo-google-fonts/bebas-neue';
 import {
   JetBrainsMono_400Regular,
   JetBrainsMono_700Bold,
@@ -132,9 +132,9 @@ function AppContent() {
   const { colors, fonts, themeName, toggleTheme } = useTheme();
   const styles = useMemo(() => getStyles(colors, fonts), [colors, fonts]);
   const statusBarStyle = themeName === 'dark' ? 'light-content' : 'dark-content';
-  const [antonLoaded] = useAntonFonts({ Anton_400Regular });
+  const [bebasNeueLoaded] = useBebasNeueFonts({ BebasNeue_400Regular });
   const [jetBrainsMonoLoaded] = useJetBrainsMonoFonts({ JetBrainsMono_400Regular, JetBrainsMono_700Bold });
-  const fontsLoaded = antonLoaded && jetBrainsMonoLoaded;
+  const fontsLoaded = bebasNeueLoaded && jetBrainsMonoLoaded;
 
   if (apiKey === undefined || location === undefined || !fontsLoaded) {
     return (
