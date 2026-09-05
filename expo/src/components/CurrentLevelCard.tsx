@@ -5,6 +5,7 @@ import type { Fonts } from '../fonts';
 import { useTheme } from '../hooks/useTheme';
 import type { Location } from '../models/Location';
 import type { CurrentLevel, Trend } from '../services/TideSeries';
+import type { WaterQualityResult, WaterQualityStatus } from '../services/WaterQualityClient';
 import { compassPointFor } from '../services/WindSeries';
 import type { Colors } from '../theme';
 
@@ -16,6 +17,7 @@ interface Props {
   windDirection: number | null;
   windTrend: Trend;
   seaTemp: number | null;
+  waterQuality: WaterQualityResult | null;
   fetchedAt: Date | null;
   /** Set when viewing a non-live day (e.g. "Tomorrow"), shown in place of the "Updated" timestamp. */
   dayLabel?: string | null;
@@ -43,6 +45,41 @@ function TrendBadge({ trend, colors, styles }: { trend: Trend; colors: Colors; s
   return (
     <View style={styles.trendBadge}>
       <Ionicons name={trendIcon[trend]} size={11} color={tint} />
+    </View>
+  );
+}
+
+// Icon/color/label per pollution status, worst-first so a reader scanning
+// down never mistakes an EA outage ('unknown') for a clean bill of health
+// ('clear') — see WaterQualityClient's own comment on never guessing
+// 'clear'. Rendered as its own row rather than a fifth Stat: a
+// clear/flagged/unknown read isn't a number with a unit, and the location
+// carries one reading regardless of which forecast day is selected.
+function WaterQualityRow({
+  waterQuality,
+  colors,
+  styles,
+}: {
+  waterQuality: WaterQualityResult | null;
+  colors: Colors;
+  styles: Styles;
+}) {
+  if (!waterQuality) return null;
+
+  const config: Record<WaterQualityStatus, { icon: keyof typeof Ionicons.glyphMap; color: string; label: string }> = {
+    flagged: { icon: 'warning-outline', color: colors.falling, label: 'Flagged' },
+    clear: { icon: 'checkmark-circle-outline', color: colors.rising, label: 'Clear' },
+    unknown: { icon: 'help-circle-outline', color: colors.textSecondary, label: 'Unknown' },
+  };
+  const { icon, color, label } = config[waterQuality.status];
+
+  return (
+    <View style={styles.waterQualityRow}>
+      <Ionicons name={icon} size={12} color={color} />
+      <Text style={[styles.waterQualityText, { color }]} numberOfLines={1}>
+        Water quality: {label}
+        {waterQuality.siteName ? ` (${waterQuality.siteName})` : ''}
+      </Text>
     </View>
   );
 }
@@ -98,6 +135,7 @@ export function CurrentLevelCard({
   windDirection,
   windTrend,
   seaTemp,
+  waterQuality,
   fetchedAt,
   dayLabel,
   onPressUpdated,
@@ -145,6 +183,7 @@ export function CurrentLevelCard({
           )}
         </Pressable>
       </View>
+      <WaterQualityRow waterQuality={waterQuality} colors={colors} styles={styles} />
       <View style={styles.contentRow}>
         <Stat
           icon={<Ionicons name="water" size={13} color={colors.primary} />}
@@ -223,6 +262,8 @@ function getStyles(colors: Colors, fonts: Fonts) {
     },
     liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.rising },
     badgeText: { color: colors.textSecondary, fontSize: 11, fontWeight: '600', fontFamily: fonts.mono },
+    waterQualityRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 6 },
+    waterQualityText: { fontSize: 11, fontWeight: '600', fontFamily: fonts.mono, flexShrink: 1 },
     contentRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10, gap: 8 },
     stat: { flex: 1 },
     statLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 4 },

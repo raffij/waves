@@ -9,7 +9,8 @@
       { "id": "tide", "label": "Tide request path", "focus": ["expoClient", "iosWidgetClient", "widgetClient", "desktopClient", "tideAPI"], "note": "All four clients call TideCheck independently, each with its own key and cache (or no cache, for the widgets)." },
       { "id": "wave", "label": "Wave, wind & rain", "focus": ["expoClient", "iosWidgetClient", "widgetClient", "desktopClient", "marineAPI", "forecastAPI"], "note": "Open-Meteo needs no key; wave and wind/precipitation are fetched as two separate calls." },
       { "id": "keys", "label": "Where the API key lives", "focus": ["expoKey", "iosWidgetKey", "widgetKey", "desktopKey"], "note": "Four key stores. Widgets can't take direct input, so each borrows a key from a companion process." },
-      { "id": "bridges", "label": "App → widget hand-off", "focus": ["expoUI", "expoKey", "iosWidgetKey", "desktopKey"], "note": "The iOS widget's config comes from the Expo app; the desktop widget's comes from its own tiny settings app." }
+      { "id": "bridges", "label": "App → widget hand-off", "focus": ["expoUI", "expoKey", "iosWidgetKey", "desktopKey"], "note": "The iOS widget's config comes from the Expo app; the desktop widget's comes from its own tiny settings app." },
+      { "id": "waterQuality", "label": "Water quality (Expo only)", "focus": ["expoClient", "eaBathingWaterAPI"], "note": "Only the Expo app checks the EA's bathing-water classification for the selected location; the other three clients don't call this endpoint." }
     ]
   },
   "components": [
@@ -24,6 +25,7 @@
     { "id": "tideAPI", "type": "external", "label": "TideCheck API", "sublabel": "tide extremes + series", "pos": [470, 30], "size": [210, 76] },
     { "id": "marineAPI", "type": "external", "label": "Open-Meteo Marine", "sublabel": "wave height", "pos": [470, 180], "size": [210, 76] },
     { "id": "forecastAPI", "type": "external", "label": "Open-Meteo Forecast", "sublabel": "wind + precipitation", "pos": [470, 330], "size": [210, 76] },
+    { "id": "eaBathingWaterAPI", "type": "external", "label": "EA Bathing Water", "sublabel": "bathing-water classification", "pos": [470, 440], "size": [210, 76] },
 
     { "id": "widgetUI", "type": "frontend", "label": "macOS Menu Bar", "sublabel": "SwiftBar / xbar · Swift script", "tag": "every 15 min", "pos": [900, 40], "size": [200, 66] },
     { "id": "widgetKey", "type": "security", "label": "macOS Keychain", "sublabel": "via `security` CLI", "pos": [900, 166], "size": [200, 60] },
@@ -55,6 +57,7 @@
     { "id": "expo-tide", "from": "expoClient", "to": "tideAPI", "label": "X-API-Key · 8s timeout", "variant": "emphasis", "fromSide": "right", "toSide": "left" },
     { "id": "expo-marine", "from": "expoClient", "to": "marineAPI", "label": "hourly=wave_height", "fromSide": "right", "toSide": "left", "labelSegment": 0, "labelDy": -14 },
     { "id": "expo-forecast", "from": "expoClient", "to": "forecastAPI", "label": "wind_speed_10m,precipitation", "fromSide": "right", "toSide": "left" },
+    { "id": "expo-water-quality", "from": "expoClient", "to": "eaBathingWaterAPI", "label": "lat/long/dist · unverified", "fromSide": "bottom", "toSide": "left", "labelAt": [400, 478] },
 
     { "id": "widget-tide", "from": "widgetClient", "to": "tideAPI", "label": "X-API-Key · 8s timeout", "variant": "emphasis", "fromSide": "left", "toSide": "right" },
     { "id": "widget-marine", "from": "widgetClient", "to": "marineAPI", "label": "hourly=wave_height", "fromSide": "left", "toSide": "right", "labelSegment": 0, "labelDy": -14 },
@@ -62,7 +65,7 @@
   ],
   "cards": [
     { "dot": "cyan", "title": "Fetch", "items": ["All four clients read a key, then call TideCheck plus two Open-Meteo endpoints", "Expo and the xbar script cache to disk with a 6h TTL and fall back to stale data on failure", "The two widgets skip caching entirely — WidgetKit already throttles reloads to roughly hourly"] },
-    { "dot": "violet", "title": "Diverge", "items": ["Expo persists multiple locations; the xbar script hardcodes one station; both widgets read whichever location their companion process last saved", "Expo renders native SVG charts; the xbar script prints ASCII bars; both widgets render native SwiftUI", "Key storage differs across all four: Keychain/localStorage, the macOS `security` CLI, and two App Group hand-offs"] },
+    { "dot": "violet", "title": "Diverge", "items": ["Expo persists multiple locations; the xbar script hardcodes one station; both widgets read whichever location their companion process last saved", "Expo renders native SVG charts; the xbar script prints ASCII bars; both widgets render native SwiftUI", "Key storage differs across all four: Keychain/localStorage, the macOS `security` CLI, and two App Group hand-offs", "Only Expo checks the EA's bathing-water classification for the selected location; the xbar script and both widgets don't"] },
     { "dot": "emerald", "title": "Own", "items": ["No shared package across any of the four clients", "Every duplicated fetch/parse behavior is a separate, hand-written implementation", "The iOS widget borrows its config from the Expo app it's attached to; the desktop widget gets its from its own tiny settings app — neither reuses the xbar script's Keychain-based key"] }
   ]
 }

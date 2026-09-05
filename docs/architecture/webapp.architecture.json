@@ -8,7 +8,8 @@
     "views": [
       { "id": "state", "label": "Boot & state hydration", "focus": ["appScreen", "stateHooks", "useForecastData", "useWidgetSync"], "note": "apiKey and location start undefined rather than defaulting early, so nothing fires while storage is still being read." },
       { "id": "fetch", "label": "Tide + wave fetch", "focus": ["tideClient", "waveClient", "deviceStorage", "tideAPI", "marineAPI", "forecastAPI"], "note": "Two queries run in parallel, each client checking its own cache first; a wave-query failure never blocks the tide UI." },
-      { "id": "resilience", "label": "Cache-first, stale over empty", "focus": ["tideClient", "waveClient", "deviceStorage", "seriesInsights"], "note": "On a network error each client serves its last cache; retries are disabled to protect TideCheck's 50-request/day budget." },
+      { "id": "resilience", "label": "Cache-first, stale over empty", "focus": ["tideClient", "waveClient", "waterQualityClient", "deviceStorage", "seriesInsights"], "note": "On a network error each client serves its last cache; retries are disabled to protect TideCheck's 50-request/day budget." },
+      { "id": "waterQuality", "label": "Water quality fetch", "focus": ["useForecastData", "waterQualityClient", "deviceStorage", "eaBathingWaterAPI"], "note": "A third, independent query — its own 6h AsyncStorage cache, degrading to 'unknown' rather than blocking or guessing 'clear' on failure." },
       { "id": "widget-handoff", "label": "App → iOS widget hand-off", "focus": ["useWidgetSync", "widgetBridge", "secureKeyStore"], "note": "The widget can't show a text field, so the app pushes it config over a shared App Group on every key/location change." }
     ]
   },
@@ -25,17 +26,19 @@
     { "id": "deviceStorage", "type": "database", "label": "AsyncStorage", "sublabel": "location, theme, API cache", "pos": [740, 150], "size": [200, 80] },
     { "id": "tideClient", "type": "backend", "label": "TideAPIClient", "tag": "8s timeout", "sublabel": "6h cache · stale-on-failure", "pos": [740, 280], "size": [200, 80] },
     { "id": "waveClient", "type": "backend", "label": "WaveAPIClient", "sublabel": "6h cache, independent fetch", "pos": [740, 420], "size": [200, 90] },
-    { "id": "seriesInsights", "type": "backend", "label": "Series & Day Insights", "tag": "Europe/London", "sublabel": "Series + Forecast + Insights", "pos": [740, 570], "size": [200, 100] },
+    { "id": "waterQualityClient", "type": "backend", "label": "WaterQualityClient", "sublabel": "6h cache, degrades to 'unknown'", "pos": [740, 570], "size": [200, 90] },
+    { "id": "seriesInsights", "type": "backend", "label": "Series & Day Insights", "tag": "Europe/London", "sublabel": "Series + Forecast + Insights", "pos": [740, 720], "size": [200, 100] },
 
     { "id": "tideAPI", "type": "external", "label": "TideCheck API", "sublabel": "tide extremes + height series", "pos": [1090, 150], "size": [200, 90] },
     { "id": "marineAPI", "type": "external", "label": "Open-Meteo Marine", "sublabel": "wave height", "pos": [1090, 380], "size": [200, 90] },
-    { "id": "forecastAPI", "type": "external", "label": "Open-Meteo Forecast", "sublabel": "wind, rain, temp, sun", "pos": [1090, 500], "size": [200, 100] }
+    { "id": "forecastAPI", "type": "external", "label": "Open-Meteo Forecast", "sublabel": "wind, rain, temp, sun", "pos": [1090, 500], "size": [200, 100] },
+    { "id": "eaBathingWaterAPI", "type": "external", "label": "EA Bathing Water", "sublabel": "bathing-water classification", "pos": [1090, 650], "size": [200, 90] }
   ],
   "boundaries": [
     { "kind": "region", "label": "App.tsx — the single screen", "wraps": ["appScreen", "uiComponents"] },
     { "kind": "region", "label": "hooks/ — state, data & widget sync", "wraps": ["stateHooks", "useForecastData", "useWidgetSync"] },
     { "kind": "region", "label": "modules/widget-bridge/ — outside the webapp", "wraps": ["widgetBridge"] },
-    { "kind": "region", "label": "services/ — fetch, cache, security & view models", "wraps": ["secureKeyStore", "deviceStorage", "tideClient", "waveClient", "seriesInsights"] }
+    { "kind": "region", "label": "services/ — fetch, cache, security & view models", "wraps": ["secureKeyStore", "deviceStorage", "tideClient", "waveClient", "waterQualityClient", "seriesInsights"] }
   ],
   "connections": [
     { "id": "app-ui", "from": "appScreen", "to": "uiComponents", "label": "renders", "fromSide": "bottom", "toSide": "top", "labelAt": [140, 134] },
@@ -48,19 +51,21 @@
 
     { "id": "forecast-tide", "from": "useForecastData", "to": "tideClient", "label": "tide", "labelAt": [625, 320] },
     { "id": "forecast-wave", "from": "useForecastData", "to": "waveClient", "label": "wave", "labelAt": [625, 465] },
-    { "id": "forecast-series", "from": "useForecastData", "to": "seriesInsights", "label": "select()", "labelAt": [627, 590] },
+    { "id": "forecast-waterquality", "from": "useForecastData", "to": "waterQualityClient", "label": "water quality", "labelAt": [610, 610] },
+    { "id": "forecast-series", "from": "useForecastData", "to": "seriesInsights", "label": "select()", "labelAt": [627, 745] },
 
     { "id": "widgetsync-bridge", "from": "useWidgetSync", "to": "widgetBridge", "label": "syncWidgetConfig(apiKey, location)", "fromSide": "bottom", "toSide": "top", "labelAt": [490, 404] },
 
     { "id": "tide-api", "from": "tideClient", "to": "tideAPI", "label": "X-API-Key · 8s timeout", "variant": "emphasis" },
     { "id": "wave-marine", "from": "waveClient", "to": "marineAPI", "label": "hourly=wave_height" },
     { "id": "wave-forecast", "from": "waveClient", "to": "forecastAPI", "label": "wind, precip, temp, sun" },
+    { "id": "waterquality-api", "from": "waterQualityClient", "to": "eaBathingWaterAPI", "label": "lat/long/dist · unverified" },
 
     { "id": "series-ui", "from": "seriesInsights", "to": "uiComponents", "label": "current values, trends, day insights" }
   ],
   "cards": [
     { "dot": "cyan", "title": "Two clocks, one screen", "items": ["Tide and wave queries run in parallel, gated until apiKey and location hydrate from storage", "A background refresh tops up any cache hit landed over an hour old, without blocking the screen"] },
     { "dot": "violet", "title": "Cache first, stale over empty", "items": ["Each client checks its own 6h AsyncStorage cache before any network call, and serves it on failure", "Query retries are disabled — TideCheck's 50-request/day budget can't absorb them"] },
-    { "dot": "emerald", "title": "Pure computation, thin UI", "items": ["Raw JSON becomes interpolating Series answering “value now” and “trend” by linear interpolation", "Wave/wind/rain is a non-essential overlay — its failure never blocks the tide UI"] }
+    { "dot": "emerald", "title": "Pure computation, thin UI", "items": ["Raw JSON becomes interpolating Series answering “value now” and “trend” by linear interpolation", "Wave/wind/rain is a non-essential overlay — its failure never blocks the tide UI", "WaterQualityClient never guesses 'clear': a failed or unrecognised EA response degrades to 'unknown', same rule tools/swim-card/src/beachQuality.mjs uses"] }
   ]
 }

@@ -33,3 +33,4 @@ if it matters, the record's own text says which came first. Use
 | [2026-09-04](2026-09-04-cache-node-modules-in-ci.md) | Cache `expo/node_modules` across CI and deploy via a shared composite action | Accepted |
 | [2026-09-05](2026-09-05-swim-card-generator.md) | Add a standalone CLI generator for a shareable swim-report card | Accepted |
 | [2026-09-05](2026-09-05-beach-water-quality-flags.md) | Swim-card beach flags use the Environment Agency's bathing-water data, as a best-effort unverified integration | Accepted |
+| [2026-09-05](2026-09-05-app-water-quality-check.md) | The Expo app checks bathing-water pollution status too, reusing the swim-card's unverified EA integration | Accepted |
