@@ -7,9 +7,10 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { createInterface } from 'node:readline/promises';
 
+import { BEACH_SITES, fetchBeachFlags } from './beachQuality.mjs';
 import { computeCardData } from './compute.mjs';
 import { renderCard } from './render.mjs';
-import { buildSampleData } from './sampleData.mjs';
+import { buildSampleData, sampleBeachFlags } from './sampleData.mjs';
 import { fetchTideData } from './tideClient.mjs';
 import { formatLondon, londonDateKey } from './tideClock.mjs';
 import { fetchWeatherData } from './weatherClient.mjs';
@@ -70,7 +71,7 @@ async function main() {
   let cardData;
   if (args.sample) {
     const { tide, weather } = buildSampleData(now);
-    cardData = computeCardData({ tide, weather, now });
+    cardData = computeCardData({ tide, weather, beachFlags: sampleBeachFlags(), now });
   } else {
     const apiKey = args.apiKey ?? process.env.TIDECHECK_API_KEY;
     if (!apiKey) {
@@ -78,11 +79,15 @@ async function main() {
         'No TideCheck API key found. Pass --api-key <key>, set $TIDECHECK_API_KEY, or run with --sample to preview without one.',
       );
     }
-    const [tide, weather] = await Promise.all([
+    // Beach water-quality flags are fetched independently of tide/weather —
+    // an outage or schema mismatch on that (unverified, see beachQuality.mjs)
+    // integration should never block the rest of the card.
+    const [tide, weather, beachFlags] = await Promise.all([
       fetchTideData(STATION_ID, apiKey),
       fetchWeatherData(LATITUDE, LONGITUDE, now),
+      fetchBeachFlags(BEACH_SITES),
     ]);
-    cardData = computeCardData({ tide, weather, now });
+    cardData = computeCardData({ tide, weather, beachFlags, now });
   }
 
   const png = renderCard(cardData);

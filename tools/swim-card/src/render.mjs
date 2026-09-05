@@ -138,25 +138,38 @@ function periodIcon(ctx, cx, cy, r, periodLabel) {
   else drawMoonIcon(ctx, cx, cy, r);
 }
 
-function drawPin(ctx, x, groundY, stalkHeight, label, { dotColor = '#ffffff', dotStroke = COLOR.ink } = {}) {
+// Water-quality flag styling per pin — never defaults an unrecognised or
+// missing status to 'clear' (see beachQuality.mjs): 'unknown' gets its own
+// dashed, gray look so a fetch failure reads as "not checked", not "safe".
+const FLAG_STYLE = {
+  clear: { fill: '#ffffff', ring: COLOR.teal, center: COLOR.teal, dashed: false },
+  flagged: { fill: COLOR.coral, ring: COLOR.ink, center: '#ffffff', dashed: false },
+  unknown: { fill: '#d8d2c1', ring: COLOR.gray, center: COLOR.gray, dashed: true },
+};
+
+function drawPin(ctx, x, groundY, stalkHeight, label, status) {
+  const style = FLAG_STYLE[status] ?? FLAG_STYLE.unknown;
   const topY = groundY - stalkHeight;
+  ctx.save();
   ctx.strokeStyle = 'rgba(255,255,255,0.55)';
   ctx.lineWidth = 2;
+  if (style.dashed) ctx.setLineDash([4, 4]);
   ctx.beginPath();
   ctx.moveTo(x, groundY);
   ctx.lineTo(x, topY);
   ctx.stroke();
+  ctx.restore();
 
   ctx.beginPath();
   ctx.arc(x, topY, 10, 0, Math.PI * 2);
-  ctx.fillStyle = dotColor;
+  ctx.fillStyle = style.fill;
   ctx.fill();
   ctx.lineWidth = 3;
-  ctx.strokeStyle = dotStroke;
+  ctx.strokeStyle = style.ring;
   ctx.stroke();
   ctx.beginPath();
   ctx.arc(x, topY, 4, 0, Math.PI * 2);
-  ctx.fillStyle = dotStroke;
+  ctx.fillStyle = style.center;
   ctx.fill();
 
   ctx.font = `700 22px "${FONT_BODY}"`;
@@ -170,7 +183,7 @@ function drawPin(ctx, x, groundY, stalkHeight, label, { dotColor = '#ffffff', do
   ctx.fillText(label, x, topY - 20);
 }
 
-function drawCoastline(ctx, x, y, w, h, beachMarkers) {
+function drawCoastline(ctx, x, y, w, h, beachFlags) {
   roundRectPath(ctx, x, y, w, h, 20);
   ctx.save();
   ctx.clip();
@@ -220,14 +233,14 @@ function drawCoastline(ctx, x, y, w, h, beachMarkers) {
     ctx.stroke();
   }
 
-  // Beach markers along the shoreline
+  // Beach markers along the shoreline, colored by water-quality flag
   const usableWidth = w - 100;
-  beachMarkers.forEach((name, i) => {
-    const fx = x + 50 + (usableWidth * i) / (beachMarkers.length - 1);
-    const t = i / (beachMarkers.length - 1);
+  beachFlags.forEach((beach, i) => {
+    const fx = x + 50 + (usableWidth * i) / (beachFlags.length - 1);
+    const t = i / (beachFlags.length - 1);
     const shoreY = shoreBase + (shoreBase - shoreRise * 1.15 - shoreBase) * t - shoreRise * 0.3 * Math.sin(t * Math.PI);
     const stalk = 46 + (i % 2 === 0 ? 34 : 0);
-    drawPin(ctx, fx, shoreY, stalk, name);
+    drawPin(ctx, fx, shoreY, stalk, beach.name, beach.status);
   });
 
   ctx.restore();
@@ -261,6 +274,20 @@ function drawCompass(ctx, cx, cy, r, compassPoint) {
   ctx.fillStyle = COLOR.coral;
   ctx.fill();
   ctx.restore();
+}
+
+function beachFlagBadge(beachFlags) {
+  if (!beachFlags || beachFlags.length === 0) return { text: 'FLAGS UNKNOWN', color: COLOR.gray };
+  const flagged = beachFlags.filter((b) => b.status === 'flagged').length;
+  const unknown = beachFlags.filter((b) => b.status === 'unknown').length;
+
+  if (unknown === beachFlags.length) return { text: 'FLAGS UNKNOWN', color: COLOR.gray };
+  if (flagged > 0) {
+    const parts = [`${flagged} BEACH${flagged > 1 ? 'ES' : ''} FLAGGED`];
+    if (unknown > 0) parts.push(`${unknown} UNKNOWN`);
+    return { text: parts.join(' · '), color: COLOR.coral };
+  }
+  return { text: unknown > 0 ? `ALL CLEAR · ${unknown} UNKNOWN` : 'ALL CLEAR', color: COLOR.teal };
 }
 
 function drawTideChart(ctx, x, y, w, h, tide24h) {
@@ -409,18 +436,19 @@ export function renderCard(cardData) {
   ctx.fillText('HASTINGS', pad + 118, cursorY + 104);
   wavyLine(ctx, pad + 118, cursorY + 122, 330, { amplitude: 5, wavelength: 60 });
 
-  // Badge: real sea-state reading, in place of a fabricated beach-flag count
-  const badgeText = cardData.seaStateLabel ? `SEA · ${cardData.seaStateLabel.toUpperCase()}` : 'SEA · —';
+  // Badge: real beach-flag counts (see beachQuality.mjs) — never a
+  // hardcoded "all clear".
+  const badge = beachFlagBadge(cardData.beachFlags);
   ctx.font = `800 30px "${FONT_HEAVY}"`;
-  const badgeTextWidth = ctx.measureText(badgeText).width;
+  const badgeTextWidth = ctx.measureText(badge.text).width;
   const badgeW = badgeTextWidth + 64;
   const badgeH = 66;
   const badgeX = W - pad - badgeW;
   const badgeY = cursorY + 20;
-  panel(ctx, badgeX, badgeY, badgeW, badgeH, badgeH / 2, { fill: COLOR.panel, stroke: COLOR.amber, lineWidth: 5 });
+  panel(ctx, badgeX, badgeY, badgeW, badgeH, badgeH / 2, { fill: COLOR.panel, stroke: badge.color, lineWidth: 5 });
   ctx.fillStyle = COLOR.ink;
   ctx.textAlign = 'center';
-  ctx.fillText(badgeText, badgeX + badgeW / 2, badgeY + badgeH / 2 + 10);
+  ctx.fillText(badge.text, badgeX + badgeW / 2, badgeY + badgeH / 2 + 10);
 
   cursorY += 176;
 
@@ -461,8 +489,7 @@ export function renderCard(cardData) {
   const coastY = wbY + wbH + 20;
   const coastW = W - pad * 2 - 48;
   const coastH = heroH - (coastY - cursorY) - 90;
-  const beachMarkers = ['Bexhill', 'Glyne Gap', 'Bulverhythe', 'St Leonards', 'Pelham', 'Rock-a-Nore', 'Fairlight'];
-  drawCoastline(ctx, coastX, coastY, coastW, coastH, beachMarkers);
+  drawCoastline(ctx, coastX, coastY, coastW, coastH, cardData.beachFlags);
 
   // Wind readout, bottom-right of the hero panel
   const windY = coastY + coastH + 46;
@@ -526,8 +553,8 @@ export function renderCard(cardData) {
   ctx.font = `700 20px "${FONT_BODY}"`;
   ctx.fillStyle = COLOR.gray;
   ctx.textAlign = 'center';
-  const footerLine1 = 'Estimates from public data, not water quality or coastal safety testing.';
-  const footerLine2 = 'TideCheck · Open-Meteo · Hastings Pier, East Sussex';
+  const footerLine1 = 'Estimates from public data — beach flags are best-effort, not a substitute for local advisories.';
+  const footerLine2 = 'TideCheck · Open-Meteo · Environment Agency · Hastings Pier, East Sussex';
   ctx.fillText(footerLine1, W / 2, cursorY + 24);
   ctx.fillText(footerLine2, W / 2, cursorY + 52);
 

@@ -65,7 +65,7 @@ function nextExtreme(extremes, now) {
   return parsed[0] ?? null;
 }
 
-export function computeCardData({ tide, weather, now = new Date() }) {
+export function computeCardData({ tide, weather, beachFlags = [], now = new Date() }) {
   const tideSeries = new ValueSeries(
     tide.timeSeries.map((p) => ({ time: parseLondonWallTime(p.time), value: p.height })),
   );
@@ -119,6 +119,7 @@ export function computeCardData({ tide, weather, now = new Date() }) {
 
   return {
     now,
+    beachFlags,
     periodLabel: periodLabel(now),
     dateLabel: formatLondon(now, { weekday: 'short', day: '2-digit', month: 'short' }).toUpperCase(),
     updatedLabel: `${formatLondon(now, { hour: '2-digit', minute: '2-digit', hour12: false })} ${londonTimeZoneAbbreviation(now)}`,

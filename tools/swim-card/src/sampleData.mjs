@@ -4,6 +4,7 @@
 // path real data takes. Anchored to whatever `now` is passed in, not a
 // fixed date, so the preview always looks sensible whenever it's run.
 
+import { BEACH_SITES } from './beachQuality.mjs';
 import { formatLondonWallTimeString, londonDateKey } from './tideClock.mjs';
 
 const TIDAL_PERIOD_MS = 12.42 * 3600 * 1000; // semi-diurnal, M2 constituent
@@ -102,4 +103,11 @@ function buildWeatherFixture(now) {
 
 export function buildSampleData(now = new Date()) {
   return { tide: buildTideFixture(now), weather: buildWeatherFixture(now) };
+}
+
+// A plausible clear/flagged/unknown mix, so --sample previews all three pin
+// states at once rather than only ever showing "all clear".
+export function sampleBeachFlags() {
+  const statusByName = { Bulverhythe: 'flagged', Pelham: 'flagged', Fairlight: 'unknown' };
+  return BEACH_SITES.map((site) => ({ name: site.name, status: statusByName[site.name] ?? 'clear' }));
 }
