@@ -206,6 +206,7 @@ function PreviewContent() {
             windDirection={data.windSeries.directionAt(now)}
             windTrend={data.windSeries.trend(now)}
             seaTemp={data.seaTemperatureSeries.tempAt(now)}
+            waterQuality={{ status: 'clear', siteName: null, classification: 'good', fetchedAt: now }}
             fetchedAt={now}
             dayLabel={null}
             onPressUpdated={() => {

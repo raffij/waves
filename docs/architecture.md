@@ -25,9 +25,11 @@ plus wave/wind, then either cache for six hours (the app and the xbar script)
 or just fetch fresh each time (the two widgets, since WidgetKit already
 throttles reloads) — against the same TideCheck and Open-Meteo endpoints.
 Nothing below that shape is shared: each client has its own key store and its
-own fetch client.
+own fetch client. The Expo app additionally checks the Environment Agency's
+bathing-water classification for the selected location — an overlay only it
+fetches; the other three clients don't.
 
-<img src="architecture.png" width="900" alt="How Waves works: the Expo app, the iOS widget, the macOS menu-bar script and the macOS desktop widget each read an API key from their own platform key store, then independently call TideCheck's tides API, Open-Meteo's Marine API, and Open-Meteo's Forecast API — no fetch/parse code is shared between any of them." />
+<img src="architecture.png" width="900" alt="How Waves works: the Expo app, the iOS widget, the macOS menu-bar script and the macOS desktop widget each read an API key from their own platform key store, then independently call TideCheck's tides API, Open-Meteo's Marine API, and Open-Meteo's Forecast API — no fetch/parse code is shared between any of them. The Expo app alone also checks the Environment Agency's bathing-water classification for the selected location." />
 
 An interactive version — pan/zoom, theme toggle, guided views for the tide
 path, the wave/wind calls, where each key lives, and how the app hands
@@ -49,6 +51,7 @@ layer, a cache, or an in-flight-request lock with any other.
 | **Cache** | AsyncStorage, 6h TTL, stale-on-failure | None — WidgetKit already throttles reloads | Disk JSON, 6h TTL, stale-on-failure | None — WidgetKit already throttles reloads |
 | **Manual refresh** | Pull-to-refresh / footer button clears cache keys, refetches | N/A — reload on its own schedule, or when the app calls `reloadWidgets()` | xbar menu item `rm`'s the cache files, then `refresh=true` | N/A — reload on its own schedule, or when its settings app saves |
 | **On fetch failure** | Serves the last cache, however stale | Shows a "couldn't load" placeholder | Serves the last cache, otherwise prints a red status line | Shows a "couldn't load" placeholder |
+| **Water quality** | EA bathing-water check (unverified integration) | — | — | — |
 
 ## Cold-start request lifecycle
 
@@ -57,9 +60,10 @@ What happens between opening the Expo app and seeing numbers on screen:
 1. **Key and location hydrate.** `useApiKey` and `useLocation` both start
    `undefined` rather than defaulting early, so nothing fires a request for
    the wrong key or location while the stores are still being read.
-2. **Two queries enable at once.** Once both resolve, `useForecastData` turns
-   on a tide query keyed on `(stationId, apiKey)` and a wave query keyed on
-   `(location.id)` — run in parallel via `useQueries`.
+2. **Three queries enable at once.** Once both resolve, `useForecastData` turns
+   on a tide query keyed on `(stationId, apiKey)`, a wave query keyed on
+   `(location.id)`, and a water-quality query also keyed on `(location.id)` —
+   run in parallel via `useQueries`.
 3. **Tide client checks its cache.** `TideAPIClient` reads AsyncStorage; a hit
    under six hours old returns immediately, otherwise it calls TideCheck with
    an 8s timeout and an `X-API-Key` header, then writes the new cache.
@@ -67,10 +71,20 @@ What happens between opening the Expo app and seeing numbers on screen:
    Open-Meteo's Marine API for wave height, then — independently, so one
    outage can't take down the other — the Forecast API for wind and
    precipitation together.
+4a. **Water-quality client checks the EA's bathing-water classification.**
+   `WaterQualityClient` queries `environment.data.gov.uk` by the selected
+   location's lat/long; a request failure or unrecognised response degrades
+   to `'unknown'` rather than ever guessing `'clear'` — same rule
+   `tools/swim-card/src/beachQuality.mjs` uses for its per-beach flags. This
+   is an unverified integration (see
+   [`2026-09-05-beach-water-quality-flags.md`](decisions/2026-09-05-beach-water-quality-flags.md)):
+   the exact request/response shape hasn't been confirmed against the live
+   API.
 5. **Results become interpolating series.** Raw points turn into
    `TideSeries` / `WaveSeries` / `WindSeries` / `PrecipitationSeries`, which
    answer "value right now" and "trend" by linear interpolation between the
-   nearest samples.
+   nearest samples. The water-quality result is a single current reading, not
+   a series — no interpolation applies.
 6. **A silent background top-up.** If the cache hit that just landed was
    fetched over an hour ago, an effect quietly calls the cache-bypassing
    `refresh()` — the already-rendered screen never blocks on it.
@@ -84,12 +98,12 @@ The system map above treats each client as one "Tide/Wave Clients" box. Zooming
 into just `expo/` — the webapp — shows the layers behind that box: `App.tsx`
 wires a handful of hooks to seven presentational components; the hooks
 (`useApiKey`, `useLocation`, `useTheme`, `useForecastData`, `useWidgetSync`)
-own state and orchestrate fetching; and the services layer (the two API
+own state and orchestrate fetching; and the services layer (the three API
 clients, `SecureKeyStore`, `AsyncStorage`, and the interpolating Series +
 `buildDayInsights()` view models) does the actual caching, fetching, and
 computation, independent of any UI framework detail.
 
-<img src="webapp-architecture.png" width="900" alt="Inside the Waves webapp: App.tsx wires state hooks and useForecastData to seven screen components; useForecastData coordinates a TideAPIClient and a WaveAPIClient that each keep their own AsyncStorage cache and call TideCheck or Open-Meteo independently; useWidgetSync hands the API key and location to the iOS widget over a shared App Group via the local WidgetBridge Expo Module." />
+<img src="webapp-architecture.png" width="900" alt="Inside the Waves webapp: App.tsx wires state hooks and useForecastData to seven screen components; useForecastData coordinates a TideAPIClient, a WaveAPIClient and a WaterQualityClient that each keep their own AsyncStorage cache and call TideCheck, Open-Meteo or the Environment Agency's bathing-water API independently; useWidgetSync hands the API key and location to the iOS widget over a shared App Group via the local WidgetBridge Expo Module." />
 
 An interactive version — guided views for boot/state hydration, the tide+wave
 fetch, cache-first resilience, and the app→widget hand-off — is in

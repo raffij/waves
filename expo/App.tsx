@@ -97,6 +97,7 @@ function AppContent() {
     cloudCoverSeries,
     seaCurrentSeries,
     seaTemperatureSeries,
+    waterQuality,
     fetchedAt,
     isFetching,
     error,
@@ -216,6 +217,7 @@ function AppContent() {
             windDirection={windDirection}
             windTrend={windTrend}
             seaTemp={seaTemp}
+            waterQuality={waterQuality}
             fetchedAt={fetchedAt}
             dayLabel={selectedDayLabel}
             onPressUpdated={() => selectDay(null)}

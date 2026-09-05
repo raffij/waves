@@ -13,6 +13,8 @@ import type { TideDataResult } from '../services/TideAPIClient';
 import { TideAPIClient } from '../services/TideAPIClient';
 import { TideForecast } from '../services/TideForecast';
 import { TideSeries } from '../services/TideSeries';
+import type { WaterQualityResult } from '../services/WaterQualityClient';
+import { WaterQualityClient } from '../services/WaterQualityClient';
 import type { WaveDataResult } from '../services/WaveAPIClient';
 import { WaveAPIClient } from '../services/WaveAPIClient';
 import { WaveSeries } from '../services/WaveSeries';
@@ -48,6 +50,7 @@ export interface ForecastData {
   cloudCoverSeries: CloudCoverSeries | null;
   seaCurrentSeries: SeaCurrentSeries | null;
   seaTemperatureSeries: SeaTemperatureSeries | null;
+  waterQuality: WaterQualityResult | null;
   fetchedAt: Date | null;
   isFetching: boolean;
   error: Error | null;
@@ -73,6 +76,12 @@ function waveQueryKey(location: Location | undefined) {
   return ['wave', location?.id] as const;
 }
 
+// Water quality comes from the Environment Agency, also no key required —
+// same reasoning as waveQueryKey above.
+function waterQualityQueryKey(location: Location | undefined) {
+  return ['waterQuality', location?.id] as const;
+}
+
 // `force` picks between each client's cache-first load and its
 // cache-bypassing forceRefresh — both go through the same TanStack Query
 // cache entry either way, just via loadTideData()/loadWaveData() (normal
@@ -94,6 +103,15 @@ function waveQueryFn(location: Location, force: boolean) {
     const client = new WaveAPIClient(location.id, location.latitude, location.longitude);
     const result = force ? await client.forceRefresh() : await client.loadWaveData();
     if (!result) throw new Error('Could not load wave data.');
+    return result;
+  };
+}
+
+function waterQualityQueryFn(location: Location, force: boolean) {
+  return async (): Promise<WaterQualityResult> => {
+    const client = new WaterQualityClient(location.id, location.latitude, location.longitude);
+    const result = force ? await client.forceRefresh() : await client.loadWaterQuality();
+    if (!result) throw new Error('Could not load water quality data.');
     return result;
   };
 }
@@ -124,15 +142,16 @@ function selectWave(result: WaveDataResult): WaveView {
   };
 }
 
-// Wave/wind/precipitation/temperature/sun are a nice-to-have overlay (see
-// WaveAPIClient's own comment on fetching them independently of tide) — a
-// wave-query error is deliberately left out of the combined `error`, so a
-// wave outage never blocks the tide UI or shows a scary error for a
-// non-essential chart.
-function combineForecastData([tide, wave]: [UseQueryResult<TideView, Error>, UseQueryResult<WaveView, Error>]): Omit<
-  ForecastData,
-  'refresh'
-> {
+// Wave/wind/precipitation/temperature/sun and water quality are all
+// nice-to-have overlays (see WaveAPIClient's own comment on fetching them
+// independently of tide) — their query errors are deliberately left out of
+// the combined `error`, so a wave or EA outage never blocks the tide UI or
+// shows a scary error for a non-essential chart/badge.
+function combineForecastData([tide, wave, waterQuality]: [
+  UseQueryResult<TideView, Error>,
+  UseQueryResult<WaveView, Error>,
+  UseQueryResult<WaterQualityResult, Error>,
+]): Omit<ForecastData, 'refresh'> {
   return {
     series: tide.data?.series ?? null,
     forecast: tide.data?.forecast ?? null,
@@ -146,7 +165,8 @@ function combineForecastData([tide, wave]: [UseQueryResult<TideView, Error>, Use
     cloudCoverSeries: wave.data?.cloudCoverSeries ?? null,
     seaCurrentSeries: wave.data?.seaCurrentSeries ?? null,
     seaTemperatureSeries: wave.data?.seaTemperatureSeries ?? null,
-    isFetching: tide.isFetching || wave.isFetching,
+    waterQuality: waterQuality.data ?? null,
+    isFetching: tide.isFetching || wave.isFetching || waterQuality.isFetching,
     error: tide.error ?? null,
   };
 }
@@ -175,6 +195,11 @@ export function useForecastData(apiKey: string | null | undefined, location: Loc
         enabled: ready,
         select: selectWave,
       },
+      {
+        queryKey: waterQualityQueryKey(location),
+        queryFn: waterQualityQueryFn(location ?? DEFAULT_LOCATION, false),
+        enabled: ready,
+      },
     ],
     combine: combineForecastData,
   });
@@ -184,6 +209,7 @@ export function useForecastData(apiKey: string | null | undefined, location: Loc
 
     const tideKey = tideQueryKey(location, apiKey);
     const waveKey = waveQueryKey(location);
+    const waterQualityKey = waterQualityQueryKey(location);
 
     // fetchQuery only applies a queryFn override (needed to swap in the
     // cache-bypassing forceRefresh() call below) when the query is idle —
@@ -203,6 +229,13 @@ export function useForecastData(apiKey: string | null | undefined, location: Loc
         queryClient.fetchQuery({
           queryKey: waveKey,
           queryFn: waveQueryFn(location, true),
+          staleTime: 0,
+        }),
+      ),
+      queryClient.cancelQueries({ queryKey: waterQualityKey }).then(() =>
+        queryClient.fetchQuery({
+          queryKey: waterQualityKey,
+          queryFn: waterQualityQueryFn(location, true),
           staleTime: 0,
         }),
       ),
