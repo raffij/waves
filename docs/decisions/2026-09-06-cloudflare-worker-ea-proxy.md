@@ -84,19 +84,19 @@ decision record. It keeps calling `environment.data.gov.uk` directly.
   pair in the repo, and a fourth GitHub Actions workflow.
 - **Water quality can resolve on web now** instead of always reading
   "Unknown" — subject to the response-shape work below.
-- **New follow-up, surfaced by testing through the Worker:** with real EA
-  access (the Worker's local `wrangler dev` runtime can reach
-  `environment.data.gov.uk` even though this sandbox's own fetch can't), the
-  `bathing-water.json` list response turns out **not** to embed a site's
-  classification — `latestComplianceAssessment` is only a reference URL. The
-  actual value is one more fetch away, at that URL, as
-  `complianceClassification.name._value` (with `complianceCodeNotation` on the
-  `bwq-cc-2015` scale). So `WaterQualityClient`'s current single-request
-  guess-chain never resolves to anything but `'unknown'`. Fixing it means a
-  two-step fetch (list → follow `latestComplianceAssessment._about`), which
-  changes the client's fetch strategy enough to warrant its own decision
-  record when done. The "never guess 'clear'" safety property already holds
-  in the meantime.
+- **New follow-up, surfaced by testing through the Worker:** early testing
+  suggested the `bathing-water.json` list response didn't embed a site's
+  classification and that a two-step fetch (list → follow
+  `latestComplianceAssessment._about`) would be needed.
+  **Resolved 2026-09-06** — see
+  [2026-09-06-bathing-water-status-from-single-list-response.md](2026-09-06-bathing-water-status-from-single-list-response.md).
+  A real `_view=default` response *does* embed
+  `latestComplianceAssessment.complianceClassification.name._value` (and
+  `latestRiskPrediction.riskLevel.name._value`) inline, so it stays a
+  single request; the bug was that the parsing compared Linked-Data
+  `{ _value, … }` objects against `typeof x === 'string'` and always fell
+  through to `'unknown'`. The "never guess 'clear'" safety property held
+  throughout.
 - The Worker's allowlist is kept at the path-family level specifically so that
   two-step fetch — and a later STP integration — won't need a Worker redeploy.
 
