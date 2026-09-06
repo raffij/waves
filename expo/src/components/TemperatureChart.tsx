@@ -409,7 +409,6 @@ export function TemperatureChart({
         </Svg>
         {activeFeelsLike !== null && activePoint && (
           <View
-            pointerEvents="none"
             onLayout={onTooltipLayout}
             style={[
               styles.tooltip,
@@ -490,6 +489,9 @@ function getStyles(colors: Colors, fonts: Fonts) {
     tooltip: {
       position: 'absolute',
       top: 0,
+      // Never intercept touches — set in style, not as the deprecated
+      // `pointerEvents` prop. See TideChart's identical tooltip.
+      pointerEvents: 'none',
       // No fixed width — sized to its own (single-line) text. See
       // TideChart's identical tooltip for why.
       alignSelf: 'flex-start',

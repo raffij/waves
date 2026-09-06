@@ -279,7 +279,6 @@ export function PrecipitationChart({
         </Svg>
         {activeMm !== null && activeX >= PADDING_X && activeX <= width - PADDING_X && (
           <View
-            pointerEvents="none"
             onLayout={onTooltipLayout}
             style={[styles.tooltip, { left: Math.min(Math.max(activeX - tooltipWidth / 2, 0), width - tooltipWidth) }]}
           >
@@ -325,6 +324,9 @@ function getStyles(colors: Colors, fonts: Fonts) {
     tooltip: {
       position: 'absolute',
       top: 0,
+      // Never intercept touches — set in style, not as the deprecated
+      // `pointerEvents` prop. See TideChart's identical tooltip.
+      pointerEvents: 'none',
       // No fixed width — sized to its own (single-line) text. See
       // TideChart's identical tooltip for why.
       alignSelf: 'flex-start',

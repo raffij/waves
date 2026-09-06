@@ -511,7 +511,6 @@ export function TideChart({
         </Svg>
         {activeTideHeight !== null && activeTidePoint && (
           <View
-            pointerEvents="none"
             onLayout={onTooltipLayout}
             style={[
               styles.tooltip,
@@ -607,6 +606,10 @@ function getStyles(colors: Colors, fonts: Fonts) {
     tooltip: {
       position: 'absolute',
       top: 0,
+      // Never intercept touches — the tooltip sits over the chart's own
+      // scrub gesture area. (Set in style, not as a `pointerEvents` prop,
+      // which React Native has deprecated.)
+      pointerEvents: 'none',
       // No fixed width — sized to its own (single-line) text, not a box
       // wide enough for the longest possible reading.
       alignSelf: 'flex-start',
