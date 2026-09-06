@@ -25,6 +25,7 @@ import { type ForecastDetail, ForecastList } from './src/components/ForecastList
 import { PrecipitationChart } from './src/components/PrecipitationChart';
 import { TemperatureChart } from './src/components/TemperatureChart';
 import { TideChart } from './src/components/TideChart';
+import { WaterQualityLine } from './src/components/WaterQualityLine';
 import type { Fonts } from './src/fonts';
 import { useApiKey } from './src/hooks/useApiKey';
 import { useAppStateFocusManager } from './src/hooks/useAppStateFocusManager';
@@ -217,7 +218,6 @@ function AppContent() {
             windDirection={windDirection}
             windTrend={windTrend}
             seaTemp={seaTemp}
-            waterQuality={waterQuality}
             fetchedAt={fetchedAt}
             dayLabel={selectedDayLabel}
             onPressUpdated={() => selectDay(null)}
@@ -301,6 +301,10 @@ function AppContent() {
               daylightSeries={daylightSeries}
               seaTemperatureSeries={seaTemperatureSeries}
             />
+          </View>
+
+          <View style={styles.section}>
+            <WaterQualityLine waterQuality={waterQuality} />
           </View>
 
           <View style={styles.footer}>
