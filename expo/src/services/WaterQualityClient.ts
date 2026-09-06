@@ -1,5 +1,4 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Platform } from 'react-native';
 import { wgs84ToOsGridRef } from './OsGridRef';
 
 // Bathing-water pollution status for the selected location, driven by the
@@ -7,6 +6,15 @@ import { wgs84ToOsGridRef } from './OsGridRef';
 // (environment.data.gov.uk/bwq, branded "Swimfo") — the same source and
 // endpoint tools/swim-card/src/beachQuality.mjs uses for its per-beach
 // flags.
+//
+// The request goes through waves-api.giraffi.dev/ea/... — a narrow
+// allowlisted Cloudflare Worker (workers/waves-api/) that forwards to
+// environment.data.gov.uk and adds the CORS headers the EA doesn't send.
+// That's what lets the web build read this API at all; native iOS/Android
+// aren't subject to CORS but route through the same proxy so there's one
+// request path and one shared 6h edge cache. See
+// docs/decisions/2026-09-06-cloudflare-worker-ea-proxy.md (which supersedes
+// the earlier "skip the fetch on web" decision).
 //
 // ⚠️ PARTIALLY VERIFIED, still not run against the real service. This
 // session's outbound access to environment.data.gov.uk is blocked, but
@@ -31,17 +39,10 @@ import { wgs84ToOsGridRef } from './OsGridRef';
 // See docs/decisions/2026-09-05-bathing-water-lookup-uses-os-grid-not-latlong.md
 // for what changed and why, and run this for real to fix whatever's still
 // wrong.
-//
-// One thing IS now confirmed, the hard way: environment.data.gov.uk sends
-// no CORS headers, so a browser blocks reading the response outright — the
-// web build's `fetch()` fails every time, not just on a bad request. On
-// iOS/Android this doesn't apply (CORS is a browser-only mechanism; native
-// fetch isn't subject to it), so the request there behaves however the
-// still-unverified query/field-name guesses above leave it. `fetch()`
-// below skips the network call entirely on web rather than attempting one
-// guaranteed to fail — see docs/decisions/2026-09-05-skip-water-quality-fetch-on-web-cors.md.
 
-const EA_BATHING_WATER_BASE = 'https://environment.data.gov.uk/doc/bathing-water.json';
+// Allowlisted proxy path on the Waves API Worker (workers/waves-api/) —
+// maps 1:1 onto https://environment.data.gov.uk/doc/bathing-water.json.
+const EA_BATHING_WATER_BASE = 'https://waves-api.giraffi.dev/ea/doc/bathing-water.json';
 // Matches the original (wrong) `dist=2` guess's intent: a ~2km-radius
 // search around the location, expressed as a bounding-box half-width in
 // metres since the real API takes an easting/northing box, not a radius.
@@ -137,12 +138,9 @@ export class WaterQualityClient {
   }
 
   private async fetch(): Promise<WaterQualityResult> {
-    // environment.data.gov.uk sends no CORS headers — a browser fetch here
-    // always fails, so there's nothing to gain (and a console error and a
-    // wasted round-trip to lose) by attempting one. See this file's header
-    // comment.
-    if (Platform.OS === 'web') return this.unknownResult();
-
+    // Routed through waves-api.giraffi.dev (workers/waves-api/), which adds
+    // the CORS headers the EA omits — so this now runs on web too, not just
+    // native. See this file's header comment.
     const { easting, northing } = wgs84ToOsGridRef(Number(this.latitude), Number(this.longitude));
 
     const url = new URL(EA_BATHING_WATER_BASE);

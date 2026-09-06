@@ -27,9 +27,14 @@ throttles reloads) — against the same TideCheck and Open-Meteo endpoints.
 Nothing below that shape is shared: each client has its own key store and its
 own fetch client. The Expo app additionally checks the Environment Agency's
 bathing-water classification for the selected location — an overlay only it
-fetches; the other three clients don't.
+fetches; the other three clients don't. That one call goes through
+**`waves-api.giraffi.dev`** (`workers/waves-api/`), a small allowlisted
+Cloudflare Worker that adds the CORS headers the EA omits — the repo's only
+server-side component, and the reason the water-quality check works on the web
+build at all. See
+[`docs/decisions/2026-09-06-cloudflare-worker-ea-proxy.md`](decisions/2026-09-06-cloudflare-worker-ea-proxy.md).
 
-<img src="architecture.png" width="900" alt="How Waves works: the Expo app, the iOS widget, the macOS menu-bar script and the macOS desktop widget each read an API key from their own platform key store, then independently call TideCheck's tides API, Open-Meteo's Marine API, and Open-Meteo's Forecast API — no fetch/parse code is shared between any of them. The Expo app alone also checks the Environment Agency's bathing-water classification for the selected location." />
+<img src="architecture.png" width="900" alt="How Waves works: the Expo app, the iOS widget, the macOS menu-bar script and the macOS desktop widget each read an API key from their own platform key store, then independently call TideCheck's tides API, Open-Meteo's Marine API, and Open-Meteo's Forecast API — no fetch/parse code is shared between any of them. The Expo app alone also checks the Environment Agency's bathing-water classification for the selected location, routed through a Cloudflare Worker proxy (waves-api.giraffi.dev) that adds the CORS headers the EA omits." />
 
 An interactive version — pan/zoom, theme toggle, guided views for the tide
 path, the wave/wind calls, where each key lives, and how the app hands
@@ -51,7 +56,7 @@ layer, a cache, or an in-flight-request lock with any other.
 | **Cache** | AsyncStorage, 6h TTL, stale-on-failure | None — WidgetKit already throttles reloads | Disk JSON, 6h TTL, stale-on-failure | None — WidgetKit already throttles reloads |
 | **Manual refresh** | Pull-to-refresh / footer button clears cache keys, refetches | N/A — reload on its own schedule, or when the app calls `reloadWidgets()` | xbar menu item `rm`'s the cache files, then `refresh=true` | N/A — reload on its own schedule, or when its settings app saves |
 | **On fetch failure** | Serves the last cache, however stale | Shows a "couldn't load" placeholder | Serves the last cache, otherwise prints a red status line | Shows a "couldn't load" placeholder |
-| **Water quality** | EA bathing-water check (unverified integration) | — | — | — |
+| **Water quality** | EA bathing-water check via the `waves-api.giraffi.dev` Worker proxy (unverified integration) | — | — | — |
 
 ## Cold-start request lifecycle
 
@@ -75,15 +80,21 @@ What happens between opening the Expo app and seeing numbers on screen:
    `WaterQualityClient` converts the selected location's lat/long to an
    OSGB36 National Grid easting/northing (`OsGridRef.ts` — the coordinate
    system `environment.data.gov.uk` actually filters by, not lat/long/dist)
-   and queries a ~2km bounding box around it; a request failure or
-   unrecognised response degrades to `'unknown'` rather than ever guessing
-   `'clear'` — same rule `tools/swim-card/src/beachQuality.mjs` uses for its
-   per-beach flags. This is a partially-verified integration (see
-   [`2026-09-05-beach-water-quality-flags.md`](decisions/2026-09-05-beach-water-quality-flags.md)
+   and queries a ~2km bounding box around it **via the `waves-api.giraffi.dev`
+   Worker proxy** (`workers/waves-api/`), which forwards the request to the
+   EA and adds the missing CORS headers so the web build can read the
+   response. A request failure or unrecognised response degrades to
+   `'unknown'` rather than ever guessing `'clear'` — same rule
+   `tools/swim-card/src/beachQuality.mjs` uses for its per-beach flags. This
+   is a partially-verified integration (see
+   [`2026-09-05-beach-water-quality-flags.md`](decisions/2026-09-05-beach-water-quality-flags.md),
+   [`2026-09-05-bathing-water-lookup-uses-os-grid-not-latlong.md`](decisions/2026-09-05-bathing-water-lookup-uses-os-grid-not-latlong.md)
    and
-   [`2026-09-05-bathing-water-lookup-uses-os-grid-not-latlong.md`](decisions/2026-09-05-bathing-water-lookup-uses-os-grid-not-latlong.md)):
-   the response's exact field names still haven't been confirmed against
-   the live API.
+   [`2026-09-06-cloudflare-worker-ea-proxy.md`](decisions/2026-09-06-cloudflare-worker-ea-proxy.md)):
+   real EA responses (reachable now, through the Worker) show the
+   classification isn't embedded in the list endpoint — it's one more fetch
+   away — so the client's current single-request extraction still resolves
+   to `'unknown'` until that follow-up lands.
 5. **Results become interpolating series.** Raw points turn into
    `TideSeries` / `WaveSeries` / `WindSeries` / `PrecipitationSeries`, which
    answer "value right now" and "trend" by linear interpolation between the
@@ -107,7 +118,7 @@ clients, `SecureKeyStore`, `AsyncStorage`, and the interpolating Series +
 `buildDayInsights()` view models) does the actual caching, fetching, and
 computation, independent of any UI framework detail.
 
-<img src="webapp-architecture.png" width="900" alt="Inside the Waves webapp: App.tsx wires state hooks and useForecastData to seven screen components; useForecastData coordinates a TideAPIClient, a WaveAPIClient and a WaterQualityClient that each keep their own AsyncStorage cache and call TideCheck, Open-Meteo or the Environment Agency's bathing-water API independently; useWidgetSync hands the API key and location to the iOS widget over a shared App Group via the local WidgetBridge Expo Module." />
+<img src="webapp-architecture.png" width="900" alt="Inside the Waves webapp: App.tsx wires state hooks and useForecastData to seven screen components; useForecastData coordinates a TideAPIClient, a WaveAPIClient and a WaterQualityClient that each keep their own AsyncStorage cache and call TideCheck, Open-Meteo or — via the waves-api.giraffi.dev Cloudflare Worker proxy — the Environment Agency's bathing-water API independently; useWidgetSync hands the API key and location to the iOS widget over a shared App Group via the local WidgetBridge Expo Module." />
 
 An interactive version — guided views for boot/state hydration, the tide+wave
 fetch, cache-first resilience, and the app→widget hand-off — is in
@@ -189,5 +200,6 @@ a cache to save.
 - `expo/targets/widget/` — Swift/SwiftUI, WidgetKit, `@bacons/apple-targets`
 - `mac-widget/` — Swift, xbar/SwiftBar plugin protocol
 - `mac-widget/DesktopWidget/` — Swift/SwiftUI, WidgetKit, XcodeGen
-- Upstream: tidecheck.com, open-meteo.com
+- `workers/waves-api/` — Cloudflare Worker, allowlisted CORS proxy for the EA bathing-water API
+- Upstream: tidecheck.com, open-meteo.com, environment.data.gov.uk (Expo only, via `workers/waves-api/`)
 - Timezone: Europe/London throughout

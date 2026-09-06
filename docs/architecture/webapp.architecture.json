@@ -9,7 +9,7 @@
       { "id": "state", "label": "Boot & state hydration", "focus": ["appScreen", "stateHooks", "useForecastData", "useWidgetSync"], "note": "apiKey and location start undefined rather than defaulting early, so nothing fires while storage is still being read." },
       { "id": "fetch", "label": "Tide + wave fetch", "focus": ["tideClient", "waveClient", "deviceStorage", "tideAPI", "marineAPI", "forecastAPI"], "note": "Two queries run in parallel, each client checking its own cache first; a wave-query failure never blocks the tide UI." },
       { "id": "resilience", "label": "Cache-first, stale over empty", "focus": ["tideClient", "waveClient", "waterQualityClient", "deviceStorage", "seriesInsights"], "note": "On a network error each client serves its last cache; retries are disabled to protect TideCheck's 50-request/day budget." },
-      { "id": "waterQuality", "label": "Water quality fetch", "focus": ["useForecastData", "waterQualityClient", "deviceStorage", "eaBathingWaterAPI"], "note": "A third, independent query — its own 6h AsyncStorage cache, degrading to 'unknown' rather than blocking or guessing 'clear' on failure." },
+      { "id": "waterQuality", "label": "Water quality fetch", "focus": ["useForecastData", "waterQualityClient", "deviceStorage", "wavesApiProxy", "eaBathingWaterAPI"], "note": "A third, independent query, 6h cache, degrading to 'unknown' on failure. Routed via a Cloudflare Worker adding the CORS the EA omits." },
       { "id": "widget-handoff", "label": "App → iOS widget hand-off", "focus": ["useWidgetSync", "widgetBridge", "secureKeyStore"], "note": "The widget can't show a text field, so the app pushes it config over a shared App Group on every key/location change." }
     ]
   },
@@ -32,7 +32,8 @@
     { "id": "tideAPI", "type": "external", "label": "TideCheck API", "sublabel": "tide extremes + height series", "pos": [1090, 150], "size": [200, 90] },
     { "id": "marineAPI", "type": "external", "label": "Open-Meteo Marine", "sublabel": "wave height", "pos": [1090, 380], "size": [200, 90] },
     { "id": "forecastAPI", "type": "external", "label": "Open-Meteo Forecast", "sublabel": "wind, rain, temp, sun", "pos": [1090, 500], "size": [200, 100] },
-    { "id": "eaBathingWaterAPI", "type": "external", "label": "EA Bathing Water", "sublabel": "bathing-water classification", "pos": [1090, 650], "size": [200, 90] }
+    { "id": "wavesApiProxy", "type": "cloud", "label": "Waves API Proxy", "sublabel": "Cloudflare Worker · adds CORS", "tag": "6h edge cache", "pos": [1090, 650], "size": [200, 90] },
+    { "id": "eaBathingWaterAPI", "type": "external", "label": "EA Bathing Water", "sublabel": "bathing-water classification", "pos": [1090, 800], "size": [200, 80] }
   ],
   "boundaries": [
     { "kind": "region", "label": "App.tsx — the single screen", "wraps": ["appScreen", "uiComponents"] },
@@ -59,7 +60,8 @@
     { "id": "tide-api", "from": "tideClient", "to": "tideAPI", "label": "X-API-Key · 8s timeout", "variant": "emphasis" },
     { "id": "wave-marine", "from": "waveClient", "to": "marineAPI", "label": "hourly=wave_height" },
     { "id": "wave-forecast", "from": "waveClient", "to": "forecastAPI", "label": "wind, precip, temp, sun" },
-    { "id": "waterquality-api", "from": "waterQualityClient", "to": "eaBathingWaterAPI", "label": "OSGB36 easting/northing bbox" },
+    { "id": "waterquality-api", "from": "waterQualityClient", "to": "wavesApiProxy", "label": "OSGB36 easting/northing bbox" },
+    { "id": "wavesapi-ea", "from": "wavesApiProxy", "to": "eaBathingWaterAPI", "label": "allowlisted GET", "fromSide": "bottom", "toSide": "top", "labelAt": [1190, 770] },
 
     { "id": "series-ui", "from": "seriesInsights", "to": "uiComponents", "label": "current values, trends, day insights" }
   ],

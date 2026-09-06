@@ -2,7 +2,12 @@
 
 - **Date:** 2026-09-05 (same day as, and after,
   [2026-09-05-bathing-water-lookup-uses-os-grid-not-latlong.md](2026-09-05-bathing-water-lookup-uses-os-grid-not-latlong.md))
-- **Status:** Accepted
+- **Status:** Superseded by
+  [2026-09-06-cloudflare-worker-ea-proxy.md](2026-09-06-cloudflare-worker-ea-proxy.md)
+  — the web fetch is no longer skipped; it's routed through a Cloudflare
+  Worker that adds the missing CORS headers. The analysis below (why the raw
+  EA endpoint can't be called from a browser) still holds and is the reason
+  that proxy exists.
 
 ## Context
 
