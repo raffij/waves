@@ -6,6 +6,7 @@ import { type ForecastDetail, ForecastList } from './src/components/ForecastList
 import { PrecipitationChart } from './src/components/PrecipitationChart';
 import { TemperatureChart } from './src/components/TemperatureChart';
 import { TideChart } from './src/components/TideChart';
+import { WaterQualityLine } from './src/components/WaterQualityLine';
 import type { Fonts } from './src/fonts';
 import { ThemeProvider, useTheme } from './src/hooks/useTheme';
 import { DEFAULT_LOCATION } from './src/models/Location';
@@ -206,7 +207,6 @@ function PreviewContent() {
             windDirection={data.windSeries.directionAt(now)}
             windTrend={data.windSeries.trend(now)}
             seaTemp={data.seaTemperatureSeries.tempAt(now)}
-            waterQuality={{ status: 'clear', siteName: null, classification: 'good', fetchedAt: now }}
             fetchedAt={now}
             dayLabel={null}
             onPressUpdated={() => {
@@ -282,6 +282,12 @@ function PreviewContent() {
               cloudCoverSeries={data.cloudCoverSeries}
               daylightSeries={data.daylightSeries}
               seaTemperatureSeries={data.seaTemperatureSeries}
+            />
+          </View>
+
+          <View style={styles.section}>
+            <WaterQualityLine
+              waterQuality={{ status: 'clear', siteName: 'Morecambe South', classification: 'good', fetchedAt: now }}
             />
           </View>
         </ScrollView>
