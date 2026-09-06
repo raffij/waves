@@ -56,7 +56,7 @@ layer, a cache, or an in-flight-request lock with any other.
 | **Cache** | AsyncStorage, 6h TTL, stale-on-failure | None — WidgetKit already throttles reloads | Disk JSON, 6h TTL, stale-on-failure | None — WidgetKit already throttles reloads |
 | **Manual refresh** | Pull-to-refresh / footer button clears cache keys, refetches | N/A — reload on its own schedule, or when the app calls `reloadWidgets()` | xbar menu item `rm`'s the cache files, then `refresh=true` | N/A — reload on its own schedule, or when its settings app saves |
 | **On fetch failure** | Serves the last cache, however stale | Shows a "couldn't load" placeholder | Serves the last cache, otherwise prints a red status line | Shows a "couldn't load" placeholder |
-| **Water quality** | EA bathing-water check via the `waves-api.giraffi.dev` Worker proxy (unverified integration) | — | — | — |
+| **Water quality** | EA bathing-water check via the `waves-api.giraffi.dev` Worker proxy | — | — | — |
 
 ## Cold-start request lifecycle
 
@@ -85,16 +85,15 @@ What happens between opening the Expo app and seeing numbers on screen:
    EA and adds the missing CORS headers so the web build can read the
    response. A request failure or unrecognised response degrades to
    `'unknown'` rather than ever guessing `'clear'` — same rule
-   `tools/swim-card/src/beachQuality.mjs` uses for its per-beach flags. This
-   is a partially-verified integration (see
-   [`2026-09-05-beach-water-quality-flags.md`](decisions/2026-09-05-beach-water-quality-flags.md),
+   `tools/swim-card/src/beachQuality.mjs` uses for its per-beach flags. The
+   query shape and response shape are both confirmed against a real EA
+   response now (see
    [`2026-09-05-bathing-water-lookup-uses-os-grid-not-latlong.md`](decisions/2026-09-05-bathing-water-lookup-uses-os-grid-not-latlong.md)
    and
-   [`2026-09-06-cloudflare-worker-ea-proxy.md`](decisions/2026-09-06-cloudflare-worker-ea-proxy.md)):
-   real EA responses (reachable now, through the Worker) show the
-   classification isn't embedded in the list endpoint — it's one more fetch
-   away — so the client's current single-request extraction still resolves
-   to `'unknown'` until that follow-up lands.
+   [`2026-09-06-bathing-water-status-from-single-list-response.md`](decisions/2026-09-06-bathing-water-status-from-single-list-response.md)):
+   the one list response embeds both the annual rBWD classification and the
+   current short-term-pollution risk level, so an `"increased"` risk flags a
+   site even when its yearly rating is `Good`.
 5. **Results become interpolating series.** Raw points turn into
    `TideSeries` / `WaveSeries` / `WindSeries` / `PrecipitationSeries`, which
    answer "value right now" and "trend" by linear interpolation between the

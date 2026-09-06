@@ -44,38 +44,33 @@ chose (created if it doesn't exist).
 | `--sample` | Render with realistic sample data instead of fetching live conditions. |
 | `--help`, `-h` | Show usage. |
 
-## What's real data and what's unverified
+## What's real data and what's approximate
 
 The tide state/times, sea temperature, wave height, wind, air temperature,
 sky condition and sunset are all live readings for Hastings Pier (or, with
 `--sample`, a synthetic-but-realistic stand-in for the same shape of data).
 
 The illustrated coastline strip's beach flags (Bexhill, Glyne Gap,
-Bulverhythe, St Leonards, Pelham, Rock-a-Nore, Fairlight) are meant to
-reflect real water quality, computed from the water companies' storm-outflow
-data — but **`src/beachQuality.mjs`'s integration against the Environment
-Agency's Bathing Water Quality open data is only partially verified**: this
-session's outbound access to `environment.data.gov.uk` is blocked, but
-`WebSearch` isn't, and confirmed the base endpoint
-(`environment.data.gov.uk/doc/bathing-water.json`) is right — and that the
-geographic filter is **not** lat/long/dist (that was a guess ported from the
-EA's flood-monitoring API, and wrong): the real API filters by
-`min-`/`max-samplingPoint.easting`/`.northing`, OSGB36 British National Grid
-coordinates, so `src/osGridRef.mjs` converts each beach's lat/long before
-querying. The response field names for a site's current classification are
-still unconfirmed against a real response body. Run it for real and see
-what comes back — if a query shape is still wrong, every beach will read
-**"unknown"** (a dashed gray pin), which is the deliberately safe failure
-mode: this tool never guesses a beach "clear" when the lookup didn't
-actually work. See
-`docs/decisions/2026-09-05-beach-water-quality-flags.md` and
+Bulverhythe, St Leonards, Pelham, Rock-a-Nore, Fairlight) reflect real
+water quality from the Environment Agency's Bathing Water Quality open
+data. Both the query shape and the response shape are now confirmed against
+the real API (see
+`expo/src/services/__fixtures__/bathing-water-morecambe-south.json` and
+`docs/decisions/2026-09-06-bathing-water-status-from-single-list-response.md`):
+`src/beachQuality.mjs` queries a `min-`/`max-samplingPoint.easting`/`.northing`
+OSGB36 bounding box (converted from each beach's lat/long by
+`src/osGridRef.mjs`) and reads the site's annual rBWD classification plus
+its current short-term-pollution risk level out of the one list response.
+If a lookup fails or returns an unrecognised shape, that beach reads
+**"unknown"** (a dashed gray pin) — the deliberately safe failure mode:
+this tool never guesses a beach "clear" when the lookup didn't actually
+work. See `docs/decisions/2026-09-05-beach-water-quality-flags.md` and
 `docs/decisions/2026-09-05-bathing-water-lookup-uses-os-grid-not-latlong.md`
-for the full reasoning, what was considered and rejected, and what's still
-open (the EA's *seasonal classification* is what's wired up today, not the
-finer-grained live storm-overflow discharge events the flags are meant to
-reflect — Southern Water's Rivers and Seas Watch or the Water UK storm-
-overflow hub would be a closer match once one of their exact endpoints can
-be confirmed).
+for the earlier reasoning. Still approximate: the EA's *annual*
+classification and a *daily* pollution-risk forecast are what's wired up,
+not the minute-by-minute storm-overflow discharge events — Southern Water's
+Rivers and Seas Watch or the Water UK storm-overflow hub would be a closer
+match once one of their exact endpoints can be confirmed.
 
 ## How it's built
 
@@ -83,7 +78,7 @@ be confirmed).
   TideCheck and Open-Meteo (no cache; this script doesn't stay running).
 - `src/beachQuality.mjs` — per-beach water-quality flags from the
   Environment Agency's open data, fetched independently of tide/weather.
-  **Partially verified** — see the section above.
+  See the section above for what's exact and what's approximate.
 - `src/osGridRef.mjs` — converts a beach's WGS84 lat/long to an OSGB36
   National Grid easting/northing for `beachQuality.mjs`'s query.
 - `src/series.mjs` / `src/tideClock.mjs` — small standalone interpolation

@@ -37,3 +37,4 @@ if it matters, the record's own text says which came first. Use
 | [2026-09-05](2026-09-05-bathing-water-lookup-uses-os-grid-not-latlong.md) | Bathing-water lookups convert to OSGB36 easting/northing instead of guessing lat/long/dist | Accepted |
 | [2026-09-05](2026-09-05-skip-water-quality-fetch-on-web-cors.md) | Skip the water-quality fetch on web — environment.data.gov.uk sends no CORS headers | Superseded by [2026-09-06](2026-09-06-cloudflare-worker-ea-proxy.md) |
 | [2026-09-06](2026-09-06-cloudflare-worker-ea-proxy.md) | Route the EA bathing-water fetch through a Cloudflare Worker proxy | Accepted |
+| [2026-09-06](2026-09-06-bathing-water-status-from-single-list-response.md) | Read bathing-water status (annual rating + STP risk) from the single list response, not a follow-up fetch | Accepted |

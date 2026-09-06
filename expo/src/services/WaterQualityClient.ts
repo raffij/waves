@@ -16,29 +16,32 @@ import { wgs84ToOsGridRef } from './OsGridRef';
 // docs/decisions/2026-09-06-cloudflare-worker-ea-proxy.md (which supersedes
 // the earlier "skip the fetch on web" decision).
 //
-// ⚠️ PARTIALLY VERIFIED, still not run against the real service. This
-// session's outbound access to environment.data.gov.uk is blocked, but
-// WebSearch (unlike WebFetch) isn't, and confirmed real API documentation:
-// - The base endpoint and JSON format
-//   (environment.data.gov.uk/doc/bathing-water.json) are correct.
-// - The geographic filter is NOT lat/long/dist (that was a guess ported
-//   from the flood-monitoring API's query shape, and wrong) — the real API
-//   filters by min-/max-samplingPoint.easting/.northing, OSGB36 British
-//   National Grid coordinates, not WGS84 lat/long. OsGridRef.ts converts
-//   the location's lat/long to easting/northing and queries a bounding box
-//   around it, same 2km-radius intent as the original (wrong) `dist` guess.
-// - The exact response field names for a site's current classification
-//   (guessed below as `latestComplianceAssessment.complianceClassification`
-//   plus the older `currentClassification.classification` guess, tried in
-//   order) are still unconfirmed — search results mentioned
-//   `latestComplianceAssessment...name` in passing but never showed a full
-//   example response body to check the `label` vs `name` field. Still
-//   never resolves to 'clear' on anything unrecognised, so a wrong guess
-//   here costs an icon, not a false safety claim.
+// The geographic filter is min-/max-samplingPoint.easting/.northing —
+// OSGB36 British National Grid coordinates, not WGS84 lat/long.
+// OsGridRef.ts converts the location's lat/long to easting/northing and
+// queries a ~2km bounding box around it. See
+// docs/decisions/2026-09-05-bathing-water-lookup-uses-os-grid-not-latlong.md.
 //
-// See docs/decisions/2026-09-05-bathing-water-lookup-uses-os-grid-not-latlong.md
-// for what changed and why, and run this for real to fix whatever's still
-// wrong.
+// Response shape CONFIRMED 2026-09-06 against a real body — see
+// __fixtures__/bathing-water-morecambe-south.json and this file's tests.
+// The single list request embeds everything we need (contrary to an
+// earlier worry that the classification was one fetch further on). The
+// EA's Linked-Data API returns, per `result.items[]`:
+// - `latestComplianceAssessment.complianceClassification.name._value` —
+//   the annual rBWD rating: "Excellent" | "Good" | "Sufficient" | "Poor".
+// - `latestRiskPrediction.riskLevel.name._value` — today's short-term
+//   pollution (STP) advisory: "normal" | "increased". Treated as an
+//   override in the unsafe direction only (see classificationToStatus).
+// - `name._value` — the bathing water's name.
+// Human-readable strings are wrapped as
+// `{ _value, _datatype: "langString", _lang }`, sometimes inside a
+// one-element array; readLangString() unwraps both.
+// See docs/decisions/2026-09-06-bathing-water-status-from-single-list-response.md.
+//
+// Safety property, unchanged: nothing here resolves to 'clear' on an
+// unrecognised value. A request failure, an unexpected shape, or no
+// bathing water near the coordinates all degrade to 'unknown' — a wrong
+// 'unknown' costs an icon; a wrong 'clear' would be a false safety claim.
 
 // Allowlisted proxy path on the Waves API Worker (workers/waves-api/) —
 // maps 1:1 onto https://environment.data.gov.uk/doc/bathing-water.json.
@@ -71,11 +74,27 @@ export interface WaterQualityResult {
   fetchedAt: Date;
 }
 
-// Classifications the EA uses for bathing water compliance, worst to best.
-// A live short-term pollution risk advisory (however that surfaces in the
-// real response) should also map to 'flagged' once confirmed.
+// Annual rBWD classifications the EA uses for bathing water compliance.
 const FLAGGED_CLASSIFICATIONS = new Set(['poor', 'poor water quality']);
 const CLEAR_CLASSIFICATIONS = new Set(['excellent', 'good', 'sufficient']);
+
+// EA short-term-pollution (STP) risk levels (def/bwq-stp/*) that mean
+// "don't swim today", whatever the annual rating says. "normal" is the
+// all-clear and adds nothing.
+const FLAGGED_RISK_LEVELS = new Set(['increased']);
+
+// The EA's Linked-Data API wraps human-readable strings as
+// { _value, _datatype: 'langString', _lang }, occasionally inside a
+// one-element array, and just once in a while as a bare string. Unwrap all
+// three shapes; anything else is null.
+function readLangString(field: unknown): string | null {
+  if (typeof field === 'string') return field;
+  if (Array.isArray(field)) return readLangString(field[0]);
+  if (field && typeof field === 'object' && typeof (field as { _value?: unknown })._value === 'string') {
+    return (field as { _value: string })._value;
+  }
+  return null;
+}
 
 export class WaterQualityClient {
   constructor(
@@ -183,22 +202,20 @@ export class WaterQualityClient {
       if (!response.ok) return this.unknownResult();
 
       const body = await response.json();
-      const item = body?.items?.[0] ?? body?.result?.items?.[0] ?? null;
-      // Tried in order, most-likely-real first: none of these field names
-      // have been confirmed against a real response body (see header
-      // comment) — this stays a guess-chain the same way the pre-fix
-      // lat/long/dist query was, just a better-informed one.
-      const classificationRaw =
-        item?.latestComplianceAssessment?.complianceClassification?.name ??
-        item?.latestComplianceAssessment?.complianceClassification?.label ??
-        item?.currentClassification?.classification?.label ??
-        item?.classification ??
-        null;
-      const classification = typeof classificationRaw === 'string' ? classificationRaw.toLowerCase() : null;
-      const siteName = typeof item?.label === 'string' ? item.label : (item?.name ?? null);
+      const item = body?.result?.items?.[0] ?? body?.items?.[0] ?? null;
+
+      const classificationRaw = readLangString(item?.latestComplianceAssessment?.complianceClassification?.name);
+      const classification = classificationRaw ? classificationRaw.toLowerCase() : null;
+
+      // Today's STP advisory, read alongside the annual rating so an
+      // "increased" risk can flag a site whose yearly classification is
+      // Good/Excellent.
+      const riskLevel = readLangString(item?.latestRiskPrediction?.riskLevel?.name)?.toLowerCase() ?? null;
+
+      const siteName = readLangString(item?.name);
 
       return {
-        status: this.classificationToStatus(classification),
+        status: this.classificationToStatus(classification, riskLevel),
         siteName,
         classification,
         fetchedAt: new Date(),
@@ -214,7 +231,10 @@ export class WaterQualityClient {
     return { status: 'unknown', siteName: null, classification: null, fetchedAt: new Date() };
   }
 
-  private classificationToStatus(classification: string | null): WaterQualityStatus {
+  private classificationToStatus(classification: string | null, riskLevel: string | null): WaterQualityStatus {
+    // A live STP advisory overrides the annual rating, but only in the
+    // unsafe direction: an unrecognised risk level never clears a site.
+    if (riskLevel !== null && FLAGGED_RISK_LEVELS.has(riskLevel)) return 'flagged';
     if (classification === null) return 'unknown';
     if (FLAGGED_CLASSIFICATIONS.has(classification)) return 'flagged';
     if (CLEAR_CLASSIFICATIONS.has(classification)) return 'clear';
