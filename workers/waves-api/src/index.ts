@@ -93,6 +93,15 @@ export default {
       return new Response(`Path not allowed: ${eaPath}\n`, { status: 403, headers: cors });
     }
 
+    // Reject a malformed bounding-box query (e.g. `...easting=NaN` from a
+    // blank client-side coordinate) before it reaches the EA — otherwise the
+    // upstream 400/garbage could get cached for 6h under that URL.
+    for (const [key, value] of url.searchParams) {
+      if (/samplingPoint\.(easting|northing)$/.test(key) && !Number.isFinite(Number(value))) {
+        return new Response(`Bad numeric parameter: ${key}=${value}\n`, { status: 400, headers: cors });
+      }
+    }
+
     const upstream = new URL(`${EA_ORIGIN}/${eaPath}`);
     upstream.search = url.search;
 

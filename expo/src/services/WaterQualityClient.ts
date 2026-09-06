@@ -49,6 +49,14 @@ const EA_BATHING_WATER_BASE = 'https://waves-api.giraffi.dev/ea/doc/bathing-wate
 const SEARCH_RADIUS_METRES = 2000;
 const FETCH_TIMEOUT_MS = 8000;
 
+// Rough bounding box for Great Britain (WGS84). The EA's bathing waters are
+// England-only, so anything outside this is either a bad/blank coordinate or
+// a location this API can't answer for — either way there's nothing to
+// fetch. Guards against `Number('')` (=> 0, a valid-looking 0°N/0°E off West
+// Africa) and `Number('n/a')` (=> NaN, which the OSGB36 conversion turns
+// into `easting=NaN` in the query string).
+const GB_BOUNDS = { minLat: 49, maxLat: 61, minLon: -9, maxLon: 2 } as const;
+
 // Matches WaveAPIClient's cache window — a short-term pollution risk
 // advisory can lift within a day, so this shouldn't sit on a stale
 // "flagged" any longer than the other overlay data does.
@@ -141,7 +149,24 @@ export class WaterQualityClient {
     // Routed through waves-api.giraffi.dev (workers/waves-api/), which adds
     // the CORS headers the EA omits — so this now runs on web too, not just
     // native. See this file's header comment.
-    const { easting, northing } = wgs84ToOsGridRef(Number(this.latitude), Number(this.longitude));
+    const lat = Number(this.latitude);
+    const lon = Number(this.longitude);
+    if (
+      !Number.isFinite(lat) ||
+      !Number.isFinite(lon) ||
+      lat < GB_BOUNDS.minLat ||
+      lat > GB_BOUNDS.maxLat ||
+      lon < GB_BOUNDS.minLon ||
+      lon > GB_BOUNDS.maxLon
+    ) {
+      // A blank or non-GB coordinate — don't build a request with `NaN` (or
+      // a nonsense easting/northing) in the query string. Same degrade-to-
+      // 'unknown' outcome as any other failure.
+      return this.unknownResult();
+    }
+
+    const { easting, northing } = wgs84ToOsGridRef(lat, lon);
+    if (!Number.isFinite(easting) || !Number.isFinite(northing)) return this.unknownResult();
 
     const url = new URL(EA_BATHING_WATER_BASE);
     url.searchParams.set('min-samplingPoint.easting', String(Math.round(easting - SEARCH_RADIUS_METRES)));
