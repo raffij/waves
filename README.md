@@ -25,6 +25,13 @@ Every client reads from the same two upstreams:
 - **[Open-Meteo](https://open-meteo.com)** — wave height (Marine API), wind
   speed, precipitation and sunrise/sunset (Forecast API). No key required.
 
+The Expo app additionally reads the **[Environment Agency Bathing Water
+Quality API](https://environment.data.gov.uk/bwq/)** for a per-location
+pollution flag. That API sends no CORS headers, so the request goes through
+**`waves-api.giraffi.dev`** — a small allowlisted Cloudflare Worker
+([`workers/waves-api/`](workers/waves-api/)) that forwards to the EA and adds
+the headers. It's the repo's only server-side component. No key required.
+
 All times are handled in **Europe/London** throughout.
 
 ## Repository layout
@@ -46,6 +53,8 @@ expo/                         React Native / Expo app (iOS, Android, web)
 mac-widget/
   wave-hastings.15m.swift      xbar / SwiftBar menu-bar plugin (standalone script)
   DesktopWidget/               macOS desktop widget (SwiftUI app + widget extension)
+workers/
+  waves-api/                   Cloudflare Worker: allowlisted CORS proxy for the EA bathing-water API
 docs/
   architecture.md              how the four clients fit together, what's duplicated
   architecture/                typed Archify source + interactive HTML diagrams

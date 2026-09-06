@@ -1,0 +1,16 @@
+{
+  "name": "waves-api-worker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Allowlisted CORS proxy for the Environment Agency Bathing Water Quality API",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260903.1",
+    "typescript": "^5.9.2",
+    "wrangler": "^4.34.0"
+  }
+}

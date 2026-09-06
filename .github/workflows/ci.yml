@@ -56,3 +56,4 @@ jobs:
         run: |
           gh workflow run ci.yml --ref main --repo "${{ github.repository }}"
           gh workflow run deploy-web.yml --ref main --repo "${{ github.repository }}"
+          gh workflow run deploy-worker.yml --ref main --repo "${{ github.repository }}"

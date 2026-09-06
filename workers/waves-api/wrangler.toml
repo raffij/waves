@@ -1,0 +1,15 @@
+# Deployed by .github/workflows/deploy-worker.yml on pushes to main that
+# touch workers/**. Manual: `npm run deploy` from this directory with
+# CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID set.
+name = "waves-api"
+main = "src/index.ts"
+compatibility_date = "2026-09-01"
+
+# giraffi.dev is a zone on the same Cloudflare account; custom_domain lets
+# Cloudflare provision the DNS record and edge cert for this hostname.
+routes = [
+  { pattern = "waves-api.giraffi.dev", custom_domain = true }
+]
+
+# No KV/D1/R2 bindings — the only state is the edge cache (caches.default),
+# which needs no configuration.
